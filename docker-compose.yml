@@ -1,0 +1,14 @@
+docompose:
+  image: ghcr.io/claudeailab/docompose
+  container_name: docompose
+  hostname: docompose
+  restart: unless-stopped
+  user: "0"
+  environment:
+    TZ: ${TZ}
+  ports:
+    - 8094:8094
+  volumes:
+    - ./config/docompose:/data
+    - /var/run/docker.sock:/var/run/docker.sock
+    - /path/to/your/compose/projects:/compose

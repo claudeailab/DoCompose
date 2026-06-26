@@ -1,0 +1,174 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const { execFile } = require('child_process');
+const YAML = require('yaml');
+
+const COMPOSE_DIR = process.env.COMPOSE_DIR || '/compose';
+const COMPOSE_FILE = process.env.COMPOSE_FILE || 'docker-compose.yml';
+
+// Key ordering for service blocks
+const SERVICE_KEY_ORDER = [
+  'image', 'container_name', 'hostname', 'restart', 'user',
+  'environment', 'ports', 'volumes', 'networks', 'depends_on',
+];
+
+function getComposePath(projectDir) {
+  return path.join(COMPOSE_DIR, projectDir || '', COMPOSE_FILE);
+}
+
+function getEnvPath(projectDir) {
+  return path.join(COMPOSE_DIR, projectDir || '', '.env');
+}
+
+/**
+ * List all compose projects (subdirectories containing a compose file).
+ */
+function listProjects() {
+  const results = [];
+  // Check root
+  const rootFile = path.join(COMPOSE_DIR, COMPOSE_FILE);
+  if (fs.existsSync(rootFile)) {
+    results.push({ name: '(root)', dir: '', file: rootFile });
+  }
+  // Check subdirs
+  try {
+    const entries = fs.readdirSync(COMPOSE_DIR, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const composeFile = path.join(COMPOSE_DIR, entry.name, COMPOSE_FILE);
+      if (fs.existsSync(composeFile)) {
+        results.push({ name: entry.name, dir: entry.name, file: composeFile });
+      }
+    }
+  } catch {
+    // COMPOSE_DIR may not exist
+  }
+  return results;
+}
+
+/**
+ * Read and parse a compose file, returning raw text + parsed object.
+ */
+function readCompose(projectDir) {
+  const filePath = getComposePath(projectDir);
+  const raw = fs.readFileSync(filePath, 'utf8');
+  const parsed = YAML.parse(raw);
+  return { raw, parsed, filePath };
+}
+
+/**
+ * Sort service keys in the canonical order.
+ */
+function sortServiceKeys(serviceObj) {
+  const ordered = {};
+  for (const key of SERVICE_KEY_ORDER) {
+    if (key in serviceObj) ordered[key] = serviceObj[key];
+  }
+  // Remaining keys alphabetically
+  const remaining = Object.keys(serviceObj)
+    .filter((k) => !SERVICE_KEY_ORDER.includes(k))
+    .sort();
+  for (const key of remaining) {
+    ordered[key] = serviceObj[key];
+  }
+  return ordered;
+}
+
+/**
+ * Normalize a parsed compose document: sort services alphabetically,
+ * sort keys within each service, remove duplicate keys.
+ */
+function normalizeCompose(parsed) {
+  if (!parsed || typeof parsed !== 'object') return parsed;
+  const result = { ...parsed };
+  if (result.services && typeof result.services === 'object') {
+    const sortedServices = {};
+    const serviceNames = Object.keys(result.services).sort((a, b) => a.localeCompare(b));
+    for (const name of serviceNames) {
+      sortedServices[name] = sortServiceKeys(result.services[name] || {});
+    }
+    result.services = sortedServices;
+  }
+  return result;
+}
+
+/**
+ * Serialize a compose object to YAML string.
+ */
+function serializeCompose(obj) {
+  return YAML.stringify(obj, {
+    indent: 2,
+    lineWidth: 0,
+    defaultKeyType: 'PLAIN',
+    defaultStringType: 'QUOTE_DOUBLE',
+  });
+}
+
+/**
+ * Write a compose file. Accepts raw YAML string or parsed object.
+ */
+function writeCompose(projectDir, contentOrObj) {
+  const filePath = getComposePath(projectDir);
+  let content;
+  if (typeof contentOrObj === 'string') {
+    // Validate parse before writing
+    YAML.parse(contentOrObj);
+    content = contentOrObj;
+  } else {
+    const normalized = normalizeCompose(contentOrObj);
+    content = serializeCompose(normalized);
+  }
+  fs.writeFileSync(filePath, content, 'utf8');
+  return { filePath, content };
+}
+
+/**
+ * Validate a compose file using docker compose config.
+ */
+function validateCompose(filePath) {
+  return new Promise((resolve) => {
+    execFile('docker', ['compose', '-f', filePath, 'config'], { timeout: 15000 }, (err, stdout, stderr) => {
+      if (err) {
+        resolve({ valid: false, error: stderr || err.message });
+      } else {
+        resolve({ valid: true, output: stdout });
+      }
+    });
+  });
+}
+
+/**
+ * Read the .env file as raw text.
+ */
+function readEnv(projectDir) {
+  const filePath = getEnvPath(projectDir);
+  if (!fs.existsSync(filePath)) return { raw: '', filePath };
+  const raw = fs.readFileSync(filePath, 'utf8');
+  return { raw, filePath };
+}
+
+/**
+ * Write the .env file.
+ */
+function writeEnv(projectDir, content) {
+  const filePath = getEnvPath(projectDir);
+  fs.writeFileSync(filePath, content, 'utf8');
+  return { filePath };
+}
+
+module.exports = {
+  COMPOSE_DIR,
+  COMPOSE_FILE,
+  listProjects,
+  readCompose,
+  writeCompose,
+  validateCompose,
+  readEnv,
+  writeEnv,
+  normalizeCompose,
+  serializeCompose,
+  getComposePath,
+  getEnvPath,
+};
