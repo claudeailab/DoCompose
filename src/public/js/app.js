@@ -265,7 +265,7 @@ overlay.addEventListener('click', () => {
 fetch('/api/version').then((r) => r.json()).then(({ version }) => {
   if (version) {
     const badge = document.getElementById('versionBadge');
-    badge.textContent = `v${version}`;
+    if (badge) badge.textContent = `v${version}`;
     DC.version = `v${version}`;
   }
 }).catch(() => {});

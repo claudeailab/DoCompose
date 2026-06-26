@@ -81,7 +81,7 @@ async function selectEditorService(name) {
   panel.innerHTML = `
     <div class="editor-panel-toolbar">
       <span class="editor-panel-title">${escHtml(name)}</span>
-      <button class="btn btn-primary btn-sm" id="editorSaveBtn">
+      <button class="btn btn-primary btn-sm" id="editorSaveBtn" disabled>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
           <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
@@ -103,7 +103,12 @@ async function selectEditorService(name) {
   document.getElementById('editorSaveBtn').addEventListener('click', editorSave);
   document.getElementById('editorReloadBtn').addEventListener('click', () => selectEditorService(name));
   const ta = document.getElementById('editorTextarea');
-  ta.addEventListener('input', () => { editorDirty = true; setEditorStatus(''); });
+  ta.addEventListener('input', () => {
+    editorDirty = true;
+    setEditorStatus('');
+    const saveBtn = document.getElementById('editorSaveBtn');
+    if (saveBtn) saveBtn.disabled = false;
+  });
 
   await editorLoadService(name);
 }
@@ -132,6 +137,8 @@ async function editorSave() {
     editorDirty = false;
     setEditorStatus('Saved', 'valid');
     showToast(`${editorSelectedService} saved`, 'success');
+    const saveBtn = document.getElementById('editorSaveBtn');
+    if (saveBtn) saveBtn.disabled = true;
   } catch (err) {
     setEditorStatus(`Error: ${err.message}`, 'invalid');
     showToast(`Save failed: ${err.message}`, 'error');
@@ -152,7 +159,7 @@ function envInit() {
     <div class="env-editor">
       <div class="env-toolbar">
         <h2 style="font-size:1rem;font-weight:700;margin-right:auto">.env File</h2>
-        <button class="btn btn-primary" id="envSaveBtn">
+        <button class="btn btn-primary" id="envSaveBtn" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
             <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
@@ -173,6 +180,12 @@ function envInit() {
 
   document.getElementById('envSaveBtn').addEventListener('click', envSave);
   document.getElementById('envReloadBtn').addEventListener('click', envLoad);
+
+  document.getElementById('envTextarea').addEventListener('input', () => {
+    const btn = document.getElementById('envSaveBtn');
+    if (btn) btn.disabled = false;
+  });
+
   envLoad();
 }
 window.envInit = envInit;
@@ -193,6 +206,8 @@ async function envSave() {
   try {
     await api('POST', '/api/files/env', { content });
     showToast('.env file saved', 'success');
+    const btn = document.getElementById('envSaveBtn');
+    if (btn) btn.disabled = true;
   } catch (err) {
     showToast(`Save failed: ${err.message}`, 'error');
   }
