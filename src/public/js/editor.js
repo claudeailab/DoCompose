@@ -9,6 +9,9 @@ let editorSelectedService = null;
 let editorDirty = false;
 
 function editorInit() {
+  const autoSelect = DC._autoSelectService || null;
+  DC._autoSelectService = null;
+
   const container = document.getElementById('view-editor');
   container.innerHTML = `
     <div class="editor-split">
@@ -25,18 +28,21 @@ function editorInit() {
   `;
   editorSelectedService = null;
   editorDirty = false;
-  loadEditorServices();
+  loadEditorServices(autoSelect);
 }
 window.editorInit = editorInit;
 
-async function loadEditorServices() {
+async function loadEditorServices(autoSelect) {
   try {
     const { parsed } = await api('GET', '/api/files/compose');
-    editorServices = Object.keys((parsed && parsed.services) || []);
+    editorServices = Object.keys((parsed && parsed.services) || {});
     renderEditorServiceList();
+    if (autoSelect && editorServices.includes(autoSelect)) {
+      selectEditorService(autoSelect);
+    }
   } catch (err) {
     const btns = document.getElementById('editorServiceBtns');
-    if (btns) btns.innerHTML = `<div style="padding:0.75rem;font-size:0.85rem;color:var(--danger)">${escHtml(err.message)}</div>`;
+    if (btns) btns.innerHTML = `<div style="padding:0.75rem;font-size:0.9rem;color:var(--danger)">${escHtml(err.message)}</div>`;
   }
 }
 

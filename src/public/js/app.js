@@ -146,11 +146,8 @@ function renderSidebarServices(services) {
 }
 
 function openServiceEditor(name) {
+  DC._autoSelectService = name;
   showView('editor');
-  // editorInit sets up the split panel; once ready, select the service
-  setTimeout(() => {
-    if (typeof selectEditorService === 'function') selectEditorService(name);
-  }, 50);
 }
 window.openServiceEditor = openServiceEditor;
 
