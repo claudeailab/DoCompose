@@ -7,28 +7,25 @@
 let editorServices = [];
 let editorSelectedService = null;
 let editorDirty = false;
-let editorInitialized = false;
 
 function editorInit() {
   const container = document.getElementById('view-editor');
-
-  if (!editorInitialized) {
-    container.innerHTML = `
-      <div class="editor-split">
-        <div class="editor-service-list" id="editorServiceList">
-          <div class="editor-service-list-header">Services</div>
-          <div id="editorServiceBtns"><div class="loading"><div class="spinner"></div></div></div>
-        </div>
-        <div class="editor-panel" id="editorPanel">
-          <div class="editor-panel-empty" id="editorPanelEmpty">
-            Select a service from the left to edit its configuration.
-          </div>
+  container.innerHTML = `
+    <div class="editor-split">
+      <div class="editor-service-list" id="editorServiceList">
+        <div class="editor-service-list-header">Services</div>
+        <div id="editorServiceBtns"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <div class="editor-panel" id="editorPanel">
+        <div class="editor-panel-empty">
+          ← Select a service to edit its configuration.
         </div>
       </div>
-    `;
-    editorInitialized = true;
-    loadEditorServices();
-  }
+    </div>
+  `;
+  editorSelectedService = null;
+  editorDirty = false;
+  loadEditorServices();
 }
 window.editorInit = editorInit;
 

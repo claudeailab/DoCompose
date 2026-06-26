@@ -78,11 +78,11 @@ function buildServiceCard(s) {
   const extraPorts = allPorts.length - visiblePorts.length;
 
   return `
-    <div class="service-card ${stateClass(state)}">
+    <div class="service-card ${stateClass(state)}" onclick="openServiceEditor(${JSON.stringify(s.name)})">
       <div class="card-header">
         <span class="card-status-dot status-dot ${statusClass(state)}"></span>
         <div>
-          <div class="card-title" onclick="openServiceEditor(${JSON.stringify(s.name)})" title="Edit ${escHtml(s.name)}">${escHtml(s.name)}</div>
+          <div class="card-title">${escHtml(s.name)}</div>
           <div class="card-subtitle">${escHtml(s.containerName || s.name)}</div>
         </div>
         <span class="card-status-text">${escHtml(state)}</span>
@@ -96,7 +96,7 @@ function buildServiceCard(s) {
           ${extraPorts > 0 ? `<span class="port-badge-more">+${extraPorts} more</span>` : ''}
         </div>` : ''}
 
-      <div class="card-actions">
+      <div class="card-actions" onclick="event.stopPropagation()">
         ${state !== 'running' ? `
           <button class="btn btn-success btn-sm" data-action="start" data-service="${escHtml(s.name)}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>

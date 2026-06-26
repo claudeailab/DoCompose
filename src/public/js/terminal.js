@@ -7,47 +7,39 @@
 let termInstance = null;
 let termFitAddon = null;
 let termWs = null;
-let termInitialized = false;
 let termActiveContainer = null;
 
 function terminalInit() {
+  termDisconnect();
+  termActiveContainer = null;
+
   const container = document.getElementById('view-terminal');
-
-  if (!termInitialized) {
-    container.innerHTML = `
-      <div class="terminal-container" style="display:flex;flex-direction:column;height:100%">
-        <div class="container-picker" id="termContainerPicker">
-          <div class="container-picker-label">Select a container to open its terminal</div>
-          <div class="container-picker-grid" id="termChips">
-            <div class="loading"><div class="spinner"></div></div>
-          </div>
+  container.innerHTML = `
+    <div class="terminal-container" style="display:flex;flex-direction:column;height:100%">
+      <div class="container-picker" id="termContainerPicker">
+        <div class="container-picker-label">Click a running container to open its terminal</div>
+        <div class="container-picker-grid" id="termChips">
+          <div class="loading"><div class="spinner"></div></div>
         </div>
-        <div class="terminal-toolbar" id="termToolbar" style="display:none">
-          <span id="termContainerLabel" style="font-size:0.9rem;font-weight:600;color:var(--text-secondary)"></span>
-          <button class="btn btn-secondary btn-sm" id="termClearBtn">Clear</button>
-          <button class="btn btn-secondary btn-sm" id="termReconnectBtn">Reconnect</button>
-          <span id="termStatus" style="font-size:0.875rem;color:var(--text-muted);margin-left:auto">Disconnected</span>
-        </div>
-        <div id="xterm-container" style="flex:1;padding:0.5rem;min-height:0;overflow:hidden;display:none"></div>
       </div>
-    `;
+      <div class="terminal-toolbar" id="termToolbar" style="display:none">
+        <span id="termContainerLabel" style="font-size:1rem;font-weight:700;color:var(--text-secondary)"></span>
+        <button class="btn btn-secondary btn-sm" id="termClearBtn">Clear</button>
+        <button class="btn btn-secondary btn-sm" id="termReconnectBtn">Reconnect</button>
+        <span id="termStatus" style="font-size:0.9rem;color:var(--text-muted);margin-left:auto">Disconnected</span>
+      </div>
+      <div id="xterm-container" style="flex:1;padding:0.5rem;min-height:0;overflow:hidden;display:none"></div>
+    </div>
+  `;
 
-    document.getElementById('termClearBtn').addEventListener('click', () => {
-      if (termInstance) termInstance.clear();
-    });
-    document.getElementById('termReconnectBtn').addEventListener('click', () => {
-      if (termActiveContainer) termConnect(termActiveContainer);
-    });
-
-    termInitialized = true;
-  }
+  document.getElementById('termClearBtn').addEventListener('click', () => {
+    if (termInstance) termInstance.clear();
+  });
+  document.getElementById('termReconnectBtn').addEventListener('click', () => {
+    if (termActiveContainer) termConnect(termActiveContainer);
+  });
 
   loadTermContainerList();
-
-  // Fit terminal when view becomes visible
-  setTimeout(() => {
-    if (termFitAddon) try { termFitAddon.fit(); } catch {}
-  }, 100);
 }
 window.terminalInit = terminalInit;
 
@@ -93,8 +85,10 @@ function termSelectContainer(name) {
   const label = document.getElementById('termContainerLabel');
   if (label) label.textContent = name;
 
-  // Initialize xterm once
-  if (typeof Terminal !== 'undefined' && !termInstance) {
+  // Re-create xterm instance for the new DOM node
+  if (termInstance) { try { termInstance.dispose(); } catch {} termInstance = null; termFitAddon = null; }
+
+  if (typeof Terminal !== 'undefined') {
     termInstance = new Terminal({
       theme: {
         background: '#0a0f1a',

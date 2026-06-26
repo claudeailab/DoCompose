@@ -8,65 +8,60 @@ let logsEventSource = null;
 let logsAutoScroll = true;
 let logsSearchQuery = '';
 let logsActiveContainer = null;
-let logsInitialized = false;
 
 function logsInit() {
-  const container = document.getElementById('view-logs');
+  logsStop();
+  logsActiveContainer = null;
 
-  if (!logsInitialized) {
-    container.innerHTML = `
-      <div class="logs-container">
-        <div class="container-picker" id="logsContainerPicker">
-          <div class="container-picker-label">Select a container</div>
-          <div class="container-picker-grid" id="logsChips">
-            <div class="loading"><div class="spinner"></div></div>
-          </div>
-        </div>
-        <div class="logs-toolbar" id="logsToolbar" style="display:none">
-          <button class="btn btn-danger btn-sm" id="logsStopBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"/></svg>
-            Stop
-          </button>
-          <button class="btn btn-secondary btn-sm" id="logsClearBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-            </svg>
-            Clear
-          </button>
-          <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-            <input type="checkbox" id="logsAutoScrollToggle" checked style="margin-right:4px" />
-            Auto-scroll
-          </label>
-          <input type="text" id="logsSearch" placeholder="Filter…" style="width:150px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:0.3rem 0.6rem;font-size:0.875rem;outline:none" />
-          <span id="logsStatus" style="font-size:0.875rem;color:var(--text-muted);margin-left:auto"></span>
-        </div>
-        <div class="logs-output" id="logsOutput" style="display:none">
-          <span style="color:var(--text-muted)">Select a container above to start streaming logs.</span>
+  const container = document.getElementById('view-logs');
+  container.innerHTML = `
+    <div class="logs-container">
+      <div class="container-picker" id="logsContainerPicker">
+        <div class="container-picker-label">Click a container to stream its logs</div>
+        <div class="container-picker-grid" id="logsChips">
+          <div class="loading"><div class="spinner"></div></div>
         </div>
       </div>
-    `;
+      <div class="logs-toolbar" id="logsToolbar" style="display:none">
+        <button class="btn btn-danger btn-sm" id="logsStopBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"/></svg>
+          Stop
+        </button>
+        <button class="btn btn-secondary btn-sm" id="logsClearBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+          </svg>
+          Clear
+        </button>
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+          <input type="checkbox" id="logsAutoScrollToggle" checked style="margin-right:4px" />
+          Auto-scroll
+        </label>
+        <input type="text" id="logsSearch" placeholder="Filter…" style="width:150px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:0.35rem 0.6rem;font-size:0.9rem;outline:none" />
+        <span id="logsStatus" style="font-size:0.9rem;color:var(--text-muted);margin-left:auto"></span>
+      </div>
+      <div class="logs-output" id="logsOutput" style="display:none"></div>
+    </div>
+  `;
 
-    document.getElementById('logsStopBtn').addEventListener('click', logsStop);
-    document.getElementById('logsClearBtn').addEventListener('click', () => {
-      document.getElementById('logsOutput').innerHTML = '';
-    });
-    document.getElementById('logsAutoScrollToggle').addEventListener('change', (e) => {
-      logsAutoScroll = e.target.checked;
-    });
-    document.getElementById('logsSearch').addEventListener('input', (e) => {
-      logsSearchQuery = e.target.value.toLowerCase();
-      highlightLogsSearch();
-    });
-    document.getElementById('logsOutput').addEventListener('scroll', function() {
-      const atBottom = this.scrollHeight - this.scrollTop <= this.clientHeight + 50;
-      if (!atBottom) {
-        document.getElementById('logsAutoScrollToggle').checked = false;
-        logsAutoScroll = false;
-      }
-    });
-
-    logsInitialized = true;
-  }
+  document.getElementById('logsStopBtn').addEventListener('click', logsStop);
+  document.getElementById('logsClearBtn').addEventListener('click', () => {
+    document.getElementById('logsOutput').innerHTML = '';
+  });
+  document.getElementById('logsAutoScrollToggle').addEventListener('change', (e) => {
+    logsAutoScroll = e.target.checked;
+  });
+  document.getElementById('logsSearch').addEventListener('input', (e) => {
+    logsSearchQuery = e.target.value.toLowerCase();
+    highlightLogsSearch();
+  });
+  document.getElementById('logsOutput').addEventListener('scroll', function() {
+    const atBottom = this.scrollHeight - this.scrollTop <= this.clientHeight + 50;
+    if (!atBottom) {
+      document.getElementById('logsAutoScrollToggle').checked = false;
+      logsAutoScroll = false;
+    }
+  });
 
   loadLogsContainerList();
 }
