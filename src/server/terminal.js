@@ -17,24 +17,39 @@ function handleTerminal(ws, req) {
     return;
   }
 
-  const shell = process.env.SHELL || '/bin/sh';
+  // Parse ?container=name from the WebSocket upgrade URL
+  const urlParams = new URLSearchParams((req.url || '').split('?')[1] || '');
+  const containerName = urlParams.get('container');
+
   const cols = 80;
   const rows = 24;
 
   let ptyProcess;
   try {
-    ptyProcess = pty.spawn(shell, [], {
-      name: 'xterm-256color',
-      cols,
-      rows,
-      cwd: process.env.COMPOSE_DIR || '/compose',
-      env: { ...process.env, TERM: 'xterm-256color' },
-    });
+    if (containerName) {
+      ptyProcess = pty.spawn('docker', ['exec', '-it', containerName, '/bin/sh'], {
+        name: 'xterm-256color',
+        cols,
+        rows,
+        cwd: '/',
+        env: { ...process.env, TERM: 'xterm-256color' },
+      });
+    } else {
+      const shell = process.env.SHELL || '/bin/sh';
+      ptyProcess = pty.spawn(shell, [], {
+        name: 'xterm-256color',
+        cols,
+        rows,
+        cwd: process.env.COMPOSE_DIR || '/compose',
+        env: { ...process.env, TERM: 'xterm-256color' },
+      });
+    }
   } catch (err) {
     ws.send(JSON.stringify({ type: 'error', data: err.message }));
     ws.close();
     return;
   }
+
 
   ptyProcess.onData((data) => {
     if (ws.readyState === ws.constructor.OPEN) {

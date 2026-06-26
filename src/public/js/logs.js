@@ -1,5 +1,5 @@
 /* ============================================================
-   DoCompose — Logs View
+   DoCompose — Logs View (click container → stream immediately)
    ============================================================ */
 
 'use strict';
@@ -7,102 +7,130 @@
 let logsEventSource = null;
 let logsAutoScroll = true;
 let logsSearchQuery = '';
+let logsActiveContainer = null;
+let logsInitialized = false;
 
 function logsInit() {
   const container = document.getElementById('view-logs');
-  container.innerHTML = `
-    <div class="logs-container">
-      <div class="logs-toolbar">
-        <select id="logsServiceSelect">
-          <option value="">— Select container —</option>
-        </select>
-        <button class="btn btn-secondary btn-sm" id="logsStartBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Stream
-        </button>
-        <button class="btn btn-danger btn-sm" id="logsStopBtn" disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"/></svg>
-          Stop
-        </button>
-        <button class="btn btn-secondary btn-sm" id="logsClearBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-            <path d="M10 11v6"/><path d="M14 11v6"/>
-          </svg>
-          Clear
-        </button>
-        <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-          <input type="checkbox" id="logsAutoScrollToggle" checked style="margin-right:4px" />
-          Auto-scroll
-        </label>
-        <input type="text" id="logsSearch" placeholder="Filter…" style="width:140px" />
-        <span id="logsStatus" style="font-size:0.8rem;color:var(--text-muted);margin-left:auto"></span>
+
+  if (!logsInitialized) {
+    container.innerHTML = `
+      <div class="logs-container">
+        <div class="container-picker" id="logsContainerPicker">
+          <div class="container-picker-label">Select a container</div>
+          <div class="container-picker-grid" id="logsChips">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="logs-toolbar" id="logsToolbar" style="display:none">
+          <button class="btn btn-danger btn-sm" id="logsStopBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"/></svg>
+            Stop
+          </button>
+          <button class="btn btn-secondary btn-sm" id="logsClearBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+            </svg>
+            Clear
+          </button>
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+            <input type="checkbox" id="logsAutoScrollToggle" checked style="margin-right:4px" />
+            Auto-scroll
+          </label>
+          <input type="text" id="logsSearch" placeholder="Filter…" style="width:150px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:0.3rem 0.6rem;font-size:0.875rem;outline:none" />
+          <span id="logsStatus" style="font-size:0.875rem;color:var(--text-muted);margin-left:auto"></span>
+        </div>
+        <div class="logs-output" id="logsOutput" style="display:none">
+          <span style="color:var(--text-muted)">Select a container above to start streaming logs.</span>
+        </div>
       </div>
-      <div class="logs-output" id="logsOutput">
-        <span style="color:var(--text-muted);font-size:0.85rem">Select a container and click Stream to view logs.</span>
-      </div>
-    </div>
-  `;
+    `;
+
+    document.getElementById('logsStopBtn').addEventListener('click', logsStop);
+    document.getElementById('logsClearBtn').addEventListener('click', () => {
+      document.getElementById('logsOutput').innerHTML = '';
+    });
+    document.getElementById('logsAutoScrollToggle').addEventListener('change', (e) => {
+      logsAutoScroll = e.target.checked;
+    });
+    document.getElementById('logsSearch').addEventListener('input', (e) => {
+      logsSearchQuery = e.target.value.toLowerCase();
+      highlightLogsSearch();
+    });
+    document.getElementById('logsOutput').addEventListener('scroll', function() {
+      const atBottom = this.scrollHeight - this.scrollTop <= this.clientHeight + 50;
+      if (!atBottom) {
+        document.getElementById('logsAutoScrollToggle').checked = false;
+        logsAutoScroll = false;
+      }
+    });
+
+    logsInitialized = true;
+  }
 
   loadLogsContainerList();
-
-  document.getElementById('logsStartBtn').addEventListener('click', logsStart);
-  document.getElementById('logsStopBtn').addEventListener('click', logsStop);
-  document.getElementById('logsClearBtn').addEventListener('click', () => {
-    document.getElementById('logsOutput').innerHTML = '';
-  });
-
-  document.getElementById('logsAutoScrollToggle').addEventListener('change', (e) => {
-    logsAutoScroll = e.target.checked;
-  });
-
-  document.getElementById('logsSearch').addEventListener('input', (e) => {
-    logsSearchQuery = e.target.value.toLowerCase();
-    highlightLogsSearch();
-  });
-
-  const output = document.getElementById('logsOutput');
-  output.addEventListener('scroll', () => {
-    const atBottom = output.scrollHeight - output.scrollTop <= output.clientHeight + 50;
-    if (!atBottom) {
-      document.getElementById('logsAutoScrollToggle').checked = false;
-      logsAutoScroll = false;
-    }
-  });
 }
 window.logsInit = logsInit;
 
 async function loadLogsContainerList() {
+  const chipsEl = document.getElementById('logsChips');
+  if (!chipsEl) return;
+
   try {
     const { containers } = await fetch('/api/logs').then((r) => r.json());
-    const sel = document.getElementById('logsServiceSelect');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">— Select container —</option>';
-    (containers || []).forEach((c) => {
-      const opt = document.createElement('option');
-      opt.value = c.name.split(', ')[0];
-      opt.textContent = `${c.name} (${c.state})`;
-      sel.appendChild(opt);
-    });
+    const list = containers || [];
 
-    sel.addEventListener('change', () => {
-      logsStop();
-      document.getElementById('logsOutput').innerHTML = '';
-    });
+    if (!list.length) {
+      chipsEl.innerHTML = '<span style="font-size:0.875rem;color:var(--text-muted)">No containers found</span>';
+      return;
+    }
+
+    chipsEl.innerHTML = list.map((c) => {
+      const name = c.name.split(', ')[0];
+      const state = (c.state || '').toLowerCase();
+      return `
+        <button class="container-chip${logsActiveContainer === name ? ' active' : ''}"
+                onclick="logsSelectContainer(${JSON.stringify(name)})"
+                data-container="${escHtml(name)}">
+          <span class="status-dot ${statusClass(state)}" style="width:8px;height:8px"></span>
+          ${escHtml(name)}
+        </button>`;
+    }).join('');
   } catch (err) {
-    console.warn('Failed to load container list:', err.message);
+    chipsEl.innerHTML = `<span style="font-size:0.875rem;color:var(--danger)">${escHtml(err.message)}</span>`;
   }
 }
 
-function logsStart() {
-  const sel = document.getElementById('logsServiceSelect');
-  const containerName = sel ? sel.value : '';
-  if (!containerName) { showToast('Select a container first', 'info'); return; }
+function logsSelectContainer(name) {
+  logsStop();
+  logsActiveContainer = name;
 
+  // Update chip highlight
+  document.querySelectorAll('#logsChips .container-chip').forEach((ch) => {
+    ch.classList.toggle('active', ch.dataset.container === name);
+  });
+
+  // Show toolbar and output
+  document.getElementById('logsToolbar').style.display = '';
+  const output = document.getElementById('logsOutput');
+  output.style.display = '';
+  output.innerHTML = '';
+
+  logsAutoScroll = true;
+  const toggle = document.getElementById('logsAutoScrollToggle');
+  if (toggle) toggle.checked = true;
+
+  // Start streaming immediately
+  logsStart(name);
+}
+window.logsSelectContainer = logsSelectContainer;
+
+function logsStart(containerName) {
   logsStop();
 
   const output = document.getElementById('logsOutput');
-  output.innerHTML = '';
+  if (!output) return;
+
   setLogsStatus('Connecting…');
 
   const url = `/api/logs/${encodeURIComponent(containerName)}?tail=200`;
@@ -126,7 +154,6 @@ function logsStart() {
     logsStop();
   };
 
-  document.getElementById('logsStartBtn').disabled = true;
   document.getElementById('logsStopBtn').disabled = false;
 }
 
@@ -135,9 +162,7 @@ function logsStop() {
     logsEventSource.close();
     logsEventSource = null;
   }
-  const startBtn = document.getElementById('logsStartBtn');
   const stopBtn = document.getElementById('logsStopBtn');
-  if (startBtn) startBtn.disabled = false;
   if (stopBtn) stopBtn.disabled = true;
   setLogsStatus('Stopped');
 }
@@ -150,7 +175,6 @@ function appendLogLine(text) {
   for (const rawLine of lines) {
     if (!rawLine) continue;
 
-    // Parse timestamp if present (Docker format: 2024-01-01T00:00:00.000000000Z text)
     let timeStr = '';
     let content = rawLine;
     const tsMatch = rawLine.match(/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z)\s/);
@@ -170,10 +194,8 @@ function appendLogLine(text) {
       span.appendChild(ts);
     }
 
-    const textNode = document.createTextNode(content);
-    span.appendChild(textNode);
+    span.appendChild(document.createTextNode(content));
 
-    // Highlight search query
     if (logsSearchQuery && content.toLowerCase().includes(logsSearchQuery)) {
       span.classList.add('highlight');
     }
@@ -181,25 +203,15 @@ function appendLogLine(text) {
     output.appendChild(span);
   }
 
-  if (logsAutoScroll) {
-    output.scrollTop = output.scrollHeight;
-  }
+  if (logsAutoScroll) output.scrollTop = output.scrollHeight;
 }
 
 function highlightLogsSearch() {
   const output = document.getElementById('logsOutput');
   if (!output) return;
   output.querySelectorAll('.log-line').forEach((line) => {
-    if (!logsSearchQuery) {
-      line.classList.remove('highlight');
-      return;
-    }
-    const text = line.textContent.toLowerCase();
-    if (text.includes(logsSearchQuery)) {
-      line.classList.add('highlight');
-    } else {
-      line.classList.remove('highlight');
-    }
+    if (!logsSearchQuery) { line.classList.remove('highlight'); return; }
+    line.classList.toggle('highlight', line.textContent.toLowerCase().includes(logsSearchQuery));
   });
 }
 

@@ -73,15 +73,16 @@ function renderDashboard(services) {
 
 function buildServiceCard(s) {
   const state = (s.state || 'absent').toLowerCase();
-  const statusLabel = s.status || s.state || 'unknown';
-  const ports = Array.isArray(s.ports) ? s.ports : [];
+  const allPorts = Array.isArray(s.ports) ? s.ports : [];
+  const visiblePorts = allPorts.slice(0, 3);
+  const extraPorts = allPorts.length - visiblePorts.length;
 
   return `
     <div class="service-card ${stateClass(state)}">
       <div class="card-header">
         <span class="card-status-dot status-dot ${statusClass(state)}"></span>
         <div>
-          <div class="card-title">${escHtml(s.name)}</div>
+          <div class="card-title" onclick="openServiceEditor(${JSON.stringify(s.name)})" title="Edit ${escHtml(s.name)}">${escHtml(s.name)}</div>
           <div class="card-subtitle">${escHtml(s.containerName || s.name)}</div>
         </div>
         <span class="card-status-text">${escHtml(state)}</span>
@@ -89,9 +90,10 @@ function buildServiceCard(s) {
 
       ${s.image ? `<div class="card-image" title="${escHtml(s.image)}">${escHtml(s.image)}</div>` : ''}
 
-      ${ports.length ? `
+      ${allPorts.length ? `
         <div class="card-ports">
-          ${ports.map((p) => `<span class="port-badge">${escHtml(String(p))}</span>`).join('')}
+          ${visiblePorts.map((p) => `<span class="port-badge">${escHtml(String(p))}</span>`).join('')}
+          ${extraPorts > 0 ? `<span class="port-badge-more">+${extraPorts} more</span>` : ''}
         </div>` : ''}
 
       <div class="card-actions">
@@ -131,22 +133,11 @@ function buildServiceCard(s) {
 
 async function serviceAction(name, action, btn) {
   if (action === 'logs') {
-    // Switch to logs view with this service pre-selected
+    const svc = DC.services.find((s) => s.name === name);
+    const containerName = svc ? (svc.containerName || name) : name;
     showView('logs');
     setTimeout(() => {
-      const sel = document.getElementById('logsServiceSelect');
-      if (sel) {
-        // Find container name matching service
-        const svc = DC.services.find((s) => s.name === name);
-        const containerName = svc ? svc.containerName : name;
-        for (const opt of sel.options) {
-          if (opt.value === containerName || opt.value.includes(name)) {
-            sel.value = opt.value;
-            sel.dispatchEvent(new Event('change'));
-            break;
-          }
-        }
-      }
+      if (typeof logsSelectContainer === 'function') logsSelectContainer(containerName);
     }, 300);
     return;
   }

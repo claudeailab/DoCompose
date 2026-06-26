@@ -66,7 +66,6 @@ function showView(viewName) {
     case 'env': if (window.envInit) envInit(); break;
     case 'logs': if (window.logsInit) logsInit(); break;
     case 'terminal': if (window.terminalInit) terminalInit(); break;
-    case 'backups': if (window.backupsInit) backupsInit(); break;
   }
 
   // Close sidebar on mobile
@@ -135,16 +134,25 @@ window.refreshServiceList = refreshServiceList;
 function renderSidebarServices(services) {
   const list = document.getElementById('serviceList');
   if (!services.length) {
-    list.innerHTML = '<div style="padding:0.5rem 0.75rem;font-size:0.78rem;color:var(--text-muted)">No services found</div>';
+    list.innerHTML = '<div style="padding:0.5rem 0.85rem;font-size:0.85rem;color:var(--text-muted)">No services found</div>';
     return;
   }
   list.innerHTML = services.map((s) => `
-    <div class="service-item" onclick="showView('dashboard')">
+    <div class="service-item" onclick="openServiceEditor(${JSON.stringify(s.name)})">
       <span class="status-dot ${statusClass(s.state)}"></span>
       <span>${escHtml(s.name)}</span>
     </div>
   `).join('');
 }
+
+function openServiceEditor(name) {
+  showView('editor');
+  // editorInit sets up the split panel; once ready, select the service
+  setTimeout(() => {
+    if (typeof selectEditorService === 'function') selectEditorService(name);
+  }, 50);
+}
+window.openServiceEditor = openServiceEditor;
 
 // ---- Escape HTML ----
 function escHtml(str) {

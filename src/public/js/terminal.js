@@ -1,5 +1,5 @@
 /* ============================================================
-   DoCompose — Terminal View (xterm.js + WebSocket)
+   DoCompose — Terminal View (click container → exec terminal)
    ============================================================ */
 
 'use strict';
@@ -8,171 +8,193 @@ let termInstance = null;
 let termFitAddon = null;
 let termWs = null;
 let termInitialized = false;
+let termActiveContainer = null;
 
 function terminalInit() {
   const container = document.getElementById('view-terminal');
 
   if (!termInitialized) {
     container.innerHTML = `
-      <div class="terminal-container">
-        <div class="terminal-toolbar">
-          <span style="font-size:0.85rem;font-weight:600;color:var(--text-secondary)">Terminal</span>
+      <div class="terminal-container" style="display:flex;flex-direction:column;height:100%">
+        <div class="container-picker" id="termContainerPicker">
+          <div class="container-picker-label">Select a container to open its terminal</div>
+          <div class="container-picker-grid" id="termChips">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div class="terminal-toolbar" id="termToolbar" style="display:none">
+          <span id="termContainerLabel" style="font-size:0.9rem;font-weight:600;color:var(--text-secondary)"></span>
           <button class="btn btn-secondary btn-sm" id="termClearBtn">Clear</button>
           <button class="btn btn-secondary btn-sm" id="termReconnectBtn">Reconnect</button>
-          <span id="termStatus" style="font-size:0.8rem;color:var(--text-muted);margin-left:auto">Disconnected</span>
+          <span id="termStatus" style="font-size:0.875rem;color:var(--text-muted);margin-left:auto">Disconnected</span>
         </div>
-        <div id="xterm-container"></div>
+        <div id="xterm-container" style="flex:1;padding:0.5rem;min-height:0;overflow:hidden;display:none"></div>
       </div>
     `;
 
     document.getElementById('termClearBtn').addEventListener('click', () => {
       if (termInstance) termInstance.clear();
     });
-    document.getElementById('termReconnectBtn').addEventListener('click', termConnect);
-  }
-
-  // Initialize xterm if available
-  if (typeof Terminal !== 'undefined') {
-    if (!termInstance) {
-      termInstance = new Terminal({
-        theme: {
-          background: '#0a0f1a',
-          foreground: '#c9d1d9',
-          cursor: '#3b82f6',
-          selection: 'rgba(59,130,246,0.3)',
-          black: '#0a0f1a',
-          brightBlack: '#6e7681',
-          red: '#ff7b72',
-          brightRed: '#ffa198',
-          green: '#3fb950',
-          brightGreen: '#56d364',
-          yellow: '#d29922',
-          brightYellow: '#e3b341',
-          blue: '#58a6ff',
-          brightBlue: '#79c0ff',
-          magenta: '#bc8cff',
-          brightMagenta: '#d2a8ff',
-          cyan: '#39c5cf',
-          brightCyan: '#56d4dd',
-          white: '#b1bac4',
-          brightWhite: '#f0f6fc',
-        },
-        fontFamily: "'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace",
-        fontSize: 13,
-        lineHeight: 1.4,
-        cursorBlink: true,
-        scrollback: 5000,
-      });
-
-      const xtermContainer = document.getElementById('xterm-container');
-      if (xtermContainer && !termInitialized) {
-        termInstance.open(xtermContainer);
-
-        if (typeof FitAddon !== 'undefined') {
-          termFitAddon = new FitAddon.FitAddon();
-          termInstance.loadAddon(termFitAddon);
-        }
-      }
-    }
+    document.getElementById('termReconnectBtn').addEventListener('click', () => {
+      if (termActiveContainer) termConnect(termActiveContainer);
+    });
 
     termInitialized = true;
+  }
 
-    // Fit on show
-    setTimeout(() => {
-      if (termFitAddon) termFitAddon.fit();
-    }, 100);
+  loadTermContainerList();
 
-    termConnect();
+  // Fit terminal when view becomes visible
+  setTimeout(() => {
+    if (termFitAddon) try { termFitAddon.fit(); } catch {}
+  }, 100);
+}
+window.terminalInit = terminalInit;
 
-    // Handle resize
+async function loadTermContainerList() {
+  const chipsEl = document.getElementById('termChips');
+  if (!chipsEl) return;
+
+  try {
+    const { containers } = await fetch('/api/logs').then((r) => r.json());
+    const list = (containers || []).filter((c) => c.state === 'running' || c.state === 'Running');
+
+    if (!list.length) {
+      chipsEl.innerHTML = '<span style="font-size:0.875rem;color:var(--text-muted)">No running containers</span>';
+      return;
+    }
+
+    chipsEl.innerHTML = list.map((c) => {
+      const name = c.name.split(', ')[0];
+      return `
+        <button class="container-chip${termActiveContainer === name ? ' active' : ''}"
+                onclick="termSelectContainer(${JSON.stringify(name)})"
+                data-container="${escHtml(name)}">
+          <span class="status-dot status-running" style="width:8px;height:8px"></span>
+          ${escHtml(name)}
+        </button>`;
+    }).join('');
+  } catch (err) {
+    chipsEl.innerHTML = `<span style="font-size:0.875rem;color:var(--danger)">${escHtml(err.message)}</span>`;
+  }
+}
+
+function termSelectContainer(name) {
+  termActiveContainer = name;
+
+  // Update chip highlight
+  document.querySelectorAll('#termChips .container-chip').forEach((ch) => {
+    ch.classList.toggle('active', ch.dataset.container === name);
+  });
+
+  // Show toolbar + terminal
+  document.getElementById('termToolbar').style.display = '';
+  document.getElementById('xterm-container').style.display = '';
+  const label = document.getElementById('termContainerLabel');
+  if (label) label.textContent = name;
+
+  // Initialize xterm once
+  if (typeof Terminal !== 'undefined' && !termInstance) {
+    termInstance = new Terminal({
+      theme: {
+        background: '#0a0f1a',
+        foreground: '#c9d1d9',
+        cursor: '#3b82f6',
+        selection: 'rgba(59,130,246,0.3)',
+        black: '#0a0f1a', brightBlack: '#6e7681',
+        red: '#ff7b72', brightRed: '#ffa198',
+        green: '#3fb950', brightGreen: '#56d364',
+        yellow: '#d29922', brightYellow: '#e3b341',
+        blue: '#58a6ff', brightBlue: '#79c0ff',
+        magenta: '#bc8cff', brightMagenta: '#d2a8ff',
+        cyan: '#39c5cf', brightCyan: '#56d4dd',
+        white: '#b1bac4', brightWhite: '#f0f6fc',
+      },
+      fontFamily: "'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace",
+      fontSize: 14,
+      lineHeight: 1.4,
+      cursorBlink: true,
+      scrollback: 5000,
+    });
+
+    const xtermContainer = document.getElementById('xterm-container');
+    termInstance.open(xtermContainer);
+
+    if (typeof FitAddon !== 'undefined') {
+      termFitAddon = new FitAddon.FitAddon();
+      termInstance.loadAddon(termFitAddon);
+    }
+
     const resizeObs = new ResizeObserver(() => {
       if (termFitAddon) {
         try { termFitAddon.fit(); } catch {}
         if (termWs && termWs.readyState === WebSocket.OPEN) {
-          termWs.send(JSON.stringify({
-            type: 'resize',
-            cols: termInstance.cols,
-            rows: termInstance.rows,
-          }));
+          termWs.send(JSON.stringify({ type: 'resize', cols: termInstance.cols, rows: termInstance.rows }));
         }
       }
     });
-    const xtermContainer = document.getElementById('xterm-container');
-    if (xtermContainer) resizeObs.observe(xtermContainer);
-
-  } else {
-    // xterm.js not available
-    const container2 = document.getElementById('view-terminal');
-    if (!termInitialized) {
-      container2.innerHTML += `<div class="empty-state"><p>xterm.js not available. Make sure you have internet access for CDN resources.</p></div>`;
-    }
-    termInitialized = true;
+    resizeObs.observe(xtermContainer);
   }
-}
-window.terminalInit = terminalInit;
 
-function termConnect() {
+  setTimeout(() => {
+    if (termFitAddon) try { termFitAddon.fit(); } catch {}
+    termConnect(name);
+  }, 80);
+}
+window.termSelectContainer = termSelectContainer;
+
+function termConnect(containerName) {
   termDisconnect();
+  if (!termInstance) return;
 
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${proto}//${location.host}/ws/terminal`;
+  const wsUrl = `${proto}//${location.host}/ws/terminal?container=${encodeURIComponent(containerName)}`;
 
   setTermStatus('Connecting…');
+  termInstance.clear();
 
   try {
     termWs = new WebSocket(wsUrl);
   } catch (err) {
     setTermStatus('Connection failed');
-    if (termInstance) termInstance.write('\r\n\x1b[31mFailed to connect to terminal WebSocket\x1b[0m\r\n');
+    termInstance.write(`\r\n\x1b[31mFailed to connect: ${err.message}\x1b[0m\r\n`);
     return;
   }
 
   termWs.onopen = () => {
     setTermStatus('Connected');
-    // Send initial size
-    if (termInstance && termFitAddon) {
+    if (termFitAddon) {
       try { termFitAddon.fit(); } catch {}
-      termWs.send(JSON.stringify({
-        type: 'resize',
-        cols: termInstance.cols,
-        rows: termInstance.rows,
-      }));
+      termWs.send(JSON.stringify({ type: 'resize', cols: termInstance.cols, rows: termInstance.rows }));
     }
   };
 
   termWs.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data);
-      if (msg.type === 'output' && termInstance) {
-        termInstance.write(msg.data);
-      } else if (msg.type === 'exit' && termInstance) {
+      if (msg.type === 'output') termInstance.write(msg.data);
+      else if (msg.type === 'exit') {
         termInstance.write('\r\n\x1b[33m[Process exited]\x1b[0m\r\n');
-        setTermStatus('Process exited');
-      } else if (msg.type === 'error' && termInstance) {
-        termInstance.write('\r\n\x1b[31m' + (msg.data || 'Error') + '\x1b[0m\r\n');
+        setTermStatus('Exited');
+      } else if (msg.type === 'error') {
+        termInstance.write(`\r\n\x1b[31m${msg.data || 'Error'}\x1b[0m\r\n`);
       }
     } catch {
-      if (termInstance) termInstance.write(e.data);
+      termInstance.write(e.data);
     }
   };
 
-  termWs.onclose = () => {
-    setTermStatus('Disconnected');
-  };
-
+  termWs.onclose = () => setTermStatus('Disconnected');
   termWs.onerror = () => {
-    setTermStatus('Connection error');
-    if (termInstance) termInstance.write('\r\n\x1b[31m[Connection error]\x1b[0m\r\n');
+    setTermStatus('Error');
+    termInstance.write('\r\n\x1b[31m[Connection error]\x1b[0m\r\n');
   };
 
-  // Forward keyboard input
-  if (termInstance) {
-    termInstance.onData((data) => {
-      if (termWs && termWs.readyState === WebSocket.OPEN) {
-        termWs.send(JSON.stringify({ type: 'input', data }));
-      }
-    });
-  }
+  termInstance.onData((data) => {
+    if (termWs && termWs.readyState === WebSocket.OPEN) {
+      termWs.send(JSON.stringify({ type: 'input', data }));
+    }
+  });
 }
 
 function termDisconnect() {
