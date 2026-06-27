@@ -137,4 +137,49 @@ router.post('/service/:name', (req, res) => {
   }
 });
 
+// GET /api/files/service/:name/env — returns environment vars as KEY=VALUE text
+router.get('/service/:name/env', (req, res) => {
+  try {
+    const { parsed } = readCompose(req.query.project || '');
+    const svc = ((parsed && parsed.services) || {})[req.params.name];
+    if (!svc) return res.status(404).json({ error: `Service "${req.params.name}" not found` });
+    const env = svc.environment || {};
+    let lines;
+    if (Array.isArray(env)) {
+      lines = env.map((e) => String(e));
+    } else {
+      lines = Object.entries(env).map(([k, v]) => (v === null || v === undefined ? k : `${k}=${v}`));
+    }
+    res.json({ content: lines.join('\n') });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/files/service/:name/env — save environment vars from KEY=VALUE text
+router.post('/service/:name/env', (req, res) => {
+  try {
+    const { content } = req.body;
+    if (content === undefined) return res.status(400).json({ error: 'content is required' });
+    const projectDir = req.query.project || '';
+    const { parsed } = readCompose(projectDir);
+    if (!parsed.services || !parsed.services[req.params.name]) {
+      return res.status(404).json({ error: `Service "${req.params.name}" not found` });
+    }
+    const envObj = {};
+    for (const line of String(content).split('\n')) {
+      const t = line.trim();
+      if (!t || t.startsWith('#')) continue;
+      const eq = t.indexOf('=');
+      if (eq === -1) { envObj[t] = null; } else { envObj[t.slice(0, eq)] = t.slice(eq + 1); }
+    }
+    parsed.services[req.params.name].environment = envObj;
+    const normalized = normalizeCompose(parsed);
+    writeCompose(projectDir, serializeCompose(normalized));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
