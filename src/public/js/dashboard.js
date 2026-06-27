@@ -187,6 +187,10 @@ function refreshUpdateCell(name) {
   if (!el) return;
   el.innerHTML = buildUpdateCell(name);
   attachCardListeners(el);
+
+  const card = document.querySelector(`.service-card[data-service="${CSS.escape(name)}"]`);
+  if (card) card.classList.toggle('has-update', DC.updates[name] === 'available');
+
   renderStats();
 }
 
