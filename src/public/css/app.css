@@ -127,8 +127,8 @@ body {
 }
 
 .topbar-search {
-  flex: 1;
-  max-width: 400px;
+  margin-left: auto;
+  width: 320px;
   position: relative;
 }
 .topbar-search input {
@@ -286,7 +286,7 @@ body {
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -324,11 +324,11 @@ body {
    DASHBOARD
    ============================================================ */
 .view-header {
-  padding: 0.75rem 1rem 0.5rem;
+  padding: 0.65rem 0.75rem 0.5rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 .view-title {
   font-size: 1.25rem;
@@ -337,40 +337,44 @@ body {
 }
 .view-body { padding: 0 1.5rem 1.5rem; flex: 1; overflow-y: auto; }
 
-/* ---- Stats bar ---- */
-.dash-stats {
+/* ---- Inline stat chips (in view-header row) ---- */
+.dash-stats-inline {
   display: flex;
-  gap: 0.5rem;
-  padding: 0 0.75rem 0.6rem;
+  align-items: center;
+  gap: 0.3rem;
   flex-wrap: wrap;
 }
-.dash-stat {
-  display: flex;
-  align-items: baseline;
-  gap: 0.35rem;
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  padding: 0.18rem 0.55rem;
+  white-space: nowrap;
 }
-.dash-stat-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--text-primary);
+.stat-num { font-weight: 700; color: var(--text-primary); font-size: 0.82rem; }
+.stat-chip-run  .stat-num { color: var(--success); }
+.stat-chip-stop .stat-num { color: var(--danger); }
+.stat-chip-upd  .stat-num { color: var(--text-muted); }
+.stat-chip-upd.has-updates .stat-num { color: var(--warning); }
+.stat-chip-upd.is-ok       .stat-num { color: var(--success); }
+
+/* ---- Health badge ---- */
+.card-health {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.dash-stat-label {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.stat-running { color: var(--success); }
-.stat-stopped { color: var(--danger); }
-.stat-updates { color: var(--text-muted); }
-.stat-updates.stat-ok   { color: var(--success); }
-.stat-updates.stat-warn { color: var(--warning); }
+.card-health-healthy   { background: rgba(34,197,94,0.12);  color: var(--success); }
+.card-health-unhealthy { background: rgba(239,68,68,0.12);  color: var(--danger);  }
+.card-health-starting  { background: rgba(245,158,11,0.12); color: var(--warning); }
 
 .dashboard-grid {
   display: grid;
@@ -394,6 +398,13 @@ body {
 .service-card:hover {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent-dim), 0 4px 12px rgba(0,0,0,0.2);
+}
+/* Subtle left accent for running containers */
+.service-card.state-running {
+  border-left: 2px solid rgba(34,197,94,0.4);
+}
+.service-card.state-running:hover {
+  border-left-color: var(--success);
 }
 
 .card-header {
@@ -476,8 +487,8 @@ body {
   gap: 0.25rem;
 }
 
-/* Update cell — single grid column, same as all other buttons */
-#[id^="cardUpdate-"] { display: contents; }
+/* Update cell — transparent to grid so inner button fills the cell */
+[id^="cardUpdate-"] { display: contents; }
 
 /* Base button — icon stacked above label */
 .card-btn {
@@ -505,8 +516,9 @@ body {
 /* Start / Stop variants */
 .card-btn-start { color: var(--success); border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.06); }
 .card-btn-start:hover:not(:disabled) { background: var(--success); color: #fff; border-color: var(--success); }
-.card-btn-stop  { color: var(--danger);  border-color: rgba(239,68,68,0.35);  background: rgba(239,68,68,0.06); }
-.card-btn-stop:hover:not(:disabled)  { background: var(--danger);  color: #fff; border-color: var(--danger); }
+/* Stop: neutral until hover to avoid visual alarm on every running container */
+.card-btn-stop  { color: var(--text-secondary); }
+.card-btn-stop:hover:not(:disabled)  { background: rgba(239,68,68,0.12); color: var(--danger); border-color: rgba(239,68,68,0.4); }
 
 /* Update-available variant */
 .card-btn-update { color: var(--success); border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.1); font-weight: 600; }

@@ -12,38 +12,29 @@ function dashboardInit() {
   container.innerHTML = `
     <div class="view-header">
       <h1 class="view-title">Dashboard</h1>
-      <button class="btn btn-secondary btn-sm" id="dashCheckAllBtn" title="Check all containers for image updates">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="23 4 23 10 17 10"/>
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
-        Check All Updates
-      </button>
-      <button class="btn btn-secondary btn-sm" id="dashRefreshBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="23 4 23 10 17 10"/>
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
-        Refresh
-      </button>
-    </div>
 
-    <div class="dash-stats" id="dashStats" style="display:none">
-      <div class="dash-stat">
-        <span class="dash-stat-value" id="statTotal">0</span>
-        <span class="dash-stat-label">Total</span>
+      <div class="dash-stats-inline" id="dashStats" style="display:none">
+        <span class="stat-chip"><span class="stat-num" id="statTotal">0</span> Total</span>
+        <span class="stat-chip stat-chip-run"><span class="stat-num" id="statRunning">0</span> Running</span>
+        <span class="stat-chip stat-chip-stop"><span class="stat-num" id="statStopped">0</span> Stopped</span>
+        <span class="stat-chip stat-chip-upd" id="statUpdateChip"><span class="stat-num" id="statUpdates">—</span> Updates</span>
       </div>
-      <div class="dash-stat">
-        <span class="dash-stat-value stat-running" id="statRunning">0</span>
-        <span class="dash-stat-label">Running</span>
-      </div>
-      <div class="dash-stat">
-        <span class="dash-stat-value stat-stopped" id="statStopped">0</span>
-        <span class="dash-stat-label">Stopped</span>
-      </div>
-      <div class="dash-stat">
-        <span class="dash-stat-value stat-updates" id="statUpdates">—</span>
-        <span class="dash-stat-label">Updates</span>
+
+      <div style="margin-left:auto;display:flex;gap:0.4rem">
+        <button class="btn btn-secondary btn-sm" id="dashCheckAllBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          Check for Updates
+        </button>
+        <button class="btn btn-secondary btn-sm" id="dashRefreshBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          Refresh
+        </button>
       </div>
     </div>
 
@@ -78,8 +69,8 @@ function renderStats() {
   const total = services.length;
   const running = services.filter((s) => (s.state || '').toLowerCase() === 'running').length;
   const stopped = total - running;
-  const updateCount = Object.values(DC.updates).filter((v) => v === 'available').length;
-  const checked = Object.keys(DC.updates).length;
+  const checkedKeys = Object.keys(DC.updates).filter((k) => DC.updates[k] !== 'checking');
+  const updateCount = checkedKeys.filter((k) => DC.updates[k] === 'available').length;
 
   const el = document.getElementById('dashStats');
   if (!el) return;
@@ -90,12 +81,12 @@ function renderStats() {
   set('statTotal', total);
   set('statRunning', running);
   set('statStopped', stopped);
-  set('statUpdates', checked === 0 ? '—' : updateCount === 0 ? '✓' : updateCount);
+  set('statUpdates', checkedKeys.length === 0 ? '—' : updateCount === 0 ? '✓' : updateCount);
 
-  const updEl = document.getElementById('statUpdates');
-  if (updEl) {
-    updEl.className = 'dash-stat-value stat-updates' +
-      (checked === 0 ? '' : updateCount > 0 ? ' stat-warn' : ' stat-ok');
+  const chip = document.getElementById('statUpdateChip');
+  if (chip) {
+    chip.className = 'stat-chip stat-chip-upd' +
+      (checkedKeys.length === 0 ? '' : updateCount > 0 ? ' has-updates' : ' is-ok');
   }
 }
 
@@ -181,6 +172,7 @@ function buildServiceCard(s) {
           ${s.containerName && s.containerName !== s.name ? `<div class="card-subtitle">${escHtml(s.containerName)}</div>` : ''}
         </div>
         <span class="card-status-text">${escHtml(state)}</span>
+        ${s.health ? `<span class="card-health card-health-${s.health}">${s.health === 'healthy' ? '✓ healthy' : s.health === 'unhealthy' ? '✗ unhealthy' : '⟳ starting'}</span>` : ''}
       </div>
 
       ${s.image ? `<div class="card-image" title="${escHtml(s.image)}">${escHtml(s.image)}</div>` : ''}

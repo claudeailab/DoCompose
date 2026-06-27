@@ -37,6 +37,12 @@ router.get('/', async (req, res) => {
         const container = allContainers.find((c) =>
           c.Names && c.Names.some((n) => n.replace(/^\//, '') === containerName)
         );
+        let health = null;
+        if (container && container.Status) {
+          if (/\(healthy\)/.test(container.Status)) health = 'healthy';
+          else if (/\(unhealthy\)/.test(container.Status)) health = 'unhealthy';
+          else if (/health: starting/.test(container.Status)) health = 'starting';
+        }
         services.push({
           name,
           containerName,
@@ -44,6 +50,7 @@ router.get('/', async (req, res) => {
           ports: config && config.ports,
           status: container ? container.Status : 'not created',
           state: container ? container.State : 'absent',
+          health,
           id: container ? container.Id : null,
         });
       }
