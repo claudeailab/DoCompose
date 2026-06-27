@@ -324,7 +324,7 @@ body {
    DASHBOARD
    ============================================================ */
 .view-header {
-  padding: 1.25rem 1.5rem 0.75rem;
+  padding: 0.75rem 1rem 0.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -340,53 +340,54 @@ body {
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  grid-auto-rows: 220px;
-  gap: 1rem;
-  padding: 1rem 1.5rem 1.5rem;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  align-content: start;
 }
 
 .service-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.25rem;
+  border-radius: 10px;
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  height: 220px;
+  gap: 0.35rem;
   overflow: hidden;
-  cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .service-card:hover {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-dim), 0 4px 16px rgba(0,0,0,0.2);
+  box-shadow: 0 0 0 1px var(--accent-dim), 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .card-header {
   display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding-bottom: 0.3rem;
 }
+.card-header:hover .card-title { color: var(--accent); }
 .card-status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  margin-top: 5px;
   flex-shrink: 0;
 }
-.card-title { font-weight: 700; font-size: 1.1rem; line-height: 1.3; }
-.card-subtitle { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; }
+.card-header-info { flex: 1; min-width: 0; }
+.card-title { font-weight: 700; font-size: 0.95rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-subtitle { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .card-status-text {
-  margin-left: auto;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 0.2rem 0.5rem;
+  padding: 0.15rem 0.4rem;
   border-radius: 4px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .state-running .card-status-text { background: rgba(34,197,94,0.15); color: var(--success); }
 .state-exited .card-status-text, .state-stopped .card-status-text { background: rgba(239,68,68,0.15); color: var(--danger); }
@@ -394,8 +395,8 @@ body {
 .state-absent .card-status-text, .state-created .card-status-text { background: var(--bg-tertiary); color: var(--text-muted); }
 
 .card-image {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  font-size: 0.78rem;
+  color: var(--text-muted);
   font-family: 'SFMono-Regular', Consolas, monospace;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -405,24 +406,23 @@ body {
 .card-ports {
   display: flex;
   flex-wrap: nowrap;
-  gap: 0.3rem;
+  gap: 0.25rem;
   overflow: hidden;
-  height: 26px;
   align-items: center;
 }
 .port-badge {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-family: monospace;
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 0.15rem 0.45rem;
+  padding: 0.1rem 0.35rem;
   color: var(--text-secondary);
   white-space: nowrap;
   flex-shrink: 0;
 }
 .port-badge-more {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
   white-space: nowrap;
   flex-shrink: 0;
@@ -430,10 +430,83 @@ body {
 
 .card-actions {
   display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  margin-top: auto;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.15rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.4rem;
 }
+
+/* Primary action row: Start/Stop + Restart */
+.card-actions-primary {
+  display: flex;
+  gap: 0.3rem;
+}
+.card-actions-primary .btn { flex: 1; justify-content: center; }
+
+/* Quick-nav row: Logs, Terminal, Config, Vars */
+.card-actions-nav {
+  display: flex;
+  gap: 0.25rem;
+}
+.card-nav-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0.25rem 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.card-nav-btn svg { width: 11px; height: 11px; flex-shrink: 0; }
+.card-nav-btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-light); }
+
+/* Update row */
+.card-actions-update {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 24px;
+}
+.card-update-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.card-update-btn svg { width: 11px; height: 11px; }
+.card-update-btn:hover { color: var(--text-primary); border-color: var(--border-light); background: var(--bg-hover); }
+.card-update-btn.has-update {
+  background: rgba(34,197,94,0.1);
+  border-color: var(--success);
+  color: var(--success);
+  font-weight: 600;
+}
+.card-update-btn.has-update:hover { background: var(--success); color: #fff; }
+.card-update-status {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.card-update-status.is-current { color: var(--success); }
+.card-update-status.is-available { color: var(--warning); }
 
 /* ============================================================
    BUTTONS
@@ -937,7 +1010,7 @@ body {
   .topbar-search { max-width: 160px; }
   .brand-name { display: none; }
 
-  .dashboard-grid { grid-template-columns: 1fr; padding: 0.75rem; }
+  .dashboard-grid { grid-template-columns: 1fr; padding: 0.5rem; gap: 0.4rem; }
 
   .editor-toolbar, .logs-toolbar, .env-toolbar {
     padding: 0.5rem 0.75rem;

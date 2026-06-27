@@ -116,6 +116,30 @@ router.post('/:name/rebuild', async (req, res) => {
   }
 });
 
+// GET /api/services/:name/check-update — pull image and report if a new digest was fetched
+router.get('/:name/check-update', async (req, res) => {
+  try {
+    const projectDir = req.query.project || '';
+    const { parsed } = readCompose(projectDir);
+    const svc = parsed && parsed.services && parsed.services[req.params.name];
+    if (!svc || !svc.image) return res.status(404).json({ error: 'No image configured for this service' });
+
+    const getDigest = (image) => new Promise((resolve) => {
+      execFile('docker', ['image', 'inspect', image, '--format', '{{.Id}}'], (err, stdout) => {
+        resolve(err ? null : stdout.trim());
+      });
+    });
+
+    const before = await getDigest(svc.image);
+    await runCompose(projectDir, ['pull', req.params.name]);
+    const after = await getDigest(svc.image);
+
+    res.json({ hasUpdate: after !== null && before !== after, image: svc.image });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/services/:name/inspect
 router.get('/:name/inspect', async (req, res) => {
   try {
