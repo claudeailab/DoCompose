@@ -962,23 +962,28 @@ body {
 
 .svc-header {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.65rem 1.25rem;
+  flex-direction: column;
   border-bottom: 1px solid var(--border);
   background: var(--bg-secondary);
   flex-shrink: 0;
 }
 
+.svc-header-top {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 1.25rem 0.4rem;
+}
+
 .svc-title {
   font-weight: 700;
   font-size: 1rem;
-  flex: 1;
 }
 
 .svc-tabs {
   display: flex;
   gap: 0.25rem;
+  padding: 0 1rem 0.5rem;
 }
 
 .svc-tab {
