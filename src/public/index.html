@@ -10,7 +10,10 @@
   <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=0.5.19" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="/css/app.css?v=0.5.20" />
 </head>
 <body>
   <!-- Top bar -->
@@ -19,13 +22,17 @@
       <span></span><span></span><span></span>
     </button>
     <div class="topbar-brand">
-      <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="2" y="3" width="20" height="14" rx="2"/>
-        <path d="M8 21h8M12 17v4"/>
-        <path d="M6 8h4M6 11h3M14 8h4"/>
+      <svg class="brand-icon" viewBox="0 0 32 32" fill="none">
+        <rect x="4" y="18" width="24" height="7" rx="2.5" fill="currentColor" opacity="0.3"/>
+        <rect x="4" y="12" width="24" height="7" rx="2.5" fill="currentColor" opacity="0.6"/>
+        <rect x="4" y="6"  width="24" height="7" rx="2.5" fill="currentColor"/>
+        <circle cx="9"  cy="9.5"  r="1.5" fill="var(--bg-primary)"/>
+        <circle cx="14" cy="9.5"  r="1.5" fill="var(--bg-primary)"/>
+        <circle cx="9"  cy="15.5" r="1.5" fill="var(--bg-primary)"/>
+        <circle cx="14" cy="15.5" r="1.5" fill="var(--bg-primary)"/>
       </svg>
       <span class="brand-name">DoCompose</span>
-      <span class="brand-version" id="versionBadge">v0.5.19</span>
+      <span class="brand-version" id="versionBadge">v0.5.20</span>
     </div>
 
     <!-- project select kept hidden for multi-project API logic -->
@@ -85,8 +92,8 @@
   <!-- Toast notifications -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/js/app.js?v=0.5.19"></script>
-  <script src="/js/dashboard.js?v=0.5.19"></script>
-  <script src="/js/service.js?v=0.5.19"></script>
+  <script src="/js/app.js?v=0.5.20"></script>
+  <script src="/js/dashboard.js?v=0.5.20"></script>
+  <script src="/js/service.js?v=0.5.20"></script>
 </body>
 </html>

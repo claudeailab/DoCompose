@@ -200,6 +200,23 @@ function svcRefreshHeader() {
 
   const dot = document.querySelector('.svc-header-top .status-dot');
   if (dot) dot.className = `status-dot ${statusClass(freshState)}`;
+
+  const freshHealth = svc.health || null;
+  const healthEl = document.querySelector('.svc-header-top .card-health');
+  if (freshIsRunning && freshHealth) {
+    const healthText = freshHealth === 'healthy' ? '✓ healthy' : freshHealth === 'unhealthy' ? '✗ unhealthy' : '⟳ starting';
+    if (healthEl) {
+      healthEl.className = `card-health card-health-${freshHealth}`;
+      healthEl.textContent = healthText;
+    } else {
+      const span = document.createElement('span');
+      span.className = `card-health card-health-${freshHealth}`;
+      span.textContent = healthText;
+      document.querySelector('.svc-header-top').appendChild(span);
+    }
+  } else if (healthEl) {
+    healthEl.remove();
+  }
 }
 window.svcRefreshHeader = svcRefreshHeader;
 
