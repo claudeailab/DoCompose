@@ -107,24 +107,13 @@ function normalizeCompose(parsed) {
 }
 
 /**
- * Serialize a compose object to YAML string.
- * Adds a blank line between service blocks for readability.
+ * Add a blank line between service blocks in a YAML string for readability.
  */
-function serializeCompose(obj) {
-  const raw = YAML.stringify(obj, {
-    indent: 2,
-    lineWidth: 0,
-    defaultKeyType: 'PLAIN',
-    defaultStringType: 'QUOTE_DOUBLE',
-  });
-
-  // Insert blank line before each top-level service key (lines indented by exactly 2 spaces)
-  // so services are visually separated in the file.
-  const lines = raw.split('\n');
+function addServiceSpacing(yaml) {
+  const lines = yaml.split('\n');
   const out = [];
   let inServices = false;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  for (const line of lines) {
     if (/^services:\s*$/.test(line)) { inServices = true; out.push(line); continue; }
     if (inServices && /^[^ ]/.test(line)) inServices = false;
     if (inServices && /^  \S/.test(line) && out.length && out[out.length - 1] !== '') {
@@ -136,15 +125,28 @@ function serializeCompose(obj) {
 }
 
 /**
+ * Serialize a compose object to YAML string.
+ * Adds a blank line between service blocks for readability.
+ */
+function serializeCompose(obj) {
+  const raw = YAML.stringify(obj, {
+    indent: 2,
+    lineWidth: 0,
+    defaultKeyType: 'PLAIN',
+    defaultStringType: 'QUOTE_DOUBLE',
+  });
+  return addServiceSpacing(raw);
+}
+
+/**
  * Write a compose file. Accepts raw YAML string or parsed object.
  */
 function writeCompose(projectDir, contentOrObj) {
   const filePath = getComposePath(projectDir);
   let content;
   if (typeof contentOrObj === 'string') {
-    // Validate parse before writing
-    YAML.parse(contentOrObj);
-    content = contentOrObj;
+    YAML.parse(contentOrObj); // validate
+    content = addServiceSpacing(contentOrObj);
   } else {
     const normalized = normalizeCompose(contentOrObj);
     content = serializeCompose(normalized);
@@ -198,6 +200,7 @@ module.exports = {
   writeEnv,
   normalizeCompose,
   serializeCompose,
+  addServiceSpacing,
   getComposePath,
   getEnvPath,
 };

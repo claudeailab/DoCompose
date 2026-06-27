@@ -27,19 +27,21 @@
 Add DoCompose to your `docker-compose.yml`:
 
 ```yaml
-docompose:
-  image: ghcr.io/claudeailab/docompose
-  container_name: docompose
-  hostname: docompose
-  restart: unless-stopped
-  user: "0"
-  environment:
-    TZ: ${TZ}
-  ports:
-    - 8094:8094
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - /path/to/your/compose/projects:/compose
+services:
+
+  docompose:
+    image: ghcr.io/claudeailab/docompose
+    container_name: docompose
+    hostname: docompose
+    restart: unless-stopped
+    user: "0"
+    environment:
+      TZ: ${TZ}
+    ports:
+      - 8094:8094
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /path/to/your/compose/projects:/compose
 ```
 
 Start it:
@@ -58,13 +60,3 @@ Open `http://your-host:8094` in your browser.
 docker compose pull docompose && docker compose up -d docompose
 ```
 
----
-
-## Architecture
-
-DoCompose runs as a Docker container and mounts:
-
-- **Docker socket** (`/var/run/docker.sock`) — to read container state and stream logs
-- **Compose directory** (`/compose`) — to read and write `docker-compose.yml` and `.env` files
-
-No database, no agents, no dependencies outside the container.
