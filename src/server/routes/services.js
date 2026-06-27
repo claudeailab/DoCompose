@@ -95,7 +95,10 @@ router.post('/:name/restart', async (req, res) => {
 // POST /api/services/:name/recreate
 router.post('/:name/recreate', async (req, res) => {
   try {
-    const { stdout, stderr } = await runCompose(req.query.project || '', ['up', '-d', '--force-recreate', req.params.name]);
+    const project = req.query.project || '';
+    const name = req.params.name;
+    await runCompose(project, ['rm', '-sf', name]);
+    const { stdout, stderr } = await runCompose(project, ['up', '-d', name]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
     res.status(500).json({ error: err.message });
