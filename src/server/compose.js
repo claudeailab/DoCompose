@@ -133,7 +133,6 @@ function serializeCompose(obj) {
     indent: 2,
     lineWidth: 0,
     defaultKeyType: 'PLAIN',
-    defaultStringType: 'QUOTE_DOUBLE',
   });
   return addServiceSpacing(raw);
 }
