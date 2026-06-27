@@ -1183,6 +1183,8 @@ body {
 .svc-tab.svc-tab-action { display: inline-flex; align-items: center; gap: 0.35rem; }
 .svc-tab.svc-tab-action svg { width: 13px; height: 13px; flex-shrink: 0; }
 .svc-tab.svc-tab-action:disabled { opacity: 0.45; cursor: not-allowed; }
+.svc-tab.svc-tab-update { color: var(--warning) !important; border-color: rgba(245,158,11,0.4) !important; }
+.svc-tab.svc-tab-update:hover { background: rgba(245,158,11,0.1) !important; border-color: rgba(245,158,11,0.7) !important; }
 
 .svc-body {
   flex: 1;

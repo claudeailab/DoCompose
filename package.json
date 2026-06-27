@@ -1,6 +1,6 @@
 {
   "name": "docompose",
-  "version": "0.5.14",
+  "version": "0.5.15",
   "description": "Self-hosted web app for managing Docker Compose projects",
   "main": "src/server/index.js",
   "scripts": {

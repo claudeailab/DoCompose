@@ -168,9 +168,9 @@ function buildUpdateCell(name) {
     </button>`;
   }
   if (st === 'available') {
-    return `<button class="card-btn card-btn-update" data-action="update" data-service="${escHtml(name)}" title="New image pulled — recreate to apply">
+    return `<button class="card-btn card-btn-update" data-action="update" data-service="${escHtml(name)}" title="Pull new image and recreate container">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-      Update
+      Pull &amp; Update
     </button>`;
   }
   if (st === 'updating') {
@@ -352,9 +352,12 @@ async function serviceAction(name, action, btn) {
   }
 
   if (action === 'update') {
+    const ok = await dcConfirm(`Pull the latest image for "${name}" and recreate the container?`, 'Pull & Update');
+    if (!ok) return;
     DC.updates[name] = 'updating';
     refreshUpdateCell(name);
     try {
+      await api('POST', `/api/services/${encodeURIComponent(name)}/pull`);
       await api('POST', `/api/services/${encodeURIComponent(name)}/recreate`);
       DC.updates[name] = null;
       showToast(`${name}: updated and restarted`, 'success');

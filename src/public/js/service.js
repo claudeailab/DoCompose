@@ -26,6 +26,7 @@ let svcVarsDirty = false;
 
 function showServiceDetail(name, tab) {
   svcName = name;
+  window.svcName = name;
   svcInitialTab = tab || 'logs';
   showView('service');
 }
@@ -94,6 +95,11 @@ async function serviceInit() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
             Recreate
           </button>
+          ${DC.updates[name] === 'available' ? `
+          <button class="svc-tab svc-tab-action svc-tab-update" id="svcActUpdate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            Pull &amp; Update
+          </button>` : ''}
         </div>
       </div>
       <div class="svc-body">
@@ -140,6 +146,26 @@ async function serviceInit() {
   if (rstBtn) rstBtn.addEventListener('click', () => svcRunAction('restart'));
   const recBtn = document.getElementById('svcActRecreate');
   if (recBtn) recBtn.addEventListener('click', () => svcRunAction('recreate'));
+
+  const updBtn = document.getElementById('svcActUpdate');
+  if (updBtn) updBtn.addEventListener('click', async () => {
+    const ok = await dcConfirm(`Pull the latest image for "${name}" and recreate the container?`, 'Pull & Update');
+    if (!ok) return;
+    [document.getElementById('svcActStartStop'), document.getElementById('svcActRestart'),
+     document.getElementById('svcActRecreate'), updBtn].forEach((b) => { if (b) b.disabled = true; });
+    try {
+      await api('POST', `/api/services/${encodeURIComponent(name)}/pull`);
+      await api('POST', `/api/services/${encodeURIComponent(name)}/recreate`);
+      DC.updates[name] = null;
+      showToast(`${name}: updated and restarted`, 'success');
+      if (window.updateCardState) updateCardState(name, 'running');
+      showServiceDetail(name, svcCurrentTab);
+    } catch (err) {
+      showToast(`${name}: ${err.message}`, 'error');
+      [document.getElementById('svcActStartStop'), document.getElementById('svcActRestart'),
+       document.getElementById('svcActRecreate'), document.getElementById('svcActUpdate')].forEach((b) => { if (b) b.disabled = false; });
+    }
+  });
 }
 window.serviceInit = serviceInit;
 

@@ -131,7 +131,7 @@ function renderSidebarServices(services) {
     list.innerHTML = '<div style="padding:0.5rem 0.85rem;font-size:0.85rem;color:var(--text-muted)">No services found</div>';
     return;
   }
-  const activeName = window.svcName || null;
+  const activeName = (DC.currentView === 'service' && window.svcName) ? window.svcName : null;
   list.innerHTML = services.map((s) => `
     <div class="service-item${activeName === s.name ? ' active' : ''}" data-name="${escHtml(s.name)}" onclick='showServiceDetail(${JSON.stringify(s.name)})'>
       <span class="status-dot ${statusClass(s.state)}"></span>
