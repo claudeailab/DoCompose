@@ -256,8 +256,27 @@ fetch('/api/version').then((r) => r.json()).then(({ version }) => {
   }
 }).catch(() => {});
 
-// ---- Auto-refresh services every 15s; poll service detail header every 5s ----
+// ---- System stats ----
+function fmtBytes(b) {
+  if (b >= 1e9) return (b / 1e9).toFixed(1) + ' GB';
+  if (b >= 1e6) return (b / 1e6).toFixed(1) + ' MB';
+  if (b >= 1e3) return (b / 1e3).toFixed(0) + ' KB';
+  return b + ' B';
+}
+
+async function refreshStats() {
+  try {
+    const d = await api('GET', '/api/stats');
+    const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+    set('tsCpu', d.cpu + '%');
+    set('tsMem', fmtBytes(d.memUsed));
+    set('tsNet', '↑' + fmtBytes(d.netOut) + ' ↓' + fmtBytes(d.netIn));
+  } catch {}
+}
+
+// ---- Auto-refresh services every 15s; stats every 10s; poll service detail header every 5s ----
 setInterval(refreshServiceList, 15000);
+setInterval(refreshStats, 10000);
 setInterval(async () => {
   if (DC.currentView !== 'service' || !window.svcRefreshHeader) return;
   try {
@@ -271,5 +290,6 @@ setInterval(async () => {
 (async () => {
   await loadProjects();
   await refreshServiceList();
+  refreshStats();
   showView('dashboard');
 })();

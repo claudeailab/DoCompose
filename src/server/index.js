@@ -10,6 +10,7 @@ const filesRouter = require('./routes/files');
 const logsRouter = require('./routes/logs');
 const backupsRouter = require('./routes/backups');
 const searchRouter = require('./routes/search');
+const statsRouter = require('./routes/stats');
 const { handleTerminal } = require('./terminal');
 
 const app = express();
@@ -24,6 +25,7 @@ app.use(express.static(PUBLIC_DIR));
 
 // API routes
 app.use('/api/services', servicesRouter);
+app.use('/api/stats', statsRouter);
 app.use('/api/files', filesRouter);
 app.use('/api/logs', logsRouter);
 app.use('/api/backups', backupsRouter);

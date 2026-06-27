@@ -10,7 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
 
-  <link rel="stylesheet" href="/css/app.css?v=0.5.13" />
+  <link rel="stylesheet" href="/css/app.css?v=0.5.14" />
 </head>
 <body>
   <!-- Top bar -->
@@ -25,11 +25,26 @@
         <path d="M6 8h4M6 11h3M14 8h4"/>
       </svg>
       <span class="brand-name">DoCompose</span>
-      <span class="brand-version" id="versionBadge">v0.5.13</span>
+      <span class="brand-version" id="versionBadge">v0.5.14</span>
     </div>
 
     <!-- project select kept hidden for multi-project API logic -->
     <select id="projectSelect" style="display:none"></select>
+
+    <div class="topbar-stats" id="topbarStats">
+      <span class="topbar-stat" title="Total CPU usage across all containers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg>
+        <span id="tsCpu">—</span>
+      </span>
+      <span class="topbar-stat" title="Total memory used by containers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><circle cx="8" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="16" cy="12" r="1"/></svg>
+        <span id="tsMem">—</span>
+      </span>
+      <span class="topbar-stat" title="Total network I/O across all containers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12H3M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4"/></svg>
+        <span id="tsNet">—</span>
+      </span>
+    </div>
 
     <div class="topbar-search">
       <input type="text" id="searchInput" placeholder="Search services, ports, volumes…" autocomplete="off" />
@@ -70,8 +85,8 @@
   <!-- Toast notifications -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/js/app.js?v=0.5.13"></script>
-  <script src="/js/dashboard.js?v=0.5.13"></script>
-  <script src="/js/service.js?v=0.5.13"></script>
+  <script src="/js/app.js?v=0.5.14"></script>
+  <script src="/js/dashboard.js?v=0.5.14"></script>
+  <script src="/js/service.js?v=0.5.14"></script>
 </body>
 </html>
