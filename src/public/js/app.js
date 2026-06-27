@@ -11,7 +11,33 @@ window.DC = {
   projects: [],
   services: [],
   version: 'v0.1.0',
+  updates: {},
 };
+
+// ---- Update state persistence ----
+const UPDATE_CACHE_KEY = 'dc-updates-cache';
+const UPDATE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+
+function saveUpdateCache() {
+  try {
+    localStorage.setItem(UPDATE_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: DC.updates }));
+  } catch {}
+}
+window.saveUpdateCache = saveUpdateCache;
+
+function loadUpdateCache() {
+  try {
+    const raw = localStorage.getItem(UPDATE_CACHE_KEY);
+    if (!raw) return;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > UPDATE_CACHE_TTL) { localStorage.removeItem(UPDATE_CACHE_KEY); return; }
+    // Restore only terminal states — discard any 'checking' or 'updating' that was in-flight
+    DC.updates = {};
+    for (const [k, v] of Object.entries(data || {})) {
+      if (v === 'available' || v === null) DC.updates[k] = v;
+    }
+  } catch {}
+}
 
 // ---- API helpers ----
 async function api(method, path, body) {
@@ -298,6 +324,7 @@ setInterval(async () => {
 
 // ---- Boot ----
 (async () => {
+  loadUpdateCache();
   await loadProjects();
   await refreshServiceList();
   refreshStats();

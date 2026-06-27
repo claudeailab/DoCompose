@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="/css/app.css?v=0.5.20" />
+  <link rel="stylesheet" href="/css/app.css?v=0.5.21" />
 </head>
 <body>
   <!-- Top bar -->
@@ -22,17 +22,28 @@
       <span></span><span></span><span></span>
     </button>
     <div class="topbar-brand">
-      <svg class="brand-icon" viewBox="0 0 32 32" fill="none">
-        <rect x="4" y="18" width="24" height="7" rx="2.5" fill="currentColor" opacity="0.3"/>
-        <rect x="4" y="12" width="24" height="7" rx="2.5" fill="currentColor" opacity="0.6"/>
-        <rect x="4" y="6"  width="24" height="7" rx="2.5" fill="currentColor"/>
-        <circle cx="9"  cy="9.5"  r="1.5" fill="var(--bg-primary)"/>
-        <circle cx="14" cy="9.5"  r="1.5" fill="var(--bg-primary)"/>
-        <circle cx="9"  cy="15.5" r="1.5" fill="var(--bg-primary)"/>
-        <circle cx="14" cy="15.5" r="1.5" fill="var(--bg-primary)"/>
+      <svg class="brand-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient>
+          <linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient>
+          <linearGradient id="lg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
+        </defs>
+        <!-- Top layer -->
+        <rect x="4"  y="4"  width="28" height="8" rx="3" fill="url(#lg1)"/>
+        <!-- Middle layer -->
+        <rect x="4"  y="14" width="28" height="8" rx="3" fill="url(#lg2)"/>
+        <!-- Bottom layer -->
+        <rect x="4"  y="24" width="28" height="8" rx="3" fill="url(#lg3)"/>
+        <!-- Dots -->
+        <circle cx="10" cy="8"  r="2" fill="white" opacity="0.7"/>
+        <circle cx="16" cy="8"  r="2" fill="white" opacity="0.7"/>
+        <circle cx="10" cy="18" r="2" fill="white" opacity="0.7"/>
+        <circle cx="16" cy="18" r="2" fill="white" opacity="0.7"/>
+        <circle cx="10" cy="28" r="2" fill="white" opacity="0.7"/>
+        <circle cx="16" cy="28" r="2" fill="white" opacity="0.7"/>
       </svg>
-      <span class="brand-name">DoCompose</span>
-      <span class="brand-version" id="versionBadge">v0.5.20</span>
+      <span class="brand-name">Do<span class="brand-name-accent">Compose</span></span>
+      <span class="brand-version" id="versionBadge">v0.5.21</span>
     </div>
 
     <!-- project select kept hidden for multi-project API logic -->
@@ -92,8 +103,8 @@
   <!-- Toast notifications -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/js/app.js?v=0.5.20"></script>
-  <script src="/js/dashboard.js?v=0.5.20"></script>
-  <script src="/js/service.js?v=0.5.20"></script>
+  <script src="/js/app.js?v=0.5.21"></script>
+  <script src="/js/dashboard.js?v=0.5.21"></script>
+  <script src="/js/service.js?v=0.5.21"></script>
 </body>
 </html>

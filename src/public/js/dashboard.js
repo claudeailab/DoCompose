@@ -5,7 +5,7 @@
 'use strict';
 
 // Per-service update state: null | 'checking' | 'available' | 'updating'
-if (!DC.updates) DC.updates = {};
+// DC.updates is initialized (and restored from localStorage) in app.js
 let dashFilter = null; // null | 'running' | 'stopped' | 'updates'
 
 function dashboardInit() {
@@ -330,6 +330,7 @@ async function checkAllUpdates() {
     btn.disabled = false;
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Check for Updates';
   }
+  saveUpdateCache();
   renderStats();
 }
 
@@ -352,6 +353,7 @@ async function serviceAction(name, action, btn) {
       showToast(`${name}: ${err.message}`, 'error');
     }
     refreshUpdateCell(name);
+    saveUpdateCache();
     return;
   }
 
@@ -366,6 +368,7 @@ async function serviceAction(name, action, btn) {
       DC.updates[name] = null;
       showToast(`${name}: updated and restarted`, 'success');
       updateCardState(name, 'running');
+      saveUpdateCache();
     } catch (err) {
       DC.updates[name] = 'available';
       refreshUpdateCell(name);
