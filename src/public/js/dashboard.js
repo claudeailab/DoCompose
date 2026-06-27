@@ -78,7 +78,7 @@ function buildServiceCard(s) {
   const extraPorts = allPorts.length - visiblePorts.length;
 
   return `
-    <div class="service-card ${stateClass(state)}" onclick='openServiceEditor(${JSON.stringify(s.name)})'>
+    <div class="service-card ${stateClass(state)}" onclick='showServiceDetail(${JSON.stringify(s.name)})'>
       <div class="card-header">
         <span class="card-status-dot status-dot ${statusClass(state)}"></span>
         <div>
@@ -133,12 +133,7 @@ function buildServiceCard(s) {
 
 async function serviceAction(name, action, btn) {
   if (action === 'logs') {
-    const svc = DC.services.find((s) => s.name === name);
-    const containerName = svc ? (svc.containerName || name) : name;
-    showView('logs');
-    setTimeout(() => {
-      if (typeof logsSelectContainer === 'function') logsSelectContainer(containerName);
-    }, 300);
+    showServiceDetail(name, 'logs');
     return;
   }
 

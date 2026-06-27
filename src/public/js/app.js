@@ -15,10 +15,7 @@ window.DC = {
 
 // ---- API helpers ----
 async function api(method, path, body) {
-  const opts = {
-    method,
-    headers: {},
-  };
+  const opts = { method, headers: {} };
   if (body !== undefined) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
@@ -59,16 +56,12 @@ function showView(viewName) {
 
   DC.currentView = viewName;
 
-  // Trigger view-specific init
   switch (viewName) {
     case 'dashboard': if (window.dashboardInit) dashboardInit(); break;
-    case 'editor': if (window.editorInit) editorInit(); break;
-    case 'env': if (window.envInit) envInit(); break;
-    case 'logs': if (window.logsInit) logsInit(); break;
-    case 'terminal': if (window.terminalInit) terminalInit(); break;
+    case 'env':       if (window.envInit) envInit(); break;
+    case 'service':   if (window.serviceInit) serviceInit(); break;
   }
 
-  // Close sidebar on mobile
   if (window.innerWidth <= 768) {
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebarOverlay').classList.remove('open');
@@ -119,7 +112,7 @@ async function loadProjects() {
   }
 }
 
-// ---- Load & display services in sidebar ----
+// ---- Sidebar service list ----
 async function refreshServiceList() {
   try {
     const { services } = await api('GET', '/api/services');
@@ -137,19 +130,14 @@ function renderSidebarServices(services) {
     list.innerHTML = '<div style="padding:0.5rem 0.85rem;font-size:0.85rem;color:var(--text-muted)">No services found</div>';
     return;
   }
+  const activeName = window.svcName || null;
   list.innerHTML = services.map((s) => `
-    <div class="service-item" onclick='openServiceEditor(${JSON.stringify(s.name)})'>
+    <div class="service-item${activeName === s.name ? ' active' : ''}" data-name="${escHtml(s.name)}" onclick='showServiceDetail(${JSON.stringify(s.name)})'>
       <span class="status-dot ${statusClass(s.state)}"></span>
       <span>${escHtml(s.name)}</span>
     </div>
   `).join('');
 }
-
-function openServiceEditor(name) {
-  DC._autoSelectService = name;
-  showView('editor');
-}
-window.openServiceEditor = openServiceEditor;
 
 // ---- Escape HTML ----
 function escHtml(str) {
@@ -210,7 +198,7 @@ async function doSearch(q) {
       searchResults.innerHTML = '<div class="search-result-item" style="color:var(--text-muted)">No results</div>';
     } else {
       searchResults.innerHTML = results.map((r) => `
-        <div class="search-result-item" onclick="showView('dashboard')">
+        <div class="search-result-item" onclick='showServiceDetail(${JSON.stringify(r.service)})'>
           <div class="search-result-service">${escHtml(r.service)}</div>
           ${r.matches.map((m) => `<div class="search-result-match">${escHtml(m.field)}: ${escHtml(m.value)}</div>`).join('')}
         </div>
@@ -230,7 +218,6 @@ document.getElementById('themeToggle').addEventListener('click', () => {
   localStorage.setItem('dc-theme', theme);
 });
 
-// Restore saved theme
 const savedTheme = localStorage.getItem('dc-theme');
 if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
 
