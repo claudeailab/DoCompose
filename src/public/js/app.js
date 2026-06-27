@@ -211,7 +211,8 @@ async function doSearch(q) {
 }
 
 // ---- Theme toggle ----
-document.getElementById('themeToggle').addEventListener('click', () => {
+const themeToggleBtn = document.getElementById('themeToggle');
+if (themeToggleBtn) themeToggleBtn.addEventListener('click', () => {
   const html = document.documentElement;
   const theme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   html.setAttribute('data-theme', theme);
