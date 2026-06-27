@@ -31,7 +31,7 @@ function showServiceDetail(name, tab) {
 }
 window.showServiceDetail = showServiceDetail;
 
-function serviceInit() {
+async function serviceInit() {
   // Tear down previous state
   svcLogsStop();
   svcTermDisconnect();
@@ -52,6 +52,12 @@ function serviceInit() {
     c.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;flex:1;color:var(--text-muted);font-size:0.95rem">← Select a service from the list</div>`;
     return;
   }
+
+  // Always fetch fresh state so the Start/Stop button reflects reality
+  try {
+    const { services } = await api('GET', '/api/services');
+    if (services) DC.services = services;
+  } catch {}
 
   const svc = (DC.services || []).find((s) => s.name === name);
   const state = svc ? (svc.state || 'absent').toLowerCase() : 'absent';
@@ -75,7 +81,7 @@ function serviceInit() {
           <button class="svc-tab" data-tab="config">Configuration</button>
           <button class="svc-tab" data-tab="vars">Variables</button>
           <div class="svc-tabs-sep"></div>
-          <button class="svc-tab svc-tab-action" id="svcActStartStop">
+          <button class="svc-tab svc-tab-action" id="svcActStartStop" data-running="${isRunning ? '1' : '0'}">
             ${isRunning
               ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12"/></svg>Stop`
               : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>Start`}
@@ -136,6 +142,40 @@ function serviceInit() {
   if (recBtn) recBtn.addEventListener('click', () => svcRunAction('recreate'));
 }
 window.serviceInit = serviceInit;
+
+// Called by the 15s sidebar refresh to keep the header in sync without re-rendering tabs
+function svcRefreshHeader() {
+  if (!svcName || DC.currentView !== 'service') return;
+  const svc = (DC.services || []).find((s) => s.name === svcName);
+  if (!svc) return;
+  const freshState = (svc.state || 'absent').toLowerCase();
+  const freshIsRunning = freshState === 'running';
+
+  const badge = document.querySelector('.svc-state-badge');
+  if (badge) {
+    badge.textContent = freshState;
+    badge.className = `svc-state-badge ${stateClass(freshState)}`;
+  }
+
+  const ssBtn = document.getElementById('svcActStartStop');
+  if (ssBtn) {
+    const wasRunning = ssBtn.dataset.running === '1';
+    if (wasRunning !== freshIsRunning) {
+      ssBtn.dataset.running = freshIsRunning ? '1' : '0';
+      ssBtn.innerHTML = freshIsRunning
+        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12"/></svg>Stop`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>Start`;
+      // Re-bind click with updated action
+      const newBtn = ssBtn.cloneNode(true);
+      ssBtn.replaceWith(newBtn);
+      newBtn.addEventListener('click', () => svcRunAction(freshIsRunning ? 'stop' : 'start'));
+    }
+  }
+
+  const dot = document.querySelector('.svc-header-top .status-dot');
+  if (dot) dot.className = `status-dot ${statusClass(freshState)}`;
+}
+window.svcRefreshHeader = svcRefreshHeader;
 
 function svcSwitchTab(tab, name, containerName) {
   // Hide all panes, deactivate all tabs

@@ -118,6 +118,7 @@ async function refreshServiceList() {
     const { services } = await api('GET', '/api/services');
     DC.services = services || [];
     renderSidebarServices(DC.services);
+    if (window.svcRefreshHeader) svcRefreshHeader();
   } catch (err) {
     console.warn('Services load error:', err.message);
   }
