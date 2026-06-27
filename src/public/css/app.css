@@ -308,12 +308,17 @@ body {
    ============================================================ */
 .main-content {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: var(--bg-primary);
 }
 
-.view { display: none; height: 100%; }
+.view { display: none; flex: 1; min-height: 0; }
 .view.active { display: flex; flex-direction: column; }
+
+/* dashboard and env scroll internally; editor/logs/terminal use inner scroll */
+#view-dashboard, #view-env { overflow-y: auto; }
 
 /* ============================================================
    DASHBOARD
