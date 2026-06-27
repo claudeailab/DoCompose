@@ -132,12 +132,22 @@ function renderSidebarServices(services) {
     return;
   }
   const activeName = (DC.currentView === 'service' && window.svcName) ? window.svcName : null;
-  list.innerHTML = services.map((s) => `
+  list.innerHTML = services.map((s) => {
+    let healthIcon = '';
+    if (s.health === 'healthy') {
+      healthIcon = `<svg class="service-health-icon health-healthy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>`;
+    } else if (s.health === 'unhealthy') {
+      healthIcon = `<svg class="service-health-icon health-unhealthy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+    } else if (s.health === 'starting') {
+      healthIcon = `<svg class="service-health-icon health-starting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+    }
+    return `
     <div class="service-item${activeName === s.name ? ' active' : ''}" data-name="${escHtml(s.name)}" onclick='showServiceDetail(${JSON.stringify(s.name)})'>
       <span class="status-dot ${statusClass(s.state)}"></span>
-      <span>${escHtml(s.name)}</span>
-    </div>
-  `).join('');
+      <span class="service-item-name">${escHtml(s.name)}</span>
+      ${healthIcon}
+    </div>`;
+  }).join('');
 }
 
 // ---- Escape HTML ----

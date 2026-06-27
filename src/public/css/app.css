@@ -310,15 +310,20 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.3rem 0.75rem;
+  padding: 0.3rem 0.75rem 0.3rem 1.1rem;
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 500;
   color: var(--text-secondary);
 }
 .service-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+.service-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.service-health-icon { flex-shrink: 0; width: 16px; height: 16px; margin-left: auto; }
+.service-health-icon.health-healthy { color: var(--success); }
+.service-health-icon.health-unhealthy { color: var(--danger); }
+.service-health-icon.health-starting { color: var(--warning); }
 
 .status-dot {
   width: 7px;
