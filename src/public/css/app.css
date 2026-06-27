@@ -282,11 +282,11 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.28rem 0.75rem;
+  padding: 0.3rem 0.75rem;
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -337,11 +337,46 @@ body {
 }
 .view-body { padding: 0 1.5rem 1.5rem; flex: 1; overflow-y: auto; }
 
+/* ---- Stats bar ---- */
+.dash-stats {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0 0.75rem 0.6rem;
+  flex-wrap: wrap;
+}
+.dash-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.3rem 0.75rem;
+}
+.dash-stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.dash-stat-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.stat-running { color: var(--success); }
+.stat-stopped { color: var(--danger); }
+.stat-updates { color: var(--text-muted); }
+.stat-updates.stat-ok   { color: var(--success); }
+.stat-updates.stat-warn { color: var(--warning); }
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 0.5rem;
-  padding: 0.75rem;
+  padding: 0 0.75rem 0.75rem;
   align-content: start;
 }
 
@@ -441,13 +476,8 @@ body {
   gap: 0.25rem;
 }
 
-/* Update cell spans last 2 columns of row 2 */
-.card-update-cell {
-  grid-column: span 2;
-  display: flex;
-  gap: 0.25rem;
-}
-.card-update-cell .card-btn { flex: 1; }
+/* Update cell — single grid column, same as all other buttons */
+#[id^="cardUpdate-"] { display: contents; }
 
 /* Base button — icon stacked above label */
 .card-btn {
