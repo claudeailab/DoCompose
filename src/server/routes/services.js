@@ -108,7 +108,8 @@ router.post('/:name/stop', async (req, res) => {
 // POST /api/services/:name/restart
 router.post('/:name/restart', async (req, res) => {
   try {
-    const { stdout, stderr } = await runCompose(req.query.project || '', ['restart', req.params.name]);
+    const containerName = getContainerName(req.query.project || '', req.params.name);
+    const { stdout, stderr } = await runDocker(['restart', containerName]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
     res.status(500).json({ error: err.message });
