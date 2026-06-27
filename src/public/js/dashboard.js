@@ -302,7 +302,7 @@ async function checkAllUpdates() {
 
   services.forEach((s) => { DC.updates[s.name] = 'checking'; refreshUpdateCell(s.name); });
 
-  const fns = services.map((s) => async () => {
+  await Promise.all(services.map(async (s) => {
     try {
       const { hasUpdate } = await api('GET', `/api/services/${encodeURIComponent(s.name)}/check-update`);
       DC.updates[s.name] = hasUpdate ? 'available' : null;
@@ -310,13 +310,7 @@ async function checkAllUpdates() {
       DC.updates[s.name] = null;
     }
     refreshUpdateCell(s.name);
-  });
-
-  let idx = 0;
-  async function worker() {
-    while (idx < fns.length) { const i = idx++; await fns[i](); }
-  }
-  await Promise.all([worker(), worker(), worker()]);
+  }));
 
   const updateCount = Object.values(DC.updates).filter((v) => v === 'available').length;
   showToast(

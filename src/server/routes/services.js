@@ -126,7 +126,8 @@ router.post('/:name/rebuild', async (req, res) => {
   }
 });
 
-// GET /api/services/:name/check-update — pull image and report if a new digest was fetched
+// GET /api/services/:name/check-update
+// Compares local RepoDigest against the registry manifest — no image pull required.
 router.get('/:name/check-update', async (req, res) => {
   try {
     const projectDir = req.query.project || '';
@@ -134,17 +135,49 @@ router.get('/:name/check-update', async (req, res) => {
     const svc = parsed && parsed.services && parsed.services[req.params.name];
     if (!svc || !svc.image) return res.status(404).json({ error: 'No image configured for this service' });
 
-    const getDigest = (image) => new Promise((resolve) => {
-      execFile('docker', ['image', 'inspect', image, '--format', '{{.Id}}'], (err, stdout) => {
-        resolve(err ? null : stdout.trim());
+    const image = svc.image;
+
+    // Digest-pinned or local build — nothing to compare
+    if (image.includes('@sha256:') || image.startsWith('sha256:')) {
+      return res.json({ hasUpdate: false, image, reason: 'digest-pinned' });
+    }
+
+    // Local digest from image inspect (instant, no network)
+    const getLocalDigest = () => new Promise((resolve) => {
+      execFile('docker', ['image', 'inspect', image, '--format', '{{index .RepoDigests 0}}'], (err, stdout) => {
+        resolve(err ? null : (stdout.trim() || null));
       });
     });
 
-    const before = await getDigest(svc.image);
-    await runCompose(projectDir, ['pull', req.params.name]);
-    const after = await getDigest(svc.image);
+    // Remote digest via Docker Engine distribution API — just a registry manifest HEAD, no layer download
+    const getRemoteDigest = (img) => new Promise((resolve) => {
+      const http = require('http');
+      const req = http.request({
+        socketPath: '/var/run/docker.sock',
+        path: `/distribution/${encodeURIComponent(img)}/json`,
+        method: 'GET',
+      }, (resp) => {
+        let data = '';
+        resp.on('data', (d) => { data += d; });
+        resp.on('end', () => {
+          try { resolve((JSON.parse(data).Descriptor || {}).digest || null); }
+          catch { resolve(null); }
+        });
+      });
+      req.setTimeout(15000, () => { req.destroy(); resolve(null); });
+      req.on('error', () => resolve(null));
+      req.end();
+    });
 
-    res.json({ hasUpdate: after !== null && before !== after, image: svc.image });
+    const [localRepoDigest, remoteDigest] = await Promise.all([getLocalDigest(), getRemoteDigest(image)]);
+
+    if (!remoteDigest) return res.json({ hasUpdate: false, image, reason: 'registry-unreachable' });
+
+    // localRepoDigest format: "nginx@sha256:abc…" — extract the hash part
+    const localDigest = localRepoDigest ? localRepoDigest.split('@')[1] : null;
+    const hasUpdate = !localDigest || localDigest !== remoteDigest;
+
+    res.json({ hasUpdate, image });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
