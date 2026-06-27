@@ -256,8 +256,16 @@ fetch('/api/version').then((r) => r.json()).then(({ version }) => {
   }
 }).catch(() => {});
 
-// ---- Auto-refresh services every 15s ----
+// ---- Auto-refresh services every 15s; poll service detail header every 5s ----
 setInterval(refreshServiceList, 15000);
+setInterval(async () => {
+  if (DC.currentView !== 'service' || !window.svcRefreshHeader) return;
+  try {
+    const { services } = await api('GET', '/api/services');
+    if (services) DC.services = services;
+    svcRefreshHeader();
+  } catch {}
+}, 5000);
 
 // ---- Boot ----
 (async () => {
