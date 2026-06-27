@@ -85,7 +85,7 @@ async function loadLogsContainerList() {
       const state = (c.state || '').toLowerCase();
       return `
         <button class="container-chip${logsActiveContainer === name ? ' active' : ''}"
-                onclick="logsSelectContainer(${JSON.stringify(name)})"
+                onclick='logsSelectContainer(${JSON.stringify(name)})'
                 data-container="${escHtml(name)}">
           <span class="status-dot ${statusClass(state)}" style="width:8px;height:8px"></span>
           ${escHtml(name)}

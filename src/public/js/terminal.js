@@ -60,7 +60,7 @@ async function loadTermContainerList() {
       const name = c.name.split(', ')[0];
       return `
         <button class="container-chip${termActiveContainer === name ? ' active' : ''}"
-                onclick="termSelectContainer(${JSON.stringify(name)})"
+                onclick='termSelectContainer(${JSON.stringify(name)})'
                 data-container="${escHtml(name)}">
           <span class="status-dot status-running" style="width:8px;height:8px"></span>
           ${escHtml(name)}

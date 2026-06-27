@@ -138,7 +138,7 @@ function renderSidebarServices(services) {
     return;
   }
   list.innerHTML = services.map((s) => `
-    <div class="service-item" onclick="openServiceEditor(${JSON.stringify(s.name)})">
+    <div class="service-item" onclick='openServiceEditor(${JSON.stringify(s.name)})'>
       <span class="status-dot ${statusClass(s.state)}"></span>
       <span>${escHtml(s.name)}</span>
     </div>

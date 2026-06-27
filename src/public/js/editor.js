@@ -66,7 +66,7 @@ function renderEditorServiceList() {
     const svc = (DC.services || []).find((s) => s.name === name);
     const state = svc ? (svc.state || 'absent').toLowerCase() : 'absent';
     return `
-      <button class="editor-service-btn${editorSelectedService === name ? ' active' : ''}" onclick="selectEditorService(${JSON.stringify(name)})">
+      <button class="editor-service-btn${editorSelectedService === name ? ' active' : ''}" onclick='selectEditorService(${JSON.stringify(name)})'>
         <span class="status-dot ${statusClass(state)}" style="flex-shrink:0"></span>
         ${escHtml(name)}
       </button>`;

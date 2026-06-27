@@ -78,7 +78,7 @@ function buildServiceCard(s) {
   const extraPorts = allPorts.length - visiblePorts.length;
 
   return `
-    <div class="service-card ${stateClass(state)}" onclick="openServiceEditor(${JSON.stringify(s.name)})">
+    <div class="service-card ${stateClass(state)}" onclick='openServiceEditor(${JSON.stringify(s.name)})'>
       <div class="card-header">
         <span class="card-status-dot status-dot ${statusClass(state)}"></span>
         <div>
