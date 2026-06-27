@@ -108,14 +108,31 @@ function normalizeCompose(parsed) {
 
 /**
  * Serialize a compose object to YAML string.
+ * Adds a blank line between service blocks for readability.
  */
 function serializeCompose(obj) {
-  return YAML.stringify(obj, {
+  const raw = YAML.stringify(obj, {
     indent: 2,
     lineWidth: 0,
     defaultKeyType: 'PLAIN',
     defaultStringType: 'QUOTE_DOUBLE',
   });
+
+  // Insert blank line before each top-level service key (lines indented by exactly 2 spaces)
+  // so services are visually separated in the file.
+  const lines = raw.split('\n');
+  const out = [];
+  let inServices = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^services:\s*$/.test(line)) { inServices = true; out.push(line); continue; }
+    if (inServices && /^[^ ]/.test(line)) inServices = false;
+    if (inServices && /^  \S/.test(line) && out.length && out[out.length - 1] !== '') {
+      out.push('');
+    }
+    out.push(line);
+  }
+  return out.join('\n');
 }
 
 /**
