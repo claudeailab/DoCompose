@@ -6,6 +6,7 @@
 
 // Per-service update state: null | 'checking' | 'available' | 'updating'
 if (!DC.updates) DC.updates = {};
+let dashFilter = null; // null | 'running' | 'stopped' | 'updates'
 
 function dashboardInit() {
   const container = document.getElementById('view-dashboard');
@@ -14,10 +15,10 @@ function dashboardInit() {
       <h1 class="view-title">Dashboard</h1>
 
       <div class="dash-stats-inline" id="dashStats" style="display:none">
-        <span class="stat-chip"><span class="stat-num" id="statTotal">0</span> Total</span>
-        <span class="stat-chip stat-chip-run"><span class="stat-num" id="statRunning">0</span> Running</span>
-        <span class="stat-chip stat-chip-stop"><span class="stat-num" id="statStopped">0</span> Stopped</span>
-        <span class="stat-chip stat-chip-upd" id="statUpdateChip"><span class="stat-num" id="statUpdates">—</span> Updates</span>
+        <span class="stat-chip stat-chip-filter" data-filter="all"><span class="stat-num" id="statTotal">0</span> Total</span>
+        <span class="stat-chip stat-chip-run stat-chip-filter" data-filter="running"><span class="stat-num" id="statRunning">0</span> Running</span>
+        <span class="stat-chip stat-chip-stop stat-chip-filter" data-filter="stopped"><span class="stat-num" id="statStopped">0</span> Stopped</span>
+        <span class="stat-chip stat-chip-upd stat-chip-filter" id="statUpdateChip" data-filter="updates"><span class="stat-num" id="statUpdates">—</span> Updates</span>
       </div>
 
       <div style="margin-left:auto;display:flex;gap:0.4rem">
@@ -45,9 +46,40 @@ function dashboardInit() {
 
   document.getElementById('dashRefreshBtn').addEventListener('click', loadDashboard);
   document.getElementById('dashCheckAllBtn').addEventListener('click', checkAllUpdates);
+
+  // Filter chips — clicking a chip filters cards by that state
+  document.getElementById('dashStats').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-filter]');
+    if (!chip) return;
+    const f = chip.dataset.filter;
+    dashFilter = (dashFilter === f || f === 'all') ? null : f;
+    applyDashFilter();
+    updateFilterChipStyles();
+  });
+
   loadDashboard();
 }
 window.dashboardInit = dashboardInit;
+
+function updateFilterChipStyles() {
+  document.querySelectorAll('.stat-chip-filter').forEach((chip) => {
+    chip.classList.toggle('stat-chip-active', chip.dataset.filter !== 'all' && chip.dataset.filter === dashFilter);
+  });
+}
+
+function applyDashFilter() {
+  const grid = document.getElementById('dashGrid');
+  if (!grid) return;
+  grid.querySelectorAll('.service-card').forEach((card) => {
+    const name = card.dataset.service;
+    const svc = (DC.services || []).find((s) => s.name === name);
+    let show = true;
+    if (svc && dashFilter === 'running') show = (svc.state || '').toLowerCase() === 'running';
+    else if (svc && dashFilter === 'stopped') show = (svc.state || '').toLowerCase() !== 'running';
+    else if (dashFilter === 'updates') show = DC.updates[name] === 'available';
+    card.style.display = show ? '' : 'none';
+  });
+}
 
 async function loadDashboard() {
   const grid = document.getElementById('dashGrid');
@@ -85,9 +117,11 @@ function renderStats() {
 
   const chip = document.getElementById('statUpdateChip');
   if (chip) {
-    chip.className = 'stat-chip stat-chip-upd' +
-      (checkedKeys.length === 0 ? '' : updateCount > 0 ? ' has-updates' : ' is-ok');
+    chip.className = 'stat-chip stat-chip-upd stat-chip-filter' +
+      (checkedKeys.length === 0 ? '' : updateCount > 0 ? ' has-updates' : ' is-ok') +
+      (dashFilter === 'updates' ? ' stat-chip-active' : '');
   }
+  updateFilterChipStyles();
 }
 
 function renderDashboard(services) {
@@ -106,6 +140,7 @@ function renderDashboard(services) {
   }
   grid.innerHTML = services.map((s) => buildServiceCard(s)).join('');
   attachCardListeners(grid);
+  applyDashFilter();
 }
 
 function attachCardListeners(root) {
@@ -158,21 +193,22 @@ function refreshUpdateCell(name) {
 /* ---- Card ---- */
 function buildServiceCard(s) {
   const state = (s.state || 'absent').toLowerCase();
+  const isRunning = state === 'running';
   const allPorts = Array.isArray(s.ports) ? s.ports : [];
   const visiblePorts = allPorts.slice(0, 4);
   const extraPorts = allPorts.length - visiblePorts.length;
   const n = escHtml(s.name);
 
   return `
-    <div class="service-card ${stateClass(state)}" data-service="${n}">
-      <div class="card-header" onclick='showServiceDetail(${JSON.stringify(s.name)})'>
+    <div class="service-card ${stateClass(state)}" data-service="${n}" onclick='showServiceDetail(${JSON.stringify(s.name)})'>
+      <div class="card-header">
         <span class="card-status-dot status-dot ${statusClass(state)}"></span>
         <div class="card-header-info">
           <div class="card-title">${n}</div>
           ${s.containerName && s.containerName !== s.name ? `<div class="card-subtitle">${escHtml(s.containerName)}</div>` : ''}
         </div>
         <span class="card-status-text">${escHtml(state)}</span>
-        ${s.health ? `<span class="card-health card-health-${s.health}">${s.health === 'healthy' ? '✓ healthy' : s.health === 'unhealthy' ? '✗ unhealthy' : '⟳ starting'}</span>` : ''}
+        ${isRunning && s.health ? `<span class="card-health card-health-${s.health}">${s.health === 'healthy' ? '✓ healthy' : s.health === 'unhealthy' ? '✗ unhealthy' : '⟳ starting'}</span>` : ''}
       </div>
 
       ${s.image ? `<div class="card-image" title="${escHtml(s.image)}">${escHtml(s.image)}</div>` : ''}
@@ -186,10 +222,9 @@ function buildServiceCard(s) {
       <div class="card-actions" onclick="event.stopPropagation()">
         <div class="card-btn-grid">
 
-          <!-- Row 1: power + navigation -->
-          <button class="card-btn ${state === 'running' ? 'card-btn-stop' : 'card-btn-start'}"
-                  data-action="${state === 'running' ? 'stop' : 'start'}" data-service="${n}">
-            ${state === 'running'
+          <button class="card-btn ${isRunning ? 'card-btn-stop' : 'card-btn-start'}"
+                  data-action="${isRunning ? 'stop' : 'start'}" data-service="${n}">
+            ${isRunning
               ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12"/></svg>Stop`
               : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>Start`}
           </button>
@@ -209,7 +244,6 @@ function buildServiceCard(s) {
             Terminal
           </button>
 
-          <!-- Row 2: config + update -->
           <button class="card-btn" data-action="config" data-service="${n}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             Config
@@ -236,9 +270,12 @@ function buildServiceCard(s) {
 }
 
 /* ---- Targeted card update (no full re-render) ---- */
-function updateCardState(name, newState) {
+function updateCardState(name, newState, clearHealth) {
   const svc = DC.services.find((s) => s.name === name);
-  if (svc) svc.state = newState;
+  if (svc) {
+    svc.state = newState;
+    if (clearHealth) svc.health = null;
+  }
 
   const grid = document.getElementById('dashGrid');
   if (!grid || !svc) return;
@@ -250,11 +287,12 @@ function updateCardState(name, newState) {
   const newCard = wrapper.firstElementChild;
   oldCard.replaceWith(newCard);
   attachCardListeners(newCard);
+  applyDashFilter();
   renderSidebarServices(DC.services);
   renderStats();
 }
 
-/* ---- Check all updates ---- */
+/* ---- Check all updates (3 concurrent max to avoid overloading Docker) ---- */
 async function checkAllUpdates() {
   const services = DC.services || [];
   if (!services.length) return;
@@ -262,20 +300,23 @@ async function checkAllUpdates() {
   const btn = document.getElementById('dashCheckAllBtn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:13px;height:13px;display:inline-block;vertical-align:middle"></div> Checking…'; }
 
-  // Set all to checking
   services.forEach((s) => { DC.updates[s.name] = 'checking'; refreshUpdateCell(s.name); });
 
-  const results = await Promise.allSettled(
-    services.map(async (s) => {
-      try {
-        const { hasUpdate } = await api('GET', `/api/services/${encodeURIComponent(s.name)}/check-update`);
-        DC.updates[s.name] = hasUpdate ? 'available' : null;
-      } catch {
-        DC.updates[s.name] = null;
-      }
-      refreshUpdateCell(s.name);
-    })
-  );
+  const fns = services.map((s) => async () => {
+    try {
+      const { hasUpdate } = await api('GET', `/api/services/${encodeURIComponent(s.name)}/check-update`);
+      DC.updates[s.name] = hasUpdate ? 'available' : null;
+    } catch {
+      DC.updates[s.name] = null;
+    }
+    refreshUpdateCell(s.name);
+  });
+
+  let idx = 0;
+  async function worker() {
+    while (idx < fns.length) { const i = idx++; await fns[i](); }
+  }
+  await Promise.all([worker(), worker(), worker()]);
 
   const updateCount = Object.values(DC.updates).filter((v) => v === 'available').length;
   showToast(
@@ -285,7 +326,10 @@ async function checkAllUpdates() {
     updateCount === 0 ? 'success' : 'info'
   );
 
-  if (btn) { btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Check All Updates'; }
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Check for Updates';
+  }
   renderStats();
 }
 
@@ -335,15 +379,9 @@ async function serviceAction(name, action, btn) {
   try {
     await api('POST', `/api/services/${encodeURIComponent(name)}/${action}`);
     showToast(`${name}: ${action} successful`, 'success');
-    // Optimistically update the card — don't re-render whole dashboard
-    const newState = action === 'start' || action === 'recreate' ? 'running' : action === 'stop' ? 'exited' : null;
-    if (newState !== null) {
-      updateCardState(name, newState);
-    } else {
-      // restart: keep running state, just restore button
-      btn.disabled = false;
-      btn.innerHTML = originalHTML;
-    }
+    const newState = action === 'stop' ? 'exited' : 'running';
+    const clearHealth = action === 'stop';
+    updateCardState(name, newState, clearHealth);
   } catch (err) {
     showToast(`${name}: ${err.message}`, 'error');
     btn.disabled = false;

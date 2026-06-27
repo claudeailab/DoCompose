@@ -70,8 +70,8 @@ body {
    ============================================================ */
 .topbar {
   height: var(--topbar-height);
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #0f172a 0%, #1a2744 50%, #0f2038 100%);
+  border-bottom: 1px solid rgba(59,130,246,0.2);
   display: flex;
   align-items: center;
   padding: 0 1rem;
@@ -363,6 +363,12 @@ body {
 .stat-chip-upd.has-updates .stat-num { color: var(--warning); }
 .stat-chip-upd.is-ok       .stat-num { color: var(--success); }
 
+/* Filter chips — clickable */
+.stat-chip-filter { cursor: pointer; transition: all 0.15s; }
+.stat-chip-filter:hover { border-color: var(--accent); color: var(--text-primary); }
+.stat-chip-active { border-color: var(--accent) !important; background: var(--accent-dim) !important; color: var(--text-primary) !important; }
+.stat-chip-active .stat-num { color: var(--accent) !important; }
+
 /* ---- Health badge ---- */
 .card-health {
   font-size: 0.68rem;
@@ -394,17 +400,25 @@ body {
   gap: 0.35rem;
   overflow: hidden;
   transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+  min-height: 200px;
 }
 .service-card:hover {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent-dim), 0 4px 12px rgba(0,0,0,0.2);
 }
-/* Subtle left accent for running containers */
+/* Subtle left accent by state */
 .service-card.state-running {
-  border-left: 2px solid rgba(34,197,94,0.4);
+  border-left: 3px solid rgba(34,197,94,0.5);
 }
 .service-card.state-running:hover {
   border-left-color: var(--success);
+}
+.service-card.state-exited, .service-card.state-stopped {
+  border-left: 3px solid rgba(239,68,68,0.35);
+}
+.service-card.state-exited:hover, .service-card.state-stopped:hover {
+  border-left-color: var(--danger);
 }
 
 .card-header {
@@ -459,11 +473,11 @@ body {
 .port-badge {
   font-size: 0.7rem;
   font-family: monospace;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.25);
   border-radius: 4px;
   padding: 0.1rem 0.35rem;
-  color: var(--text-secondary);
+  color: var(--accent);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -475,7 +489,7 @@ body {
 }
 
 .card-actions {
-  margin-top: 0.2rem;
+  margin-top: auto;
   border-top: 1px solid var(--border);
   padding-top: 0.4rem;
 }
