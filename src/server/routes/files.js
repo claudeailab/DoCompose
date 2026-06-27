@@ -138,17 +138,31 @@ router.post('/service/:name', (req, res) => {
 });
 
 // GET /api/files/service/:name/env — returns environment vars as KEY=VALUE text
+// ${VAR} references are resolved against the project's .env file
 router.get('/service/:name/env', (req, res) => {
   try {
-    const { parsed } = readCompose(req.query.project || '');
+    const projectDir = req.query.project || '';
+    const { parsed } = readCompose(projectDir);
     const svc = ((parsed && parsed.services) || {})[req.params.name];
     if (!svc) return res.status(404).json({ error: `Service "${req.params.name}" not found` });
+
+    // Load .env for substitution
+    const { raw: envRaw } = readEnv(projectDir);
+    const dotenv = {};
+    for (const line of (envRaw || '').split('\n')) {
+      const t = line.trim();
+      if (!t || t.startsWith('#')) continue;
+      const eq = t.indexOf('=');
+      if (eq !== -1) dotenv[t.slice(0, eq).trim()] = t.slice(eq + 1);
+    }
+    const resolve = (val) => String(val).replace(/\$\{([^}]+)\}/g, (_, k) => (dotenv[k] !== undefined ? dotenv[k] : `\${${k}}`));
+
     const env = svc.environment || {};
     let lines;
     if (Array.isArray(env)) {
-      lines = env.map((e) => String(e));
+      lines = env.map((e) => resolve(String(e)));
     } else {
-      lines = Object.entries(env).map(([k, v]) => (v === null || v === undefined ? k : `${k}=${v}`));
+      lines = Object.entries(env).map(([k, v]) => (v === null || v === undefined ? k : `${k}=${resolve(v)}`));
     }
     res.json({ content: lines.join('\n') });
   } catch (err) {

@@ -264,7 +264,7 @@ body {
 .sidebar-services {
   flex: 1;
   overflow-y: auto;
-  padding: 0.5rem;
+  padding: 0.25rem;
 }
 
 .services-header {
@@ -281,12 +281,12 @@ body {
 .service-item {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
+  gap: 0.5rem;
+  padding: 0.28rem 0.75rem;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -429,84 +429,62 @@ body {
 }
 
 .card-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  margin-top: 0.15rem;
+  margin-top: 0.2rem;
   border-top: 1px solid var(--border);
   padding-top: 0.4rem;
 }
 
-/* Primary action row: Start/Stop + Restart */
-.card-actions-primary {
-  display: flex;
-  gap: 0.3rem;
+/* Uniform 4-column button grid */
+.card-btn-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
 }
-.card-actions-primary .btn { flex: 1; justify-content: center; }
 
-/* Quick-nav row: Logs, Terminal, Config, Vars */
-.card-actions-nav {
+/* Update cell spans last 2 columns of row 2 */
+.card-update-cell {
+  grid-column: span 2;
   display: flex;
   gap: 0.25rem;
 }
-.card-nav-btn {
-  flex: 1;
-  display: inline-flex;
+.card-update-cell .card-btn { flex: 1; }
+
+/* Base button — icon stacked above label */
+.card-btn {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 0.25rem 0.3rem;
+  padding: 0.38rem 0.2rem;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 6px;
   background: none;
-  color: var(--text-muted);
-  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-size: 0.69rem;
   cursor: pointer;
   transition: all 0.15s;
+  line-height: 1.1;
   white-space: nowrap;
+  min-width: 0;
 }
-.card-nav-btn svg { width: 11px; height: 11px; flex-shrink: 0; }
-.card-nav-btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-light); }
+.card-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+.card-btn:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-light); }
+.card-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-/* Update row */
-.card-actions-update {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-height: 24px;
-}
-.card-update-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0.2rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: none;
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.card-update-btn svg { width: 11px; height: 11px; }
-.card-update-btn:hover { color: var(--text-primary); border-color: var(--border-light); background: var(--bg-hover); }
-.card-update-btn.has-update {
-  background: rgba(34,197,94,0.1);
-  border-color: var(--success);
-  color: var(--success);
-  font-weight: 600;
-}
-.card-update-btn.has-update:hover { background: var(--success); color: #fff; }
-.card-update-status {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.card-update-status.is-current { color: var(--success); }
-.card-update-status.is-available { color: var(--warning); }
+/* Start / Stop variants */
+.card-btn-start { color: var(--success); border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.06); }
+.card-btn-start:hover:not(:disabled) { background: var(--success); color: #fff; border-color: var(--success); }
+.card-btn-stop  { color: var(--danger);  border-color: rgba(239,68,68,0.35);  background: rgba(239,68,68,0.06); }
+.card-btn-stop:hover:not(:disabled)  { background: var(--danger);  color: #fff; border-color: var(--danger); }
+
+/* Update-available variant */
+.card-btn-update { color: var(--success); border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.1); font-weight: 600; }
+.card-btn-update:hover:not(:disabled) { background: var(--success); color: #fff; border-color: var(--success); }
+
+/* Up-to-date non-interactive state */
+.card-btn-current { color: var(--success); border-color: transparent; background: none; cursor: default; font-weight: 500; }
+.card-btn-current:hover { background: none; color: var(--success); border-color: transparent; }
 
 /* ============================================================
    BUTTONS

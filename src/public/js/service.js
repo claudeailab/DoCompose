@@ -419,6 +419,9 @@ function svcRenderVars(name) {
       </button>
       <span class="svc-status" id="svcVarsStatus" style="margin-left:auto"></span>
     </div>
+    <div style="padding:0.4rem 0.75rem;font-size:0.78rem;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg-secondary)">
+      Values shown are resolved from <code>.env</code>. Saving writes them directly into the compose file.
+    </div>
     <textarea class="yaml-textarea" id="svcVarsTextarea" spellcheck="false" placeholder="KEY=value&#10;ANOTHER_KEY=value"></textarea>
   `;
 
