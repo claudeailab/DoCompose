@@ -34,15 +34,24 @@ window.editorInit = editorInit;
 
 async function loadEditorServices(autoSelect) {
   try {
+    console.log('[editor] loading, autoSelect=', autoSelect, 'project=', DC.currentProject);
     const { parsed } = await api('GET', '/api/files/compose');
     editorServices = Object.keys((parsed && parsed.services) || {});
+    console.log('[editor] services:', editorServices);
     renderEditorServiceList();
     if (autoSelect && editorServices.includes(autoSelect)) {
       selectEditorService(autoSelect);
+    } else if (autoSelect) {
+      console.warn('[editor] service not found in compose:', autoSelect, editorServices);
+      const panel = document.getElementById('editorPanel');
+      if (panel) panel.innerHTML = `<div class="editor-panel-empty" style="color:var(--danger)">Service "${escHtml(autoSelect)}" not found in compose file.<br><small>Available: ${escHtml(editorServices.join(', ') || 'none')}</small></div>`;
     }
   } catch (err) {
+    console.error('[editor] error:', err);
     const btns = document.getElementById('editorServiceBtns');
     if (btns) btns.innerHTML = `<div style="padding:0.75rem;font-size:0.9rem;color:var(--danger)">${escHtml(err.message)}</div>`;
+    const panel = document.getElementById('editorPanel');
+    if (panel) panel.innerHTML = `<div class="editor-panel-empty" style="color:var(--danger)">Error: ${escHtml(err.message)}</div>`;
   }
 }
 
@@ -120,13 +129,18 @@ window.selectEditorService = selectEditorService;
 async function editorLoadService(name) {
   setEditorStatus('Loading…');
   try {
+    console.log('[editor] loading service:', name);
     const { yaml } = await api('GET', `/api/files/service/${encodeURIComponent(name)}`);
+    console.log('[editor] loaded yaml length:', yaml && yaml.length);
     const ta = document.getElementById('editorTextarea');
     if (ta) ta.value = yaml;
     editorDirty = false;
     setEditorStatus('Loaded', 'valid');
   } catch (err) {
+    console.error('[editor] load service error:', err);
     setEditorStatus(`Error: ${err.message}`, 'invalid');
+    const ta = document.getElementById('editorTextarea');
+    if (ta) ta.value = `# Error loading service: ${err.message}`;
   }
 }
 
