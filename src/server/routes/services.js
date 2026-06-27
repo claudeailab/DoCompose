@@ -32,17 +32,35 @@ router.get('/', async (req, res) => {
     const services = [];
 
     if (parsed && parsed.services) {
+      // Collect running container IDs so we can batch-inspect for health
+      const containerMap = {};
       for (const [name, config] of Object.entries(parsed.services)) {
         const containerName = (config && config.container_name) || name;
         const container = allContainers.find((c) =>
           c.Names && c.Names.some((n) => n.replace(/^\//, '') === containerName)
         );
-        let health = null;
-        if (container && container.Status) {
-          if (/\(healthy\)/.test(container.Status)) health = 'healthy';
-          else if (/\(unhealthy\)/.test(container.Status)) health = 'unhealthy';
-          else if (/health: starting/.test(container.Status)) health = 'starting';
-        }
+        containerMap[name] = { name, config, containerName, container };
+      }
+
+      // Batch inspect running containers to get reliable health status
+      const runningEntries = Object.values(containerMap).filter((e) => e.container && e.container.State === 'running');
+      const inspectResults = await Promise.all(
+        runningEntries.map(async (e) => {
+          try {
+            const info = await inspectContainer(e.container.Id);
+            return { name: e.name, info };
+          } catch {
+            return { name: e.name, info: null };
+          }
+        })
+      );
+      const healthByName = {};
+      for (const { name, info } of inspectResults) {
+        const hs = info && info.State && info.State.Health && info.State.Health.Status;
+        healthByName[name] = (hs && hs !== 'none') ? hs : null;
+      }
+
+      for (const [name, { config, containerName, container }] of Object.entries(containerMap)) {
         services.push({
           name,
           containerName,
@@ -50,7 +68,7 @@ router.get('/', async (req, res) => {
           ports: config && config.ports,
           status: container ? container.Status : 'not created',
           state: container ? container.State : 'absent',
-          health,
+          health: healthByName[name] ?? null,
           id: container ? container.Id : null,
         });
       }
