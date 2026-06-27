@@ -162,7 +162,7 @@ function buildUpdateCell(name) {
     </button>`;
   }
   if (st === 'checking') {
-    return `<button class="card-btn" disabled>
+    return `<button class="card-btn card-btn-checking" disabled>
       <div class="spinner" style="width:13px;height:13px"></div>
       Checking…
     </button>`;
@@ -199,8 +199,10 @@ function buildServiceCard(s) {
   const extraPorts = allPorts.length - visiblePorts.length;
   const n = escHtml(s.name);
 
+  const hasUpdate = DC.updates[s.name] === 'available';
+
   return `
-    <div class="service-card ${stateClass(state)}" data-service="${n}" onclick='showServiceDetail(${JSON.stringify(s.name)})'>
+    <div class="service-card ${stateClass(state)}${hasUpdate ? ' has-update' : ''}" data-service="${n}" onclick='showServiceDetail(${JSON.stringify(s.name)})'>
       <div class="card-header">
         <span class="card-status-dot status-dot ${statusClass(state)}"></span>
         <div class="card-header-info">
