@@ -68,27 +68,26 @@ function serviceInit() {
           <span class="svc-title">${escHtml(name)}</span>
           <span class="svc-state-badge ${stateClass(state)}">${escHtml(state)}</span>
           ${isRunning && health ? `<span class="card-health card-health-${health}">${health === 'healthy' ? '✓ healthy' : health === 'unhealthy' ? '✗ unhealthy' : '⟳ starting'}</span>` : ''}
-          <div class="svc-action-btns" style="margin-left:auto;display:flex;gap:0.35rem">
-            <button class="btn btn-sm ${isRunning ? 'btn-secondary svc-act-stop' : 'btn-success'}" id="svcActStartStop">
-              ${isRunning
-                ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><rect x="6" y="6" width="12" height="12"/></svg>Stop`
-                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px"><polygon points="5 3 19 12 5 21 5 3"/></svg>Start`}
-            </button>
-            <button class="btn btn-secondary btn-sm" id="svcActRestart">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-              Restart
-            </button>
-            <button class="btn btn-secondary btn-sm" id="svcActRecreate">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-              Recreate
-            </button>
-          </div>
         </div>
         <div class="svc-tabs">
           <button class="svc-tab" data-tab="logs">Logs</button>
           <button class="svc-tab" data-tab="terminal">Terminal</button>
           <button class="svc-tab" data-tab="config">Configuration</button>
           <button class="svc-tab" data-tab="vars">Variables</button>
+          <div class="svc-tabs-sep"></div>
+          <button class="svc-tab svc-tab-action" id="svcActStartStop">
+            ${isRunning
+              ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12"/></svg>Stop`
+              : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>Start`}
+          </button>
+          <button class="svc-tab svc-tab-action" id="svcActRestart">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Restart
+          </button>
+          <button class="svc-tab svc-tab-action" id="svcActRecreate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+            Recreate
+          </button>
         </div>
       </div>
       <div class="svc-body">

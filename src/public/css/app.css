@@ -547,10 +547,10 @@ body {
 .card-btn[data-action="logs"]:hover:not(:disabled)     { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.5); }
 .card-btn[data-action="terminal"] { border-color: rgba(139,92,246,0.3); color: #a78bfa; }
 .card-btn[data-action="terminal"]:hover:not(:disabled) { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.5); }
-.card-btn[data-action="config"]   { border-color: rgba(245,158,11,0.2); color: #a07b2a; }
-.card-btn[data-action="config"]:hover:not(:disabled)   { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.35); color: #fbbf24; }
-.card-btn[data-action="vars"]     { border-color: rgba(249,115,22,0.2); color: #9a5a2a; }
-.card-btn[data-action="vars"]:hover:not(:disabled)     { background: rgba(249,115,22,0.08); border-color: rgba(249,115,22,0.35); color: #fb923c; }
+.card-btn[data-action="config"]   { border-color: rgba(245,158,11,0.25); color: #d4a03a; }
+.card-btn[data-action="config"]:hover:not(:disabled)   { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.45); color: #fbbf24; }
+.card-btn[data-action="vars"]     { border-color: rgba(249,115,22,0.25); color: #d4803a; }
+.card-btn[data-action="vars"]:hover:not(:disabled)     { background: rgba(249,115,22,0.1); border-color: rgba(249,115,22,0.45); color: #fb923c; }
 .card-btn[data-action="recreate"] { border-color: rgba(20,184,166,0.3); color: #2dd4bf; }
 .card-btn[data-action="recreate"]:hover:not(:disabled) { background: rgba(20,184,166,0.12); border-color: rgba(20,184,166,0.5); }
 .card-btn[data-action="check-update"] { border-color: rgba(34,197,94,0.25); color: var(--text-secondary); }
@@ -1130,8 +1130,6 @@ body {
 .state-paused  .svc-state-badge  { background: rgba(245,158,11,0.15); color: var(--warning); }
 .state-absent  .svc-state-badge  { background: var(--bg-tertiary);    color: var(--text-muted); }
 
-.btn.svc-act-stop { color: var(--danger); border: 1px solid rgba(239,68,68,0.35); background: rgba(239,68,68,0.08); }
-.btn.svc-act-stop:hover:not(:disabled) { background: var(--danger); color: #fff; }
 
 .svc-title {
   font-weight: 700;
@@ -1157,6 +1155,13 @@ body {
 }
 .svc-tab:hover { background: var(--bg-hover); color: var(--text-primary); }
 .svc-tab.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); font-weight: 600; }
+
+.svc-tabs-sep { width: 1px; background: var(--border); margin: 0.1rem 0.25rem; flex-shrink: 0; }
+
+/* Action tabs (stop/restart/recreate) — same shape as nav tabs, no active state */
+.svc-tab.svc-tab-action { display: inline-flex; align-items: center; gap: 0.35rem; }
+.svc-tab.svc-tab-action svg { width: 13px; height: 13px; flex-shrink: 0; }
+.svc-tab.svc-tab-action:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .svc-body {
   flex: 1;
