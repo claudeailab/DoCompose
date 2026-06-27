@@ -62,10 +62,30 @@ router.get('/', async (req, res) => {
   }
 });
 
+function getContainerName(projectDir, serviceName) {
+  try {
+    const { parsed } = readCompose(projectDir);
+    const svc = parsed && parsed.services && parsed.services[serviceName];
+    return (svc && svc.container_name) || serviceName;
+  } catch {
+    return serviceName;
+  }
+}
+
+function runDocker(args) {
+  return new Promise((resolve, reject) => {
+    execFile('docker', args, { timeout: 60000 }, (err, stdout, stderr) => {
+      if (err) return reject(new Error(stderr || err.message));
+      resolve({ stdout, stderr });
+    });
+  });
+}
+
 // POST /api/services/:name/start
 router.post('/:name/start', async (req, res) => {
   try {
-    const { stdout, stderr } = await runCompose(req.query.project || '', ['start', req.params.name]);
+    const containerName = getContainerName(req.query.project || '', req.params.name);
+    const { stdout, stderr } = await runDocker(['start', containerName]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -73,9 +93,12 @@ router.post('/:name/start', async (req, res) => {
 });
 
 // POST /api/services/:name/stop
+// Use `docker stop` (not `docker compose stop`) so that restart:unless-stopped
+// is properly honoured — compose stop doesn't always set the manual-stop flag.
 router.post('/:name/stop', async (req, res) => {
   try {
-    const { stdout, stderr } = await runCompose(req.query.project || '', ['stop', req.params.name]);
+    const containerName = getContainerName(req.query.project || '', req.params.name);
+    const { stdout, stderr } = await runDocker(['stop', containerName]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
     res.status(500).json({ error: err.message });
