@@ -42,6 +42,18 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /path/to/your/compose/projects:/compose
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -q
+        - -O
+        - /dev/null
+        - http://localhost:8094/api/health
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 ```
 
 Start it:
