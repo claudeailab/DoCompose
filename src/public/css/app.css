@@ -528,11 +528,25 @@ body {
 .card-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* Start / Stop variants */
-.card-btn-start { color: var(--success); border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.06); }
+.card-btn-start { color: var(--success); border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.06); }
 .card-btn-start:hover:not(:disabled) { background: var(--success); color: #fff; border-color: var(--success); }
-/* Stop: neutral until hover to avoid visual alarm on every running container */
-.card-btn-stop  { color: var(--text-secondary); }
+.card-btn-stop  { color: var(--text-secondary); border-color: rgba(239,68,68,0.2); }
 .card-btn-stop:hover:not(:disabled)  { background: rgba(239,68,68,0.12); color: var(--danger); border-color: rgba(239,68,68,0.4); }
+
+/* Per-button accent colors */
+.card-btn[data-action="restart"]  { border-color: rgba(6,182,212,0.3);  color: #06b6d4; }
+.card-btn[data-action="restart"]:hover:not(:disabled)  { background: rgba(6,182,212,0.12); border-color: rgba(6,182,212,0.5); }
+.card-btn[data-action="logs"]     { border-color: rgba(59,130,246,0.3); color: #60a5fa; }
+.card-btn[data-action="logs"]:hover:not(:disabled)     { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.5); }
+.card-btn[data-action="terminal"] { border-color: rgba(139,92,246,0.3); color: #a78bfa; }
+.card-btn[data-action="terminal"]:hover:not(:disabled) { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.5); }
+.card-btn[data-action="config"]   { border-color: rgba(245,158,11,0.3); color: #fbbf24; }
+.card-btn[data-action="config"]:hover:not(:disabled)   { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.5); }
+.card-btn[data-action="vars"]     { border-color: rgba(249,115,22,0.3); color: #fb923c; }
+.card-btn[data-action="vars"]:hover:not(:disabled)     { background: rgba(249,115,22,0.12); border-color: rgba(249,115,22,0.5); }
+.card-btn[data-action="recreate"] { border-color: rgba(20,184,166,0.3); color: #2dd4bf; }
+.card-btn[data-action="recreate"]:hover:not(:disabled) { background: rgba(20,184,166,0.12); border-color: rgba(20,184,166,0.5); }
+.card-btn[data-action="check-update"] { border-color: rgba(34,197,94,0.25); color: var(--text-secondary); }
 
 /* Update-available variant */
 .card-btn-update { color: var(--success); border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.1); font-weight: 600; }
@@ -1081,6 +1095,25 @@ body {
   gap: 0.65rem;
   padding: 0.6rem 1.25rem 0.4rem;
 }
+
+.svc-state-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.state-running .svc-state-badge  { background: rgba(34,197,94,0.15);  color: var(--success); }
+.state-exited  .svc-state-badge,
+.state-stopped .svc-state-badge  { background: rgba(239,68,68,0.15);  color: var(--danger); }
+.state-paused  .svc-state-badge  { background: rgba(245,158,11,0.15); color: var(--warning); }
+.state-absent  .svc-state-badge  { background: var(--bg-tertiary);    color: var(--text-muted); }
+
+.btn.svc-act-stop { color: var(--danger); border: 1px solid rgba(239,68,68,0.35); background: rgba(239,68,68,0.08); }
+.btn.svc-act-stop:hover:not(:disabled) { background: var(--danger); color: #fff; }
 
 .svc-title {
   font-weight: 700;
