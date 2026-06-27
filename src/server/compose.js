@@ -6,7 +6,8 @@ const { execFile } = require('child_process');
 const YAML = require('yaml');
 
 const COMPOSE_DIR = process.env.COMPOSE_DIR || '/compose';
-const COMPOSE_FILE = process.env.COMPOSE_FILE || 'docker-compose.yml';
+const COMPOSE_FILE = process.env.COMPOSE_FILE || null; // null = auto-detect
+const COMPOSE_FILENAMES = ['docker-compose.yml', 'docker-compose.yaml', 'compose.yml', 'compose.yaml'];
 
 // Key ordering for service blocks
 const SERVICE_KEY_ORDER = [
@@ -14,8 +15,19 @@ const SERVICE_KEY_ORDER = [
   'environment', 'ports', 'volumes', 'networks', 'depends_on',
 ];
 
+function findComposeFile(dir) {
+  if (COMPOSE_FILE) {
+    return path.join(dir, COMPOSE_FILE);
+  }
+  for (const name of COMPOSE_FILENAMES) {
+    const p = path.join(dir, name);
+    if (fs.existsSync(p)) return p;
+  }
+  return path.join(dir, 'docker-compose.yml'); // fallback for writes
+}
+
 function getComposePath(projectDir) {
-  return path.join(COMPOSE_DIR, projectDir || '', COMPOSE_FILE);
+  return findComposeFile(path.join(COMPOSE_DIR, projectDir || ''));
 }
 
 function getEnvPath(projectDir) {
@@ -28,7 +40,7 @@ function getEnvPath(projectDir) {
 function listProjects() {
   const results = [];
   // Check root
-  const rootFile = path.join(COMPOSE_DIR, COMPOSE_FILE);
+  const rootFile = findComposeFile(COMPOSE_DIR);
   if (fs.existsSync(rootFile)) {
     results.push({ name: '(root)', dir: '', file: rootFile });
   }
@@ -37,7 +49,7 @@ function listProjects() {
     const entries = fs.readdirSync(COMPOSE_DIR, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
-      const composeFile = path.join(COMPOSE_DIR, entry.name, COMPOSE_FILE);
+      const composeFile = findComposeFile(path.join(COMPOSE_DIR, entry.name));
       if (fs.existsSync(composeFile)) {
         results.push({ name: entry.name, dir: entry.name, file: composeFile });
       }
