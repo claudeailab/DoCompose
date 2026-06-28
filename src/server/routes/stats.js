@@ -45,7 +45,7 @@ router.get('/', (req, res) => {
     }
 
     res.json({
-      cpu: Math.round(totalCpu * 10) / 10,
+      cpu: Math.round((totalCpu / cpuCores) * 10) / 10,
       cpuCores,
       memUsed: totalMemUsed,
       memTotal: totalMemTotal,
