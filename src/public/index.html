@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="/css/app.css?v=0.5.28" />
+  <link rel="stylesheet" href="/css/app.css?v=0.5.29" />
 </head>
 <body>
   <!-- Top bar -->
@@ -43,25 +43,40 @@
         <circle cx="16" cy="28" r="2" fill="white" opacity="0.7"/>
       </svg>
       <span class="brand-name">Do<span class="brand-name-accent">Compose</span></span>
-      <span class="brand-version" id="versionBadge">v0.5.28</span>
+      <span class="brand-version" id="versionBadge">v0.5.29</span>
     </div>
 
     <!-- project select kept hidden for multi-project API logic -->
     <select id="projectSelect" style="display:none"></select>
 
     <div class="topbar-stats" id="topbarStats">
-      <span class="topbar-stat" title="Total CPU usage across all containers">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg>
-        <span id="tsCpu">—</span>
-      </span>
-      <span class="topbar-stat" title="Total memory used by containers">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><circle cx="8" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="16" cy="12" r="1"/></svg>
-        <span id="tsMem">—</span>
-      </span>
-      <span class="topbar-stat" title="Total network I/O across all containers">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12H3M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4"/></svg>
-        <span id="tsNet">—</span>
-      </span>
+      <!-- Network widget -->
+      <div class="ts-widget ts-widget-net" title="Container network I/O">
+        <div class="ts-net-rows">
+          <div class="ts-net-row">
+            <svg class="ts-net-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="2" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="2" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="2" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+            <span class="ts-net-label ts-up">↑</span><span id="tsNetOut" class="ts-net-val">—</span>
+            <span class="ts-net-label ts-down">↓</span><span id="tsNetIn" class="ts-net-val">—</span>
+          </div>
+          <div class="ts-net-row">
+            <svg class="ts-net-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            <span class="ts-net-label ts-up">↑</span><span id="tsDiskOut" class="ts-net-val">—</span>
+            <span class="ts-net-label ts-down">↓</span><span id="tsDiskIn" class="ts-net-val">—</span>
+          </div>
+        </div>
+      </div>
+      <!-- CPU widget -->
+      <div class="ts-widget ts-widget-cpu" title="Total CPU usage across all containers">
+        <div class="ts-widget-label"><span id="tsCpu">—</span></div>
+        <svg class="ts-sparkline" id="tsCpuSparkline" viewBox="0 0 120 20" preserveAspectRatio="none">
+          <polyline id="tsCpuLine" points="" fill="none" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="3 2"/>
+        </svg>
+      </div>
+      <!-- Memory widget -->
+      <div class="ts-widget ts-widget-mem" title="Total memory used by containers">
+        <div class="ts-widget-label"><span id="tsMem">—</span></div>
+        <div class="ts-membars" id="tsMemBars"></div>
+      </div>
     </div>
 
     <div class="topbar-search">
@@ -103,8 +118,8 @@
   <!-- Toast notifications -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/js/app.js?v=0.5.28"></script>
-  <script src="/js/dashboard.js?v=0.5.28"></script>
-  <script src="/js/service.js?v=0.5.28"></script>
+  <script src="/js/app.js?v=0.5.29"></script>
+  <script src="/js/dashboard.js?v=0.5.29"></script>
+  <script src="/js/service.js?v=0.5.29"></script>
 </body>
 </html>

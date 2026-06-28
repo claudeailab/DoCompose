@@ -294,19 +294,60 @@ fetch('/api/version').then((r) => r.json()).then(({ version }) => {
 
 // ---- System stats ----
 function fmtBytes(b) {
-  if (b >= 1e9) return (b / 1e9).toFixed(1) + ' GB';
-  if (b >= 1e6) return (b / 1e6).toFixed(1) + ' MB';
-  if (b >= 1e3) return (b / 1e3).toFixed(0) + ' KB';
-  return b + ' B';
+  if (b >= 1e9) return (b / 1e9).toFixed(1) + 'G';
+  if (b >= 1e6) return (b / 1e6).toFixed(1) + 'M';
+  if (b >= 1e3) return (b / 1e3).toFixed(0) + 'K';
+  return (b || 0) + 'B';
+}
+function fmtBytesRate(b) {
+  return fmtBytes(b) + '/s';
+}
+
+const CPU_HISTORY_LEN = 40;
+const cpuHistory = [];
+
+function updateCpuSparkline() {
+  const line = document.getElementById('tsCpuLine');
+  if (!line || cpuHistory.length < 2) return;
+  const max = Math.max(...cpuHistory, 1);
+  const w = 120, h = 20;
+  const pts = cpuHistory.map((v, i) => {
+    const x = (i / (CPU_HISTORY_LEN - 1)) * w;
+    const y = h - (v / max) * (h - 2) - 1;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  line.setAttribute('points', pts);
+}
+
+function updateMemBars(used, total) {
+  const el = document.getElementById('tsMemBars');
+  if (!el || !total) return;
+  const pct = Math.min(used / total, 1);
+  const BARS = 10;
+  const filled = Math.round(pct * BARS);
+  el.innerHTML = Array.from({ length: BARS }, (_, i) =>
+    `<span class="ts-membar${i < filled ? ' filled' : ''}"></span>`
+  ).join('');
 }
 
 async function refreshStats() {
   try {
     const d = await api('GET', '/api/stats');
     const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
-    set('tsCpu', d.cpu + '%');
-    set('tsMem', fmtBytes(d.memUsed));
-    set('tsNet', '↑' + fmtBytes(d.netOut) + ' ↓' + fmtBytes(d.netIn));
+    // CPU
+    cpuHistory.push(d.cpu || 0);
+    if (cpuHistory.length > CPU_HISTORY_LEN) cpuHistory.shift();
+    set('tsCpu', (d.cpu || 0).toFixed(1) + '% / ' + (d.cpuCores || '') + ' CPU');
+    updateCpuSparkline();
+    // Memory
+    set('tsMem', fmtBytes(d.memUsed) + ' / ' + fmtBytes(d.memTotal));
+    updateMemBars(d.memUsed, d.memTotal);
+    // Network
+    set('tsNetOut', fmtBytesRate(d.netOut));
+    set('tsNetIn', fmtBytesRate(d.netIn));
+    // Disk I/O (if available)
+    set('tsDiskOut', d.blkOut !== undefined ? fmtBytesRate(d.blkOut) : '—');
+    set('tsDiskIn',  d.blkIn  !== undefined ? fmtBytesRate(d.blkIn)  : '—');
   } catch {}
 }
 

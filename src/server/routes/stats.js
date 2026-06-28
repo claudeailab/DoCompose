@@ -15,14 +15,17 @@ function parseBytes(str) {
   return val * (map[unit] || 1);
 }
 
-// GET /api/stats — aggregate CPU, memory, network across all running containers
+// GET /api/stats — aggregate CPU, memory, network, disk across all running containers
 router.get('/', (req, res) => {
+  const os = require('os');
+  const cpuCores = os.cpus().length;
+
   execFile('docker', ['stats', '--no-stream', '--format', '{{json .}}'], { timeout: 15000 }, (err, stdout) => {
     if (err || !stdout.trim()) {
-      return res.json({ cpu: 0, memUsed: 0, memTotal: 0, netIn: 0, netOut: 0, containers: 0 });
+      return res.json({ cpu: 0, memUsed: 0, memTotal: 0, netIn: 0, netOut: 0, blkIn: 0, blkOut: 0, containers: 0, cpuCores });
     }
 
-    let totalCpu = 0, totalMemUsed = 0, totalMemTotal = 0, totalNetIn = 0, totalNetOut = 0, count = 0;
+    let totalCpu = 0, totalMemUsed = 0, totalMemTotal = 0, totalNetIn = 0, totalNetOut = 0, totalBlkIn = 0, totalBlkOut = 0, count = 0;
 
     for (const line of stdout.trim().split('\n')) {
       try {
@@ -34,16 +37,22 @@ router.get('/', (req, res) => {
         const [ni, no] = (s.NetIO || '').split('/');
         totalNetIn  += parseBytes(ni);
         totalNetOut += parseBytes(no);
+        const [bi, bo] = (s.BlockIO || '').split('/');
+        totalBlkIn  += parseBytes(bi);
+        totalBlkOut += parseBytes(bo);
         count++;
       } catch {}
     }
 
     res.json({
       cpu: Math.round(totalCpu * 10) / 10,
+      cpuCores,
       memUsed: totalMemUsed,
       memTotal: totalMemTotal,
       netIn: totalNetIn,
       netOut: totalNetOut,
+      blkIn: totalBlkIn,
+      blkOut: totalBlkOut,
       containers: count,
     });
   });
