@@ -1107,8 +1107,14 @@ body {
   .sidebar.open { transform: translateX(0); }
   .sidebar-overlay.open { display: block; }
 
-  .topbar-search { max-width: 160px; }
+  /* Topbar: compact stats, hide search, show only CPU + mem */
+  .topbar-search { display: none; }
   .brand-name { display: none; }
+  .topbar-stats { gap: 0.3rem; }
+  .topbar-stat { padding: 0.22rem 0.45rem; font-size: 0.72rem; gap: 0.3rem; }
+  .topbar-stat svg { width: 11px; height: 11px; }
+  /* Hide network stat on small screens — not enough room */
+  .topbar-stat:nth-child(3) { display: none; }
 
   .dashboard-grid { grid-template-columns: 1fr; padding: 0.5rem; gap: 0.4rem; }
 
@@ -1116,11 +1122,25 @@ body {
     padding: 0.5rem 0.75rem;
   }
 
+  /* Tabs: scrollable so action buttons (Stop/Restart/Recreate) are reachable */
+  .svc-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 0.6rem;
+    /* Fade hint on the right edge to indicate more content */
+    mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
+  }
+  .svc-tabs::-webkit-scrollbar { display: none; }
+
   .backups-container { padding: 0.75rem; }
 }
 
 @media (max-width: 480px) {
-  .topbar-search { display: none; }
+  /* On very small screens also hide memory stat, keep only CPU */
+  .topbar-stat:nth-child(2) { display: none; }
+  .topbar-stat:nth-child(3) { display: none; }
 }
 
 /* ============================================================
