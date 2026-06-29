@@ -318,8 +318,19 @@ function svcLogsStart(containerName) {
       let content = line;
       const m = line.match(/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z)\s/);
       if (m) { timeStr = new Date(m[1]).toLocaleTimeString(); content = line.slice(m[0].length); }
+
+      // Detect log level from common patterns
+      const cl = content.toLowerCase();
+      let level = 'info';
+      if (/\b(error|err|fatal|critical|crit|panic|emerg|exception|traceback|failed|failure)\b/.test(cl)) level = 'error';
+      else if (/\b(warn|warning)\b/.test(cl)) level = 'warn';
+      else if (/\b(debug|trace|verbose)\b/.test(cl)) level = 'debug';
+
       const span = document.createElement('span');
-      span.className = 'log-line';
+      span.className = `log-line log-level-${level}`;
+      const dot = document.createElement('span');
+      dot.className = 'log-dot';
+      span.appendChild(dot);
       if (timeStr) {
         const ts = document.createElement('span');
         ts.className = 'log-time';

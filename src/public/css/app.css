@@ -907,16 +907,38 @@ body {
 }
 
 .log-line {
-  display: block;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
   white-space: pre-wrap;
   word-break: break-all;
+  padding: 0.05rem 0.25rem;
+  border-radius: 3px;
 }
 .log-line:hover { background: rgba(255,255,255,0.04); }
 .log-line.highlight { background: rgba(59,130,246,0.2); }
 
+/* Colored dot indicator */
+.log-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-top: 0.45em;
+  background: #3b82f6;
+}
+.log-level-info  .log-dot { background: #22c55e; }
+.log-level-warn  .log-dot { background: #f59e0b; }
+.log-level-error .log-dot { background: #ef4444; }
+.log-level-debug .log-dot { background: #64748b; }
+
+/* Subtle tint on the line itself */
+.log-level-warn  { background: rgba(245,158,11,0.04); }
+.log-level-error { background: rgba(239,68,68,0.06); }
+
 .log-time {
   color: #6e7681;
-  margin-right: 0.5rem;
+  flex-shrink: 0;
   user-select: none;
 }
 
