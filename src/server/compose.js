@@ -159,7 +159,8 @@ function writeCompose(projectDir, contentOrObj) {
  */
 function validateCompose(filePath) {
   return new Promise((resolve) => {
-    execFile('docker', ['compose', '-f', filePath, 'config'], { timeout: 15000 }, (err, stdout, stderr) => {
+    const cwd = path.dirname(filePath);
+    execFile('docker', ['compose', '-f', filePath, 'config'], { timeout: 15000, cwd }, (err, stdout, stderr) => {
       if (err) {
         resolve({ valid: false, error: stderr || err.message });
       } else {

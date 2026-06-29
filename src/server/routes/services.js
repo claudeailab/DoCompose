@@ -38,11 +38,13 @@ async function detectProjectName(filePath) {
 
 async function runCompose(projectDir, args) {
   const { getComposePath } = require('../compose');
+  const path = require('path');
   const filePath = getComposePath(projectDir);
+  const cwd = path.dirname(filePath);
   const projectName = await detectProjectName(filePath);
   const projectArgs = projectName ? ['--project-name', projectName] : [];
   return new Promise((resolve, reject) => {
-    execFile('docker', ['compose', '-f', filePath, ...projectArgs, ...args], { timeout: 120000 }, (err, stdout, stderr) => {
+    execFile('docker', ['compose', '-f', filePath, ...projectArgs, ...args], { timeout: 120000, cwd }, (err, stdout, stderr) => {
       if (err) return reject(new Error(stderr || err.message));
       resolve({ stdout, stderr });
     });
