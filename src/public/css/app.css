@@ -1318,26 +1318,87 @@ body {
 .service-item.active .status-dot { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ============================================================
-   Settings view
+   Settings view — tabbed layout
    ============================================================ */
 
-.settings-page {
+.stg-layout {
   display: flex;
-  flex-direction: column;
   height: 100%;
-  overflow-y: auto;
-  padding: 2rem;
-  max-width: 760px;
-  margin: 0 auto;
-  width: 100%;
+  overflow: hidden;
 }
 
-.settings-header { margin-bottom: 2rem; }
-.settings-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.25rem; }
-.settings-subtitle { font-size: 0.9rem; color: var(--text-muted); }
+.stg-sidebar {
+  width: 180px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0.5rem;
+  gap: 0.15rem;
+}
 
-.settings-sections { display: flex; flex-direction: column; gap: 1.5rem; }
+.stg-sidebar-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 0.6rem 0.75rem;
+}
 
+.stg-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+.stg-tab svg { width: 15px; height: 15px; flex-shrink: 0; }
+.stg-tab:hover { background: var(--bg-hover); color: var(--text-primary); }
+.stg-tab.active { background: var(--accent-dim); color: var(--accent); }
+
+.stg-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.stg-pane {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 1.75rem;
+}
+.stg-pane.active { display: block; }
+
+.stg-pane-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+}
+
+.stg-footer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.75rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+/* Shared form elements */
 .settings-section {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
@@ -1345,28 +1406,16 @@ body {
   overflow: hidden;
 }
 
-.settings-section-title {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  padding: 0.85rem 1.1rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-tertiary);
-}
-.settings-section-title svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--accent); }
-
 .settings-section-desc {
   font-size: 0.82rem;
   color: var(--text-muted);
-  padding: 0.6rem 1.1rem 0;
+  line-height: 1.5;
 }
 
-.settings-group { padding: 0.75rem 0; }
+.settings-group { padding: 0.5rem 0; }
 
 .settings-exclude-scroll {
-  max-height: 220px;
+  max-height: calc(100vh - 280px);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar);
@@ -1434,7 +1483,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.4rem 1.1rem;
+  padding: 0.38rem 1.1rem;
   cursor: pointer;
   transition: background 0.1s;
   border-bottom: 1px solid var(--border);
@@ -1443,18 +1492,9 @@ body {
 .settings-checkbox-row:hover { background: var(--bg-hover); }
 .settings-checkbox-row input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
 .settings-checkbox-name { font-size: 0.875rem; font-weight: 500; flex: 1; }
-.settings-checkbox-hint { font-size: 0.78rem; color: var(--text-muted); }
+.settings-checkbox-hint { font-size: 0.78rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
 
 .settings-loading { padding: 1rem 1.1rem; font-size: 0.875rem; color: var(--text-muted); }
-
-.settings-footer {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
-}
 
 .settings-save-status { font-size: 0.85rem; color: var(--text-muted); }
 .settings-save-status.ok { color: var(--success); }
@@ -1464,7 +1504,8 @@ body {
 .logs-hide-ts .log-time { display: none; }
 
 @media (max-width: 600px) {
-  .settings-page { padding: 1rem; }
+  .stg-sidebar { width: 140px; }
+  .stg-pane { padding: 1rem; }
   .settings-row { flex-direction: column; gap: 0.5rem; }
   .settings-control { flex: none; width: 100%; }
 }

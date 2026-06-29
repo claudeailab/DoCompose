@@ -12,6 +12,7 @@ window.DC = {
   services: [],
   version: 'v0.1.0',
   updates: {},
+  settings: {},
 };
 
 // ---- Update state persistence ----
@@ -364,9 +365,20 @@ setInterval(async () => {
   } catch {}
 }, 5000);
 
+// ---- Load settings ----
+async function loadSettings() {
+  try {
+    DC.settings = await fetch('/api/settings').then((r) => r.json());
+  } catch {
+    DC.settings = {};
+  }
+}
+window.loadSettings = loadSettings;
+
 // ---- Boot ----
 (async () => {
   loadUpdateCache();
+  await loadSettings();
   await loadProjects();
   await refreshServiceList();
   refreshStats();

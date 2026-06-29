@@ -338,53 +338,43 @@ function svcLogsStart(containerName) {
     const fragment = document.createDocumentFragment();
     let added = 0;
     for (const line of raw.split('\n')) {
-      if (!line) continue;
+      if (!line.trim()) continue;
       let timeStr = '';
-      let dateStr = '';
       let content = line;
-      // Docker timestamp format: 2024-01-15T12:34:56.789012345Z [env-vars] message
-      const m = line.match(/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z)\s(?:[^\s]+=\S+\s)*/);
+      // Docker --timestamps format: 2024-01-15T12:34:56.789012345Z message
+      const m = line.match(/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z) /);
       if (m) {
         const d = new Date(m[1]);
         timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-        dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
         content = line.slice(m[0].length);
       }
 
-      // Detect log level from common patterns in content
       const cl = content.toLowerCase();
       let level = 'info';
       if (/\b(error|err|fatal|critical|crit|panic|emerg|exception|traceback|failed|failure)\b/.test(cl)) level = 'error';
       else if (/\b(warn|warning)\b/.test(cl)) level = 'warn';
       else if (/\b(debug|trace|verbose)\b/.test(cl)) level = 'debug';
 
-      const span = document.createElement('span');
-      span.className = `log-line log-level-${level}`;
+      const row = document.createElement('div');
+      row.className = `log-line log-level-${level}`;
       const dot = document.createElement('span');
       dot.className = 'log-dot';
-      span.appendChild(dot);
+      row.appendChild(dot);
       if (timeStr) {
         const ts = document.createElement('span');
         ts.className = 'log-time';
-        ts.title = dateStr + ' ' + timeStr;
         ts.textContent = timeStr;
-        span.appendChild(ts);
+        row.appendChild(ts);
       }
-      const msg = document.createElement('span');
-      msg.className = 'log-msg';
-      msg.textContent = content;
-      span.appendChild(msg);
-      if (searchQ && content.toLowerCase().includes(searchQ.toLowerCase())) span.classList.add('highlight');
-      fragment.appendChild(span);
+      row.appendChild(document.createTextNode(content));
+      if (searchQ && content.toLowerCase().includes(searchQ.toLowerCase())) row.classList.add('highlight');
+      fragment.appendChild(row);
       added++;
     }
     if (added) {
       out.appendChild(fragment);
       const countEl = document.getElementById('svcLogsCount');
-      if (countEl) {
-        const lines = out.querySelectorAll('.log-line').length;
-        countEl.textContent = lines + ' lines';
-      }
+      if (countEl) countEl.textContent = out.children.length + ' lines';
     }
     if (svcLogsAutoScroll) out.scrollTop = out.scrollHeight;
   };
@@ -502,6 +492,19 @@ function svcTermConnect(containerName) {
 }
 
 /* ---- Configuration tab ---- */
+function svcFormatYaml() {
+  const ta = document.getElementById('svcConfigTextarea');
+  if (!ta || typeof jsyaml === 'undefined') return;
+  try {
+    const parsed = jsyaml.load(ta.value);
+    ta.value = jsyaml.dump(parsed, { indent: 2, lineWidth: -1, noRefs: true });
+    svcSetStatus('svcConfigStatus', 'Formatted', 'valid');
+    setTimeout(() => svcSetStatus('svcConfigStatus', ''), 2000);
+  } catch (err) {
+    svcSetStatus('svcConfigStatus', 'Invalid YAML: ' + err.message, 'invalid');
+  }
+}
+
 function svcRenderConfig(name) {
   const pane = document.getElementById('svcPaneConfig');
   if (!pane) return;
@@ -513,6 +516,10 @@ function svcRenderConfig(name) {
           <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
         </svg>
         Save
+      </button>
+      <button class="btn btn-secondary btn-sm" id="svcFormatBtn" title="Format YAML">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+        Format
       </button>
       <button class="btn btn-secondary btn-sm" id="svcReloadBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -527,6 +534,7 @@ function svcRenderConfig(name) {
   `;
 
   document.getElementById('svcSaveBtn').addEventListener('click', () => svcSaveConfig(name));
+  document.getElementById('svcFormatBtn').addEventListener('click', svcFormatYaml);
   document.getElementById('svcReloadBtn').addEventListener('click', () => {
     svcRenderedTabs.delete('config');
     svcRenderConfig(name);
@@ -568,6 +576,13 @@ async function svcLoadConfig(name) {
 async function svcSaveConfig(name) {
   const ta = document.getElementById('svcConfigTextarea');
   if (!ta) return;
+  // Auto-format before saving
+  if (typeof jsyaml !== 'undefined') {
+    try {
+      const parsed = jsyaml.load(ta.value);
+      ta.value = jsyaml.dump(parsed, { indent: 2, lineWidth: -1, noRefs: true });
+    } catch {}
+  }
   svcSetStatus('svcConfigStatus', 'Saving…');
   try {
     await api('POST', `/api/files/service/${encodeURIComponent(name)}`, { yaml: ta.value });

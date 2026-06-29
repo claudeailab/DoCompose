@@ -154,6 +154,13 @@ function attachCardListeners(root) {
 
 /* ---- Update cell ---- */
 function buildUpdateCell(name) {
+  const excluded = (DC.settings && DC.settings.excludedFromUpdates) || [];
+  if (excluded.includes(name)) {
+    return `<span class="card-btn" style="opacity:0.35;cursor:default;pointer-events:none" title="Excluded from updates">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      Excluded
+    </span>`;
+  }
   const st = DC.updates[name];
   if (!st || st === 'idle') {
     return `<button class="card-btn" data-action="check-update" data-service="${escHtml(name)}" title="Check for image update">
@@ -306,9 +313,11 @@ async function checkAllUpdates() {
   const btn = document.getElementById('dashCheckAllBtn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<div class="spinner" style="width:13px;height:13px;display:inline-block;vertical-align:middle"></div> Checking…'; }
 
-  services.forEach((s) => { DC.updates[s.name] = 'checking'; refreshUpdateCell(s.name); });
+  const excluded = (DC.settings && DC.settings.excludedFromUpdates) || [];
+  const checkable = services.filter((s) => !excluded.includes(s.name));
+  checkable.forEach((s) => { DC.updates[s.name] = 'checking'; refreshUpdateCell(s.name); });
 
-  await Promise.all(services.map(async (s) => {
+  await Promise.all(checkable.map(async (s) => {
     try {
       const { hasUpdate } = await api('GET', `/api/services/${encodeURIComponent(s.name)}/check-update`);
       DC.updates[s.name] = hasUpdate ? 'available' : null;
