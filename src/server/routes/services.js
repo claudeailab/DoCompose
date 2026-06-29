@@ -140,9 +140,9 @@ router.post('/:name/recreate', async (req, res) => {
     const project = req.query.project || '';
     const name = req.params.name;
     const containerName = getContainerName(project, name);
-    await runDocker(['stop', containerName]);
-    await runDocker(['rm', '-f', containerName]);
-    const { stdout, stderr } = await runCompose(project, ['up', '-d', name]);
+    try { await runDocker(['stop', containerName]); } catch {}
+    try { await runDocker(['rm', '-f', containerName]); } catch {}
+    const { stdout, stderr } = await runCompose(project, ['up', '-d', '--force-recreate', '--no-deps', name]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
     res.status(500).json({ error: err.message });
