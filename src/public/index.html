@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="/css/app.css?v=0.5.49" />
+  <link rel="stylesheet" href="/css/app.css?v=0.5.50" />
 </head>
 <body>
   <!-- Top bar -->
@@ -45,7 +45,7 @@
         <circle cx="16" cy="28" r="2" fill="white" opacity="0.7"/>
       </svg>
       <span class="brand-name">Do<span class="brand-name-accent">Compose</span></span>
-      <span class="brand-version" id="versionBadge">v0.5.50</span>
+      <span class="brand-version" id="versionBadge">v0.5.51</span>
     </div>
 
     <!-- project select kept hidden for multi-project API logic -->
@@ -79,10 +79,19 @@
         <div class="ts-widget-label"><span id="tsMem">—</span></div>
         <div class="ts-membars" id="tsMemBars"></div>
       </div>
+      <!-- Date/time -->
+      <div class="ts-widget ts-widget-datetime" id="topbarDatetime" title="Current date &amp; time">
+        <span id="tsDate" style="font-size:0.7rem;opacity:0.75"></span>
+        <span id="tsTime" style="font-size:0.85rem;font-weight:700"></span>
+      </div>
     </div>
 
+    <!-- Refresh + search (right of stats) -->
+    <button class="btn-icon topbar-refresh" id="topbarRefreshBtn" title="Refresh services">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    </button>
     <div class="topbar-search">
-      <input type="text" id="searchInput" placeholder="Search services, ports, volumes…" autocomplete="off" />
+      <input type="text" id="searchInput" placeholder="Search…" autocomplete="off" />
       <div class="search-results" id="searchResults" hidden></div>
     </div>
   </header>
@@ -125,9 +134,9 @@
   <!-- Toast notifications -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/js/app.js?v=0.5.49"></script>
-  <script src="/js/dashboard.js?v=0.5.49"></script>
-  <script src="/js/service.js?v=0.5.49"></script>
-  <script src="/js/settings.js?v=0.5.49"></script>
+  <script src="/js/app.js?v=0.5.50"></script>
+  <script src="/js/dashboard.js?v=0.5.50"></script>
+  <script src="/js/service.js?v=0.5.50"></script>
+  <script src="/js/settings.js?v=0.5.50"></script>
 </body>
 </html>

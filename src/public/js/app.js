@@ -249,17 +249,27 @@ async function doSearch(q) {
   }
 }
 
-// ---- Theme toggle ----
-const themeToggleBtn = document.getElementById('themeToggle');
-if (themeToggleBtn) themeToggleBtn.addEventListener('click', () => {
+// ---- Theme ----
+function applyTheme(theme) {
   const html = document.documentElement;
-  const theme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', theme);
-  localStorage.setItem('dc-theme', theme);
+  if (theme === 'auto') {
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    html.setAttribute('data-theme', dark ? 'dark' : 'light');
+  } else {
+    html.setAttribute('data-theme', theme || 'dark');
+  }
+  localStorage.setItem('dc-theme', theme || 'dark');
+}
+window.applyTheme = applyTheme;
+
+// Listen for OS theme changes when in auto mode
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  const t = localStorage.getItem('dc-theme');
+  if (t === 'auto') applyTheme('auto');
 });
 
-const savedTheme = localStorage.getItem('dc-theme');
-if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+const savedTheme = localStorage.getItem('dc-theme') || 'dark';
+applyTheme(savedTheme);
 
 // ---- Nav ----
 document.querySelectorAll('.nav-item').forEach((btn) => {
@@ -353,6 +363,41 @@ async function refreshStats() {
   } catch {}
 }
 
+// ---- Refresh button ----
+const topbarRefreshBtn = document.getElementById('topbarRefreshBtn');
+if (topbarRefreshBtn) {
+  topbarRefreshBtn.addEventListener('click', async () => {
+    topbarRefreshBtn.classList.add('spinning');
+    await Promise.all([refreshServiceList(), refreshStats()]);
+    setTimeout(() => topbarRefreshBtn.classList.remove('spinning'), 400);
+  });
+}
+
+// ---- Topbar date/time ----
+function updateTopbarDatetime() {
+  const dateEl = document.getElementById('tsDate');
+  const timeEl = document.getElementById('tsTime');
+  if (!dateEl || !timeEl) return;
+  const tz = DC.settings?.timezone || undefined;
+  const fmt = DC.settings?.timeFormat || '24';
+  const now = new Date();
+  try {
+    dateEl.textContent = now.toLocaleDateString(undefined, { timeZone: tz, month: 'short', day: 'numeric' });
+    timeEl.textContent = now.toLocaleTimeString(undefined, {
+      timeZone: tz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: fmt === '12',
+    });
+  } catch {
+    dateEl.textContent = now.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    timeEl.textContent = now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: fmt === '12' });
+  }
+}
+window.updateTopbarDatetime = updateTopbarDatetime;
+updateTopbarDatetime();
+setInterval(updateTopbarDatetime, 10000);
+
 // ---- Auto-refresh services every 15s; stats every 10s; poll service detail header every 5s ----
 setInterval(refreshServiceList, 15000);
 setInterval(refreshStats, 10000);
@@ -379,6 +424,9 @@ window.loadSettings = loadSettings;
 (async () => {
   loadUpdateCache();
   await loadSettings();
+  // Apply persisted theme from server settings (overrides localStorage)
+  if (DC.settings.theme) applyTheme(DC.settings.theme);
+  updateTopbarDatetime();
   await loadProjects();
   await refreshServiceList();
   refreshStats();

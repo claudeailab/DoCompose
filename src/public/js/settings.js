@@ -20,7 +20,7 @@ async function settingsInit() {
         </button>
         <button class="stg-tab" data-tab="registry">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Registry
+          Registries
         </button>
         <button class="stg-tab" data-tab="excluded">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
@@ -32,7 +32,65 @@ async function settingsInit() {
         <!-- General -->
         <div class="stg-pane active" id="stgPaneGeneral">
           <h2 class="stg-pane-title">General</h2>
+
           <div class="settings-section">
+            <div class="settings-section-label">Appearance</div>
+            <div class="settings-group">
+              <div class="settings-row">
+                <div class="settings-label">
+                  <span>Color scheme</span>
+                  <span class="settings-hint">Auto follows your system preference.</span>
+                </div>
+                <div class="settings-control">
+                  <div class="theme-picker" id="stgThemePicker">
+                    <button class="theme-btn" data-theme="light">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                      Light
+                    </button>
+                    <button class="theme-btn" data-theme="dark">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                      Dark
+                    </button>
+                    <button class="theme-btn" data-theme="auto">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20" stroke-dasharray="2 2"/></svg>
+                      Auto
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-label">Date &amp; Time</div>
+            <div class="settings-group">
+              <div class="settings-row">
+                <div class="settings-label">
+                  <span>Timezone</span>
+                  <span class="settings-hint">Used for the clock in the top bar.</span>
+                </div>
+                <div class="settings-control">
+                  <select id="stgTimezone" class="settings-select">
+                    <option value="">System default</option>
+                  </select>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-label">
+                  <span>Time format</span>
+                </div>
+                <div class="settings-control">
+                  <select id="stgTimeFormat" class="settings-select">
+                    <option value="12">12-hour (3:45 PM)</option>
+                    <option value="24">24-hour (15:45)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-label">Updates</div>
             <div class="settings-group">
               <div class="settings-row">
                 <div class="settings-label">
@@ -53,48 +111,17 @@ async function settingsInit() {
           </div>
         </div>
 
-        <!-- Registry -->
+        <!-- Registries -->
         <div class="stg-pane" id="stgPaneRegistry">
-          <h2 class="stg-pane-title">Container Registry</h2>
-          <p class="settings-section-desc" style="margin-bottom:1rem">Used when pulling images or checking updates on private registries.</p>
-          <div class="settings-section">
-            <div class="settings-group">
-              <div class="settings-row">
-                <div class="settings-label">
-                  <span>Registry server</span>
-                  <span class="settings-hint">e.g. ghcr.io — leave blank for Docker Hub</span>
-                </div>
-                <div class="settings-control">
-                  <input type="text" id="stgRegServer" class="settings-input" placeholder="ghcr.io" autocomplete="off" />
-                </div>
-              </div>
-              <div class="settings-row">
-                <div class="settings-label"><span>Username</span></div>
-                <div class="settings-control">
-                  <input type="text" id="stgRegUser" class="settings-input" placeholder="username" autocomplete="off" />
-                </div>
-              </div>
-              <div class="settings-row">
-                <div class="settings-label">
-                  <span>Password / Token</span>
-                  <span class="settings-hint">GitHub PAT: needs <code>read:packages</code> scope</span>
-                </div>
-                <div class="settings-control" style="position:relative">
-                  <input type="password" id="stgRegPass" class="settings-input" placeholder="••••••••" autocomplete="new-password" style="padding-right:2.2rem" />
-                  <button class="settings-eye" id="stgRegPassToggle" type="button" title="Show/hide">
-                    <svg id="stgEyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div style="margin-top:1rem;display:flex;align-items:center;gap:0.75rem">
-            <button class="btn btn-secondary" id="stgTestRegBtn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-              Test Connection
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+            <h2 class="stg-pane-title" style="margin-bottom:0">Container Registries</h2>
+            <button class="btn btn-primary btn-sm" id="stgAddRegistryBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Registry
             </button>
-            <span id="stgTestStatus" style="font-size:0.85rem"></span>
           </div>
+          <p class="settings-section-desc" style="margin-bottom:1.25rem">Configure credentials for private container registries. Disabled registries are skipped during update checks.</p>
+          <div id="stgRegistryList"></div>
         </div>
 
         <!-- Excluded -->
@@ -139,53 +166,169 @@ async function settingsInit() {
     DC.settings = settings;
   } catch {}
 
-  // General tab
+  // ── General tab ──────────────────────────────────────────────
   const intEl = document.getElementById('stgUpdateInterval');
   if (intEl && settings.updateIntervalSeconds !== undefined) {
     intEl.value = String(settings.updateIntervalSeconds);
   }
 
-  // Registry tab
-  const reg = settings.registry || {};
-  const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
-  setVal('stgRegServer', reg.server || '');
-  setVal('stgRegUser', reg.username || '');
-  const passEl = document.getElementById('stgRegPass');
-  if (passEl && reg.password) passEl.placeholder = '(saved — enter to change)';
-
-  document.getElementById('stgRegPassToggle').addEventListener('click', () => {
-    const inp = document.getElementById('stgRegPass');
-    const icon = document.getElementById('stgEyeIcon');
-    if (inp.type === 'password') {
-      inp.type = 'text';
-      icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
-    } else {
-      inp.type = 'password';
-      icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-    }
+  // Theme picker
+  const currentTheme = settings.theme || localStorage.getItem('dc-theme') || 'dark';
+  document.querySelectorAll('.theme-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.theme === currentTheme);
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.theme-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyTheme(btn.dataset.theme);
+      markDirty();
+    });
   });
 
-  // Registry test
-  document.getElementById('stgTestRegBtn').addEventListener('click', async () => {
-    const setSt = (msg, color) => {
-      const el = document.getElementById('stgTestStatus');
-      if (el) { el.textContent = msg; el.style.color = color || 'var(--text-muted)'; }
-    };
-    setSt('Testing…');
-    try {
-      const passVal = document.getElementById('stgRegPass').value;
-      const result = await api('POST', '/api/settings/test-registry', {
-        server: document.getElementById('stgRegServer').value.trim(),
-        username: document.getElementById('stgRegUser').value.trim(),
-        password: passVal || reg.password || '',
+  // Timezone
+  const tzEl = document.getElementById('stgTimezone');
+  const knownTzs = Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : [];
+  for (const tz of knownTzs) {
+    const opt = document.createElement('option');
+    opt.value = tz;
+    opt.textContent = tz.replace(/_/g, ' ');
+    tzEl.appendChild(opt);
+  }
+  tzEl.value = settings.timezone || '';
+  tzEl.addEventListener('change', markDirty);
+
+  // Time format
+  const tfEl = document.getElementById('stgTimeFormat');
+  tfEl.value = settings.timeFormat || '24';
+  tfEl.addEventListener('change', markDirty);
+
+  // ── Registries tab ───────────────────────────────────────────
+  let registries = Array.isArray(settings.registries)
+    ? settings.registries.map((r) => Object.assign({}, r))
+    : (settings.registry ? [Object.assign({ enabled: true, name: 'Default' }, settings.registry)] : []);
+
+  function renderRegistries() {
+    const list = document.getElementById('stgRegistryList');
+    if (!list) return;
+    if (!registries.length) {
+      list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:2rem;font-size:0.9rem">No registries configured. Click "Add Registry" to add one.</div>';
+      return;
+    }
+    list.innerHTML = registries.map((reg, idx) => `
+      <div class="registry-card" id="regCard${idx}">
+        <div class="registry-card-header">
+          <label class="toggle-switch" title="${reg.enabled ? 'Enabled' : 'Disabled'}">
+            <input type="checkbox" class="reg-enabled" data-idx="${idx}" ${reg.enabled !== false ? 'checked' : ''}>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <span class="registry-card-name">${escHtml(reg.name || reg.server || 'Docker Hub')}</span>
+          <button class="btn-icon reg-delete" data-idx="${idx}" title="Remove registry" style="margin-left:auto">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+        <div class="registry-card-body">
+          <div class="settings-row" style="margin-bottom:0.5rem">
+            <div class="settings-label"><span>Registry server</span><span class="settings-hint">e.g. ghcr.io — blank = Docker Hub</span></div>
+            <div class="settings-control">
+              <input type="text" class="settings-input reg-server" data-idx="${idx}" value="${escHtml(reg.server || '')}" placeholder="ghcr.io" autocomplete="off">
+            </div>
+          </div>
+          <div class="settings-row" style="margin-bottom:0.5rem">
+            <div class="settings-label"><span>Username</span></div>
+            <div class="settings-control">
+              <input type="text" class="settings-input reg-username" data-idx="${idx}" value="${escHtml(reg.username || '')}" placeholder="username" autocomplete="off">
+            </div>
+          </div>
+          <div class="settings-row" style="margin-bottom:0.75rem">
+            <div class="settings-label"><span>Password / Token</span><span class="settings-hint">GitHub PAT needs <code>read:packages</code></span></div>
+            <div class="settings-control" style="position:relative">
+              <input type="password" class="settings-input reg-password" data-idx="${idx}" placeholder="${reg.password ? '(saved — enter to change)' : '••••••••'}" autocomplete="new-password" style="padding-right:2.2rem">
+              <button class="settings-eye reg-eye" type="button" data-idx="${idx}" title="Show/hide">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem">
+            <button class="btn btn-secondary btn-sm reg-test" data-idx="${idx}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Test Connection
+            </button>
+            <span class="reg-test-status" id="regTestStatus${idx}" style="font-size:0.85rem"></span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    // Events
+    list.querySelectorAll('.reg-enabled').forEach((cb) => {
+      cb.addEventListener('change', (e) => {
+        registries[+e.target.dataset.idx].enabled = e.target.checked;
+        markDirty();
       });
-      setSt(result.ok ? ('✓ ' + (result.message || 'Connected')) : ('✗ ' + result.error), result.ok ? 'var(--success)' : 'var(--danger)');
-    } catch (err) {
-      setSt('✗ ' + err.message, 'var(--danger)');
-    }
+    });
+    list.querySelectorAll('.reg-server').forEach((el) => {
+      el.addEventListener('input', (e) => { registries[+e.target.dataset.idx].server = e.target.value; markDirty(); });
+    });
+    list.querySelectorAll('.reg-username').forEach((el) => {
+      el.addEventListener('input', (e) => { registries[+e.target.dataset.idx].username = e.target.value; markDirty(); });
+    });
+    list.querySelectorAll('.reg-password').forEach((el) => {
+      el.addEventListener('input', (e) => { registries[+e.target.dataset.idx]._newPass = e.target.value; markDirty(); });
+    });
+    list.querySelectorAll('.reg-eye').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const idx = +btn.dataset.idx;
+        const inp = list.querySelector(`.reg-password[data-idx="${idx}"]`);
+        if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+      });
+    });
+    list.querySelectorAll('.reg-delete').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        registries.splice(+btn.dataset.idx, 1);
+        renderRegistries();
+        markDirty();
+      });
+    });
+    list.querySelectorAll('.reg-test').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const idx = +btn.dataset.idx;
+        const reg = registries[idx];
+        const statusEl = document.getElementById(`regTestStatus${idx}`);
+        const passVal = list.querySelector(`.reg-password[data-idx="${idx}"]`)?.value;
+        if (statusEl) { statusEl.textContent = 'Testing…'; statusEl.style.color = 'var(--text-muted)'; }
+        try {
+          const result = await api('POST', '/api/settings/test-registry', {
+            server: reg.server || '',
+            username: reg.username || '',
+            password: passVal || reg.password || '',
+          });
+          if (statusEl) {
+            statusEl.textContent = result.ok ? ('✓ ' + (result.message || 'Connected')) : ('✗ ' + result.error);
+            statusEl.style.color = result.ok ? 'var(--success)' : 'var(--danger)';
+          }
+          // Auto-update name if empty
+          if (result.ok && !reg.name) {
+            reg.name = reg.server || 'Docker Hub';
+            renderRegistries();
+          }
+        } catch (err) {
+          if (statusEl) { statusEl.textContent = '✗ ' + err.message; statusEl.style.color = 'var(--danger)'; }
+        }
+      });
+    });
+  }
+
+  renderRegistries();
+
+  document.getElementById('stgAddRegistryBtn').addEventListener('click', () => {
+    registries.push({ name: '', server: '', username: '', password: '', enabled: true });
+    renderRegistries();
+    markDirty();
+    // Scroll to new card
+    const list = document.getElementById('stgRegistryList');
+    if (list) list.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
 
-  // Excluded tab
+  // ── Excluded tab ─────────────────────────────────────────────
   const excludeList = document.getElementById('stgExcludeList');
   const excluded = new Set(settings.excludedFromUpdates || []);
   const services = DC.services || [];
@@ -209,7 +352,6 @@ async function settingsInit() {
     renderExcludeList(e.target.value.trim().toLowerCase());
   });
 
-  // Update excluded set when checkboxes change
   excludeList.addEventListener('change', (e) => {
     if (!e.target.classList.contains('stg-exclude-cb')) return;
     if (e.target.checked) excluded.add(e.target.value);
@@ -217,15 +359,12 @@ async function settingsInit() {
     markDirty();
   });
 
-  // Dirty tracking
+  // ── Dirty tracking ────────────────────────────────────────────
   const saveBtn = document.getElementById('stgSaveBtn');
   function markDirty() { saveBtn.disabled = false; }
   document.getElementById('stgUpdateInterval').addEventListener('change', markDirty);
-  document.getElementById('stgRegServer').addEventListener('input', markDirty);
-  document.getElementById('stgRegUser').addEventListener('input', markDirty);
-  document.getElementById('stgRegPass').addEventListener('input', markDirty);
 
-  // Save
+  // ── Save ──────────────────────────────────────────────────────
   saveBtn.addEventListener('click', async () => {
     const setSt = (msg, ok) => {
       const el = document.getElementById('stgSaveStatus');
@@ -233,18 +372,29 @@ async function settingsInit() {
     };
     setSt('Saving…');
     try {
-      const passVal = document.getElementById('stgRegPass').value;
+      // Build registries array (merge new passwords)
+      const finalRegistries = registries.map((r) => {
+        const out = { name: r.name || r.server || 'Docker Hub', server: r.server || '', username: r.username || '', enabled: r.enabled !== false };
+        if (r._newPass) out.password = r._newPass;
+        else if (r.password) out.password = r.password;
+        return out;
+      });
+
+      const selectedTheme = document.querySelector('.theme-btn.active')?.dataset.theme || 'dark';
+
       const payload = {
         updateIntervalSeconds: parseInt(document.getElementById('stgUpdateInterval').value, 10),
-        registry: {
-          server: document.getElementById('stgRegServer').value.trim(),
-          username: document.getElementById('stgRegUser').value.trim(),
-          ...(passVal ? { password: passVal } : {}),
-        },
+        registries: finalRegistries,
         excludedFromUpdates: Array.from(excluded),
+        theme: selectedTheme,
+        timezone: document.getElementById('stgTimezone').value,
+        timeFormat: document.getElementById('stgTimeFormat').value,
       };
       await api('POST', '/api/settings', payload);
       DC.settings = Object.assign({}, DC.settings, payload);
+      // Apply theme + datetime settings immediately
+      applyTheme(selectedTheme);
+      if (window.updateTopbarDatetime) updateTopbarDatetime();
       saveBtn.disabled = true;
       setSt('Saved', true);
       setTimeout(() => setSt(''), 3000);
