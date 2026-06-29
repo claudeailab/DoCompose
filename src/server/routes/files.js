@@ -180,9 +180,61 @@ function fixCompactSequences(yamlStr) {
   return lines.map((line, i) => (fixes.has(i) ? '  ' + line : line)).join('\n');
 }
 
+// Fixes mapping keys pasted at the same indentation as surrounding sequence items.
+// Example: `healthcheck:` at indent 4 inside a `command:` block (indent 4 for `- items`)
+// gets de-indented by 2, along with all its children.
+function fixMisplacedMappingKeys(yamlStr) {
+  const lines = yamlStr.split('\n');
+  const result = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const raw = lines[i];
+    const trimmed = raw.trimStart();
+
+    if (!trimmed || trimmed.startsWith('#')) { result.push(raw); i++; continue; }
+
+    const indent = raw.length - trimmed.length;
+    const isSeqItem = trimmed.startsWith('- ') || trimmed === '-';
+    const isKey = !isSeqItem && /^[^:]+:/.test(trimmed);
+
+    if (isKey && indent >= 2) {
+      let prevIdx = result.length - 1;
+      while (prevIdx >= 0 && !result[prevIdx].trim()) prevIdx--;
+
+      if (prevIdx >= 0) {
+        const prev = result[prevIdx];
+        const prevTrimmed = prev.trimStart();
+        const prevIndent = prev.length - prevTrimmed.length;
+        const prevIsSeq = prevTrimmed.startsWith('- ') || prevTrimmed === '-';
+
+        if (prevIsSeq && prevIndent === indent) {
+          // Key is at the same column as the sequence items above it — de-indent by 2
+          result.push(' '.repeat(indent - 2) + trimmed);
+          i++;
+          while (i < lines.length) {
+            const child = lines[i];
+            const childTrimmed = child.trimStart();
+            if (!childTrimmed) { result.push(child); i++; continue; }
+            const childIndent = child.length - childTrimmed.length;
+            if (childIndent <= indent) break;
+            result.push(' '.repeat(Math.max(0, childIndent - 2)) + childTrimmed);
+            i++;
+          }
+          continue;
+        }
+      }
+    }
+
+    result.push(raw);
+    i++;
+  }
+
+  return result.join('\n');
+}
+
 // POST /api/files/format — parse + re-serialize YAML using the same library as compose read/write.
-// Pre-processes compact sequences (a common Docker Compose pattern the strict parser rejects),
-// then parses; falls back to strict:false lenient mode as a last resort.
+// Pre-processes two common Docker Compose YAML pathologies before parsing.
 router.post('/format', (req, res) => {
   try {
     const { yaml } = req.body;
@@ -195,13 +247,13 @@ router.post('/format', (req, res) => {
     try {
       parsed = YAML.parse(yaml);
     } catch {
-      // Fix compact sequences then retry strict parse
-      const fixed = fixCompactSequences(yaml);
       wasRepaired = true;
+      // Apply both structural fixers then retry
+      const fixed = fixCompactSequences(fixMisplacedMappingKeys(yaml));
       try {
         parsed = YAML.parse(fixed);
       } catch {
-        // Last resort: lenient mode on the fixed input
+        // Last resort: lenient mode
         parsed = YAML.parse(fixed, { strict: false });
       }
     }
