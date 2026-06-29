@@ -492,16 +492,17 @@ function svcTermConnect(containerName) {
 }
 
 /* ---- Configuration tab ---- */
-function svcFormatYaml() {
+async function svcFormatYaml() {
   const ta = document.getElementById('svcConfigTextarea');
-  if (!ta || typeof jsyaml === 'undefined') return;
+  if (!ta) return;
+  svcSetStatus('svcConfigStatus', 'Formatting…');
   try {
-    const parsed = jsyaml.load(ta.value);
-    ta.value = jsyaml.dump(parsed, { indent: 2, lineWidth: -1, noRefs: true });
+    const { yaml } = await api('POST', '/api/files/format', { yaml: ta.value });
+    ta.value = yaml;
     svcSetStatus('svcConfigStatus', 'Formatted', 'valid');
     setTimeout(() => svcSetStatus('svcConfigStatus', ''), 2000);
   } catch (err) {
-    svcSetStatus('svcConfigStatus', 'Invalid YAML: ' + err.message, 'invalid');
+    svcSetStatus('svcConfigStatus', 'Cannot format: ' + err.message, 'invalid');
   }
 }
 
@@ -576,13 +577,11 @@ async function svcLoadConfig(name) {
 async function svcSaveConfig(name) {
   const ta = document.getElementById('svcConfigTextarea');
   if (!ta) return;
-  // Auto-format before saving
-  if (typeof jsyaml !== 'undefined') {
-    try {
-      const parsed = jsyaml.load(ta.value);
-      ta.value = jsyaml.dump(parsed, { indent: 2, lineWidth: -1, noRefs: true });
-    } catch {}
-  }
+  // Auto-format before saving (best-effort — don't block save on failure)
+  try {
+    const { yaml: formatted } = await api('POST', '/api/files/format', { yaml: ta.value });
+    ta.value = formatted;
+  } catch {}
   svcSetStatus('svcConfigStatus', 'Saving…');
   try {
     await api('POST', `/api/files/service/${encodeURIComponent(name)}`, { yaml: ta.value });

@@ -137,6 +137,19 @@ router.post('/service/:name', (req, res) => {
   }
 });
 
+// POST /api/files/format — parse + re-serialize YAML using the same library as compose read/write
+router.post('/format', (req, res) => {
+  try {
+    const { yaml } = req.body;
+    if (!yaml) return res.status(400).json({ error: 'yaml is required' });
+    const parsed = YAML.parse(yaml);
+    const formatted = YAML.stringify(parsed, { indent: 2, lineWidth: 0 });
+    res.json({ yaml: formatted });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // GET /api/files/service/:name/env — returns environment vars as KEY=VALUE text
 // ${VAR} references are resolved against the project's .env file
 router.get('/service/:name/env', (req, res) => {
