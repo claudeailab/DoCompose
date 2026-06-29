@@ -262,19 +262,40 @@ function svcRenderLogs(containerName) {
       <label class="btn btn-secondary btn-sm" style="cursor:pointer;user-select:none">
         <input type="checkbox" id="svcLogsAutoScroll" checked style="margin-right:4px">Auto-scroll
       </label>
+      <label class="btn btn-secondary btn-sm" style="cursor:pointer;user-select:none">
+        <input type="checkbox" id="svcLogsTimestamps" checked style="margin-right:4px">Timestamps
+      </label>
+      <select id="svcLogsTail" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:0.3rem 0.5rem;font-size:0.82rem;outline:none;cursor:pointer">
+        <option value="100">Last 100</option>
+        <option value="500">Last 500</option>
+        <option value="1000">Last 1000</option>
+        <option value="all">All</option>
+      </select>
       <input type="text" id="svcLogsSearch" placeholder="Filter…"
-        style="width:140px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:0.3rem 0.55rem;font-size:0.85rem;outline:none">
+        style="width:130px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:0.3rem 0.55rem;font-size:0.85rem;outline:none">
+      <span id="svcLogsCount" style="font-size:0.82rem;color:var(--text-muted)">0 lines</span>
       <span id="svcLogsStatus" style="font-size:0.85rem;color:var(--text-muted);margin-left:auto">Connecting…</span>
     </div>
     <div class="logs-output" id="svcLogsOutput"></div>
   `;
 
+  let svcLogsLineCount = 0;
+  const updateCount = () => { const el = document.getElementById('svcLogsCount'); if (el) el.textContent = svcLogsLineCount + ' lines'; };
+
   document.getElementById('svcLogsClearBtn').addEventListener('click', () => {
     const out = document.getElementById('svcLogsOutput');
-    if (out) out.innerHTML = '';
+    if (out) { out.innerHTML = ''; svcLogsLineCount = 0; updateCount(); }
   });
   document.getElementById('svcLogsAutoScroll').addEventListener('change', (e) => {
     svcLogsAutoScroll = e.target.checked;
+  });
+  document.getElementById('svcLogsTimestamps').addEventListener('change', (e) => {
+    document.getElementById('svcLogsOutput').classList.toggle('logs-hide-ts', !e.target.checked);
+  });
+  document.getElementById('svcLogsTail').addEventListener('change', () => {
+    const out = document.getElementById('svcLogsOutput');
+    if (out) { out.innerHTML = ''; svcLogsLineCount = 0; updateCount(); }
+    svcLogsStart(containerName);
   });
   document.getElementById('svcLogsSearch').addEventListener('input', (e) => {
     const q = e.target.value.toLowerCase();
@@ -306,20 +327,31 @@ function svcLogsStart(containerName) {
   setSt('Connecting…');
   svcLogsAutoScroll = true;
 
-  svcLogsEs = new EventSource(`/api/logs/${encodeURIComponent(containerName)}?tail=200`);
+  const tailSel = document.getElementById('svcLogsTail');
+  const tail = tailSel ? tailSel.value : '200';
+  svcLogsEs = new EventSource(`/api/logs/${encodeURIComponent(containerName)}?tail=${encodeURIComponent(tail)}`);
   svcLogsEs.onopen = () => setSt('Streaming');
   svcLogsEs.onmessage = (e) => {
     const searchQ = (document.getElementById('svcLogsSearch') || {}).value || '';
     let raw;
     try { raw = String(JSON.parse(e.data)); } catch { raw = e.data; }
+    const fragment = document.createDocumentFragment();
+    let added = 0;
     for (const line of raw.split('\n')) {
       if (!line) continue;
       let timeStr = '';
+      let dateStr = '';
       let content = line;
-      const m = line.match(/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z)\s/);
-      if (m) { timeStr = new Date(m[1]).toLocaleTimeString(); content = line.slice(m[0].length); }
+      // Docker timestamp format: 2024-01-15T12:34:56.789012345Z [env-vars] message
+      const m = line.match(/^(\d{4}-\d{2}-\d{2}T[\d:.]+Z)\s(?:[^\s]+=\S+\s)*/);
+      if (m) {
+        const d = new Date(m[1]);
+        timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        content = line.slice(m[0].length);
+      }
 
-      // Detect log level from common patterns
+      // Detect log level from common patterns in content
       const cl = content.toLowerCase();
       let level = 'info';
       if (/\b(error|err|fatal|critical|crit|panic|emerg|exception|traceback|failed|failure)\b/.test(cl)) level = 'error';
@@ -334,12 +366,25 @@ function svcLogsStart(containerName) {
       if (timeStr) {
         const ts = document.createElement('span');
         ts.className = 'log-time';
+        ts.title = dateStr + ' ' + timeStr;
         ts.textContent = timeStr;
         span.appendChild(ts);
       }
-      span.appendChild(document.createTextNode(content));
+      const msg = document.createElement('span');
+      msg.className = 'log-msg';
+      msg.textContent = content;
+      span.appendChild(msg);
       if (searchQ && content.toLowerCase().includes(searchQ.toLowerCase())) span.classList.add('highlight');
-      out.appendChild(span);
+      fragment.appendChild(span);
+      added++;
+    }
+    if (added) {
+      out.appendChild(fragment);
+      const countEl = document.getElementById('svcLogsCount');
+      if (countEl) {
+        const lines = out.querySelectorAll('.log-line').length;
+        countEl.textContent = lines + ' lines';
+      }
     }
     if (svcLogsAutoScroll) out.scrollTop = out.scrollHeight;
   };

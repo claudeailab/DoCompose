@@ -11,6 +11,7 @@ const logsRouter = require('./routes/logs');
 const backupsRouter = require('./routes/backups');
 const searchRouter = require('./routes/search');
 const statsRouter = require('./routes/stats');
+const settingsRouter = require('./routes/settings');
 const { handleTerminal } = require('./terminal');
 
 const app = express();
@@ -30,6 +31,7 @@ app.use('/api/files', filesRouter);
 app.use('/api/logs', logsRouter);
 app.use('/api/backups', backupsRouter);
 app.use('/api/search', searchRouter);
+app.use('/api/settings', settingsRouter);
 
 // Version endpoint
 app.get('/api/version', (req, res) => {

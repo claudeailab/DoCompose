@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="/css/app.css?v=0.5.39" />
+  <link rel="stylesheet" href="/css/app.css?v=0.5.40" />
 </head>
 <body>
   <!-- Top bar -->
@@ -43,7 +43,7 @@
         <circle cx="16" cy="28" r="2" fill="white" opacity="0.7"/>
       </svg>
       <span class="brand-name">Do<span class="brand-name-accent">Compose</span></span>
-      <span class="brand-version" id="versionBadge">v0.5.39</span>
+      <span class="brand-version" id="versionBadge">v0.5.40</span>
     </div>
 
     <!-- project select kept hidden for multi-project API logic -->
@@ -96,6 +96,10 @@
           </svg>
           Dashboard
         </button>
+        <button class="nav-item" data-view="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </button>
       </nav>
 
       <div class="sidebar-services" id="sidebarServices">
@@ -112,14 +116,16 @@
       <div id="view-dashboard" class="view active"></div>
       <div id="view-env" class="view"></div>
       <div id="view-service" class="view"></div>
+      <div id="view-settings" class="view"></div>
     </main>
   </div>
 
   <!-- Toast notifications -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/js/app.js?v=0.5.39"></script>
-  <script src="/js/dashboard.js?v=0.5.39"></script>
-  <script src="/js/service.js?v=0.5.39"></script>
+  <script src="/js/app.js?v=0.5.40"></script>
+  <script src="/js/dashboard.js?v=0.5.40"></script>
+  <script src="/js/service.js?v=0.5.40"></script>
+  <script src="/js/settings.js?v=0.5.40"></script>
 </body>
 </html>

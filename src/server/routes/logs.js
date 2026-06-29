@@ -9,7 +9,8 @@ const router = express.Router();
 // GET /api/logs/:containerName — SSE stream
 router.get('/:containerName', async (req, res) => {
   const { containerName } = req.params;
-  const tail = parseInt(req.query.tail, 10) || 100;
+  const tailParam = req.query.tail;
+  const tail = tailParam === 'all' ? 'all' : (parseInt(tailParam, 10) || 100);
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -25,7 +26,7 @@ router.get('/:containerName', async (req, res) => {
   };
 
   // Use docker logs command directly — it handles multiplexing properly
-  const proc = execFile('docker', ['logs', '--follow', '--tail', String(tail), '--timestamps', containerName], {
+  const proc = execFile('docker', ['logs', '--follow', '--tail', String(tail), '--timestamps', '--details', containerName], {
     maxBuffer: 10 * 1024 * 1024,
   });
 

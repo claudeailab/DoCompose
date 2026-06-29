@@ -86,6 +86,7 @@ function showView(viewName) {
     case 'dashboard': if (window.dashboardInit) dashboardInit(); break;
     case 'env':       if (window.envInit) envInit(); break;
     case 'service':   if (window.serviceInit) serviceInit(); break;
+    case 'settings':  if (window.settingsInit) settingsInit(); break;
   }
 
   if (window.innerWidth <= 768) {
