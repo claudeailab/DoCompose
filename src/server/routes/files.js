@@ -137,14 +137,26 @@ router.post('/service/:name', (req, res) => {
   }
 });
 
-// POST /api/files/format — parse + re-serialize YAML using the same library as compose read/write
+// POST /api/files/format — parse + re-serialize YAML using the same library as compose read/write.
+// Tries strict parsing first; on error falls back to lenient mode which recovers from
+// indentation mistakes and other structural issues, then re-serializes to correct form.
 router.post('/format', (req, res) => {
   try {
     const { yaml } = req.body;
     if (!yaml) return res.status(400).json({ error: 'yaml is required' });
-    const parsed = YAML.parse(yaml);
+
+    let parsed;
+    let wasRepaired = false;
+    try {
+      parsed = YAML.parse(yaml);
+    } catch {
+      // Lenient mode: converts errors to warnings and recovers the best-guess AST
+      parsed = YAML.parse(yaml, { strict: false });
+      wasRepaired = true;
+    }
+
     const formatted = YAML.stringify(parsed, { indent: 2, lineWidth: 0 });
-    res.json({ yaml: formatted });
+    res.json({ yaml: formatted, repaired: wasRepaired });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

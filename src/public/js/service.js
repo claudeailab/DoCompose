@@ -497,10 +497,10 @@ async function svcFormatYaml() {
   if (!ta) return;
   svcSetStatus('svcConfigStatus', 'Formatting…');
   try {
-    const { yaml } = await api('POST', '/api/files/format', { yaml: ta.value });
+    const { yaml, repaired } = await api('POST', '/api/files/format', { yaml: ta.value });
     ta.value = yaml;
-    svcSetStatus('svcConfigStatus', 'Formatted', 'valid');
-    setTimeout(() => svcSetStatus('svcConfigStatus', ''), 2000);
+    svcSetStatus('svcConfigStatus', repaired ? 'Repaired & formatted' : 'Formatted', 'valid');
+    setTimeout(() => svcSetStatus('svcConfigStatus', ''), 3000);
   } catch (err) {
     svcSetStatus('svcConfigStatus', 'Cannot format: ' + err.message, 'invalid');
   }
