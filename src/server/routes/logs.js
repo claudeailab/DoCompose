@@ -26,7 +26,7 @@ router.get('/:containerName', async (req, res) => {
   };
 
   // Use docker logs command directly — it handles multiplexing properly
-  const proc = execFile('docker', ['logs', '--follow', '--tail', String(tail), '--timestamps', '--details', containerName], {
+  const proc = execFile('docker', ['logs', '--follow', '--tail', String(tail), '--timestamps', containerName], {
     maxBuffer: 10 * 1024 * 1024,
   });
 

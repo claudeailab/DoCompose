@@ -27,7 +27,7 @@ async function settingsInit() {
             <div class="settings-row">
               <div class="settings-label">
                 <span>Update check interval</span>
-                <span class="settings-hint">How often to automatically check for image updates. Set to 0 to disable auto-check.</span>
+                <span class="settings-hint">How often to automatically check for image updates. 0 = manual only.</span>
               </div>
               <div class="settings-control">
                 <select id="stgUpdateInterval" class="settings-select">
@@ -53,16 +53,14 @@ async function settingsInit() {
             <div class="settings-row">
               <div class="settings-label">
                 <span>Registry server</span>
-                <span class="settings-hint">e.g. ghcr.io, docker.io, registry.example.com — leave blank for Docker Hub</span>
+                <span class="settings-hint">e.g. ghcr.io — leave blank for Docker Hub</span>
               </div>
               <div class="settings-control">
                 <input type="text" id="stgRegServer" class="settings-input" placeholder="ghcr.io" autocomplete="off" />
               </div>
             </div>
             <div class="settings-row">
-              <div class="settings-label">
-                <span>Username</span>
-              </div>
+              <div class="settings-label"><span>Username</span></div>
               <div class="settings-control">
                 <input type="text" id="stgRegUser" class="settings-input" placeholder="username" autocomplete="off" />
               </div>
@@ -70,10 +68,10 @@ async function settingsInit() {
             <div class="settings-row">
               <div class="settings-label">
                 <span>Password / Token</span>
-                <span class="settings-hint">For GitHub: use a Personal Access Token with read:packages scope</span>
+                <span class="settings-hint">GitHub: Personal Access Token with read:packages scope</span>
               </div>
               <div class="settings-control" style="position:relative">
-                <input type="password" id="stgRegPass" class="settings-input" placeholder="••••••••" autocomplete="new-password" />
+                <input type="password" id="stgRegPass" class="settings-input" placeholder="••••••••" autocomplete="new-password" style="padding-right:2.2rem" />
                 <button class="settings-eye" id="stgRegPassToggle" type="button" title="Show/hide">
                   <svg id="stgEyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -88,8 +86,8 @@ async function settingsInit() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
             Excluded from Updates
           </h2>
-          <p class="settings-section-desc">Containers checked here will be skipped during update checks and auto-pulls.</p>
-          <div class="settings-group" id="stgExcludeList">
+          <p class="settings-section-desc">Checked containers are skipped during update checks and auto-pulls.</p>
+          <div class="settings-exclude-scroll" id="stgExcludeList">
             <div class="settings-loading">Loading services…</div>
           </div>
         </section>
@@ -97,7 +95,7 @@ async function settingsInit() {
       </div>
 
       <div class="settings-footer">
-        <button class="btn btn-primary" id="stgSaveBtn">
+        <button class="btn btn-primary" id="stgSaveBtn" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           Save Settings
         </button>
@@ -123,7 +121,6 @@ async function settingsInit() {
   const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
   setVal('stgRegServer', reg.server || '');
   setVal('stgRegUser', reg.username || '');
-  // Don't prefill password, just indicate it's saved
   const passEl = document.getElementById('stgRegPass');
   if (passEl && reg.password) passEl.placeholder = '(saved — enter to change)';
 
@@ -156,8 +153,17 @@ async function settingsInit() {
     `).join('');
   }
 
+  // Dirty tracking — enable Save only when something changes
+  const saveBtn = document.getElementById('stgSaveBtn');
+  const markDirty = () => { saveBtn.disabled = false; };
+  document.getElementById('stgUpdateInterval').addEventListener('change', markDirty);
+  document.getElementById('stgRegServer').addEventListener('input', markDirty);
+  document.getElementById('stgRegUser').addEventListener('input', markDirty);
+  document.getElementById('stgRegPass').addEventListener('input', markDirty);
+  excludeList.addEventListener('change', markDirty);
+
   // Save
-  document.getElementById('stgSaveBtn').addEventListener('click', async () => {
+  saveBtn.addEventListener('click', async () => {
     const setSt = (msg, ok) => {
       const el = document.getElementById('stgSaveStatus');
       if (el) { el.textContent = msg; el.className = 'settings-save-status' + (ok === false ? ' err' : ok ? ' ok' : ''); }
@@ -175,6 +181,7 @@ async function settingsInit() {
         excludedFromUpdates: Array.from(document.querySelectorAll('.stg-exclude-cb:checked')).map((cb) => cb.value),
       };
       await api('POST', '/api/settings', payload);
+      saveBtn.disabled = true;
       setSt('Saved', true);
       setTimeout(() => setSt(''), 3000);
     } catch (err) {
