@@ -540,12 +540,26 @@ body {
 .state-absent .card-status-text, .state-created .card-status-text { background: var(--bg-tertiary); color: var(--text-muted); }
 
 .card-image {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.78rem;
   color: var(--text-muted);
   font-family: 'SFMono-Regular', Consolas, monospace;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+.card-image span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-badge-custom {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.18);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  letter-spacing: 0.02em;
 }
 
 .card-ports {

@@ -66,10 +66,21 @@ router.get('/', async (req, res) => {
       // Collect running container IDs so we can batch-inspect for health
       const containerMap = {};
       for (const [name, config] of Object.entries(parsed.services)) {
-        const containerName = (config && config.container_name) || name;
-        const container = allContainers.find((c) =>
-          c.Names && c.Names.some((n) => n.replace(/^\//, '') === containerName)
-        );
+        const configName = config && config.container_name;
+        // Find container: first by explicit container_name, then by compose service label
+        let container = configName
+          ? allContainers.find((c) => c.Names && c.Names.some((n) => n.replace(/^\//, '') === configName))
+          : null;
+        if (!container) {
+          container = allContainers.find((c) => {
+            const labels = c.Labels || {};
+            return labels['com.docker.compose.service'] === name;
+          });
+        }
+        // Use the actual Docker container name (reliable for docker logs, stop, etc.)
+        const containerName = container
+          ? container.Names[0].replace(/^\//, '')
+          : configName || name;
         containerMap[name] = { name, config, containerName, container };
       }
 
@@ -96,6 +107,7 @@ router.get('/', async (req, res) => {
           name,
           containerName,
           image: config && config.image,
+          isCustom: !!(config && config.build),
           ports: config && config.ports,
           status: container ? container.Status : 'not created',
           state: container ? container.State : 'absent',
@@ -111,14 +123,22 @@ router.get('/', async (req, res) => {
   }
 });
 
-function getContainerName(projectDir, serviceName) {
+async function getContainerName(projectDir, serviceName) {
   try {
     const { parsed } = readCompose(projectDir);
     const svc = parsed && parsed.services && parsed.services[serviceName];
-    return (svc && svc.container_name) || serviceName;
-  } catch {
-    return serviceName;
-  }
+    if (svc && svc.container_name) return svc.container_name;
+  } catch {}
+  // Fall back to finding via compose service label on running containers
+  try {
+    const containers = await listContainers();
+    const found = containers.find((c) => {
+      const labels = c.Labels || {};
+      return labels['com.docker.compose.service'] === serviceName;
+    });
+    if (found) return found.Names[0].replace(/^\//, '');
+  } catch {}
+  return serviceName;
 }
 
 function runDocker(args) {
@@ -133,7 +153,7 @@ function runDocker(args) {
 // POST /api/services/:name/start
 router.post('/:name/start', async (req, res) => {
   try {
-    const containerName = getContainerName(req.query.project || '', req.params.name);
+    const containerName = await getContainerName(req.query.project || '', req.params.name);
     const { stdout, stderr } = await runDocker(['start', containerName]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
@@ -146,7 +166,7 @@ router.post('/:name/start', async (req, res) => {
 // is properly honoured — compose stop doesn't always set the manual-stop flag.
 router.post('/:name/stop', async (req, res) => {
   try {
-    const containerName = getContainerName(req.query.project || '', req.params.name);
+    const containerName = await getContainerName(req.query.project || '', req.params.name);
     const { stdout, stderr } = await runDocker(['stop', containerName]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
@@ -157,7 +177,7 @@ router.post('/:name/stop', async (req, res) => {
 // POST /api/services/:name/restart
 router.post('/:name/restart', async (req, res) => {
   try {
-    const containerName = getContainerName(req.query.project || '', req.params.name);
+    const containerName = await getContainerName(req.query.project || '', req.params.name);
     const { stdout, stderr } = await runDocker(['restart', containerName]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
@@ -170,7 +190,7 @@ router.post('/:name/recreate', async (req, res) => {
   try {
     const project = req.query.project || '';
     const name = req.params.name;
-    const containerName = getContainerName(project, name);
+    const containerName = await getContainerName(project, name);
     try { await runDocker(['stop', containerName]); } catch {}
     try { await runDocker(['rm', '-f', containerName]); } catch {}
     const { stdout, stderr } = await runCompose(project, ['up', '-d', '--force-recreate', '--no-deps', name]);
@@ -208,6 +228,12 @@ router.get('/:name/check-update', async (req, res) => {
     const projectDir = req.query.project || '';
     const { parsed } = readCompose(projectDir);
     const svc = parsed && parsed.services && parsed.services[req.params.name];
+
+    // Services using a local build without an image tag can't be checked against a registry
+    if (svc && svc.build && !svc.image) {
+      return res.json({ hasUpdate: false, image: null, reason: 'custom-build' });
+    }
+
     if (!svc || !svc.image) return res.status(404).json({ error: 'No image configured for this service' });
 
     const image = svc.image;

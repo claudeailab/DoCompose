@@ -95,7 +95,7 @@ async function serviceInit() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
             Recreate
           </button>
-          ${DC.updates[name] === 'available' ? `
+          ${DC.updates[name] === 'available' && !((DC.settings && DC.settings.excludedFromUpdates) || []).includes(name) && !svc?.isCustom ? `
           <button class="svc-tab svc-tab-action svc-tab-update" id="svcActUpdate">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
             Update

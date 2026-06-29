@@ -161,6 +161,13 @@ function buildUpdateCell(name) {
       Excluded
     </span>`;
   }
+  const svc = (DC.services || []).find((s) => s.name === name);
+  if (svc && svc.isCustom) {
+    return `<span class="card-btn" style="opacity:0.4;cursor:default;pointer-events:none" title="Local build — no registry to check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      Local build
+    </span>`;
+  }
   const st = DC.updates[name];
   if (!st || st === 'idle') {
     return `<button class="card-btn" data-action="check-update" data-service="${escHtml(name)}" title="Check for image update">
@@ -185,6 +192,12 @@ function buildUpdateCell(name) {
       <div class="spinner" style="width:13px;height:13px"></div>
       Updating…
     </button>`;
+  }
+  if (st === 'unreachable') {
+    return `<span class="card-btn" style="opacity:0.5;cursor:default;pointer-events:none" title="Registry unreachable — check credentials in Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Can't check
+    </span>`;
   }
   return '';
 }
@@ -224,7 +237,10 @@ function buildServiceCard(s) {
         ${isRunning && s.health ? `<span class="card-health card-health-${s.health}">${s.health === 'healthy' ? '✓ healthy' : s.health === 'unhealthy' ? '✗ unhealthy' : '⟳ starting'}</span>` : ''}
       </div>
 
-      ${s.image ? `<div class="card-image" title="${escHtml(s.image)}">${escHtml(s.image)}</div>` : ''}
+      <div class="card-image">
+        ${s.isCustom ? `<span class="card-badge-custom" title="Built from local Dockerfile">local</span>` : ''}
+        ${s.image ? `<span title="${escHtml(s.image)}">${escHtml(s.image)}</span>` : (s.isCustom ? '' : '')}
+      </div>
 
       ${allPorts.length ? `
         <div class="card-ports">
@@ -319,8 +335,9 @@ async function checkAllUpdates() {
 
   await Promise.all(checkable.map(async (s) => {
     try {
-      const { hasUpdate } = await api('GET', `/api/services/${encodeURIComponent(s.name)}/check-update`);
-      DC.updates[s.name] = hasUpdate ? 'available' : null;
+      const { hasUpdate, reason } = await api('GET', `/api/services/${encodeURIComponent(s.name)}/check-update`);
+      if (reason === 'registry-unreachable') DC.updates[s.name] = 'unreachable';
+      else DC.updates[s.name] = hasUpdate ? 'available' : null;
     } catch {
       DC.updates[s.name] = null;
     }
@@ -354,9 +371,14 @@ async function serviceAction(name, action, btn) {
     DC.updates[name] = 'checking';
     refreshUpdateCell(name);
     try {
-      const { hasUpdate } = await api('GET', `/api/services/${encodeURIComponent(name)}/check-update`);
-      DC.updates[name] = hasUpdate ? 'available' : null;
-      showToast(hasUpdate ? `${name}: update available — click Update to apply` : `${name}: already up to date`, hasUpdate ? 'info' : 'success');
+      const { hasUpdate, reason } = await api('GET', `/api/services/${encodeURIComponent(name)}/check-update`);
+      if (reason === 'registry-unreachable') {
+        DC.updates[name] = 'unreachable';
+        showToast(`${name}: registry unreachable — check credentials in Settings`, 'error');
+      } else {
+        DC.updates[name] = hasUpdate ? 'available' : null;
+        showToast(hasUpdate ? `${name}: update available — click Update to apply` : `${name}: already up to date`, hasUpdate ? 'info' : 'success');
+      }
     } catch (err) {
       DC.updates[name] = null;
       showToast(`${name}: ${err.message}`, 'error');
