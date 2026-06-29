@@ -137,9 +137,52 @@ router.post('/service/:name', (req, res) => {
   }
 });
 
+// Fix "compact sequences" — Docker Compose YAML where list items sit at the same
+// column as their parent key (e.g. `command:\n- item` instead of `command:\n  - item`).
+// The yaml parser rejects this as ambiguous, so we indent them before parsing.
+function fixCompactSequences(yamlStr) {
+  const lines = yamlStr.split('\n');
+  const fixes = new Set();
+
+  let lastKeyIndent = -1;
+  let inCompactSeq = false;
+  let compactSeqIndent = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trimStart();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const indent = raw.length - trimmed.length;
+    const isSeq = trimmed.startsWith('- ') || trimmed === '-';
+
+    if (!isSeq) {
+      // Any non-sequence line (key or value): update key indent, reset compact-seq state
+      inCompactSeq = false;
+      compactSeqIndent = -1;
+      if (trimmed.includes(':')) lastKeyIndent = indent;
+    } else {
+      // Sequence item
+      if (inCompactSeq && indent === compactSeqIndent) {
+        fixes.add(i); // continuation of compact sequence at same column
+      } else if (indent === lastKeyIndent) {
+        // Sequence item at the same column as the most recent key → compact
+        fixes.add(i);
+        inCompactSeq = true;
+        compactSeqIndent = indent;
+      } else {
+        inCompactSeq = false;
+        compactSeqIndent = -1;
+      }
+    }
+  }
+
+  return lines.map((line, i) => (fixes.has(i) ? '  ' + line : line)).join('\n');
+}
+
 // POST /api/files/format — parse + re-serialize YAML using the same library as compose read/write.
-// Tries strict parsing first; on error falls back to lenient mode which recovers from
-// indentation mistakes and other structural issues, then re-serializes to correct form.
+// Pre-processes compact sequences (a common Docker Compose pattern the strict parser rejects),
+// then parses; falls back to strict:false lenient mode as a last resort.
 router.post('/format', (req, res) => {
   try {
     const { yaml } = req.body;
@@ -147,12 +190,20 @@ router.post('/format', (req, res) => {
 
     let parsed;
     let wasRepaired = false;
+
+    // First try strict parse on the original input
     try {
       parsed = YAML.parse(yaml);
     } catch {
-      // Lenient mode: converts errors to warnings and recovers the best-guess AST
-      parsed = YAML.parse(yaml, { strict: false });
+      // Fix compact sequences then retry strict parse
+      const fixed = fixCompactSequences(yaml);
       wasRepaired = true;
+      try {
+        parsed = YAML.parse(fixed);
+      } catch {
+        // Last resort: lenient mode on the fixed input
+        parsed = YAML.parse(fixed, { strict: false });
+      }
     }
 
     const formatted = YAML.stringify(parsed, { indent: 2, lineWidth: 0 });
