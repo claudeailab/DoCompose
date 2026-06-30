@@ -10,8 +10,7 @@ const activeTasks = new Map(); // jobId → cron.ScheduledTask
 async function runJob(job) {
   console.log(`[Backup] Running job "${job.label || job.id}" for ${job.containerName}`);
   const settings = readSettings();
-  const od = settings.onedrive || {};
-  const folderPath = (od.folderPath || '/DoCompose Backups').replace(/\/$/, '');
+  const folderPath = (settings.onedriveFolderPath || '/DoCompose Backups').replace(/\/$/, '');
 
   const updateJobStatus = (status, lastRun) => {
     const s = readSettings();
@@ -33,11 +32,12 @@ async function runJob(job) {
     // Upload each selected path
     for (const localBase of (job.paths || [])) {
       const files = walkDir(localBase, localBase);
-      const baseDir = localBase.endsWith('/') ? localBase.slice(0, -1) : localBase;
-      const baseName = path.basename(baseDir);
+      const isFile = files.length === 1 && files[0].local === localBase;
+      const baseName = path.basename(localBase.replace(/\/$/, ''));
 
       for (const { local, relative } of files) {
-        const remotePath = `${snapshotBase}/${baseName}/${relative}`;
+        // Files: place directly under snapshot. Directories: preserve baseName as top-level folder.
+        const remotePath = isFile ? `${snapshotBase}/${relative}` : `${snapshotBase}/${baseName}/${relative}`;
         try {
           await uploadFile(token, local, remotePath);
         } catch (err) {
