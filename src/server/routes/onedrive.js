@@ -6,13 +6,15 @@ const path = require('path');
 const router = express.Router();
 
 const SCOPES = 'Files.ReadWrite offline_access User.Read';
-const TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
-const DEVICE_CODE_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode';
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 
-function getClientId() {
+function getOdConfig() {
   const s = require('./settings').readSettings();
-  return process.env.ONEDRIVE_CLIENT_ID || (s.onedrive && s.onedrive.clientId) || '';
+  const od = s.onedrive || {};
+  const clientId = process.env.ONEDRIVE_CLIENT_ID || od.clientId || '';
+  const tenant = od.tenant || 'common';
+  const base = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0`;
+  return { clientId, tenant, tokenUrl: `${base}/token`, deviceCodeUrl: `${base}/devicecode` };
 }
 
 // ── Settings helpers ─────────────────────────────────────────────────────────
@@ -34,14 +36,15 @@ async function getValidToken() {
     return od.accessToken;
   }
 
+  const { clientId, tokenUrl } = getOdConfig();
   const body = new URLSearchParams({
-    client_id: getClientId(),
+    client_id: clientId,
     grant_type: 'refresh_token',
     refresh_token: od.refreshToken,
     scope: SCOPES,
   });
 
-  const res = await fetch(TOKEN_URL, {
+  const res = await fetch(tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
@@ -148,10 +151,10 @@ module.exports.deleteItem = deleteItem;
 // POST /api/onedrive/auth/start
 router.post('/auth/start', async (req, res) => {
   try {
-    const clientId = getClientId();
+    const { clientId, deviceCodeUrl } = getOdConfig();
     if (!clientId) return res.status(400).json({ error: 'No Azure App Client ID configured. Add your Client ID in the OneDrive settings first.' });
     const body = new URLSearchParams({ client_id: clientId, scope: SCOPES });
-    const r = await fetch(DEVICE_CODE_URL, {
+    const r = await fetch(deviceCodeUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
@@ -173,12 +176,13 @@ router.post('/auth/poll', async (req, res) => {
     const od = getOnedrive();
     if (!od._deviceCode) return res.status(400).json({ error: 'No pending auth' });
 
+    const { clientId, tokenUrl } = getOdConfig();
     const body = new URLSearchParams({
-      client_id: getClientId(),
+      client_id: clientId,
       grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
       device_code: od._deviceCode,
     });
-    const r = await fetch(TOKEN_URL, {
+    const r = await fetch(tokenUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),

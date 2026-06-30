@@ -397,29 +397,51 @@ async function settingsInit() {
   }
 
   let odClientId = (settings.onedrive && settings.onedrive.clientId) || '';
+  let odTenant = (settings.onedrive && settings.onedrive.tenant) || 'common';
 
   function renderOdSection(connected, displayName) {
     const el = document.getElementById('stgOdSection');
     if (!el) return;
 
-    const clientIdRow = `
+    const tenantOptions = [
+      { value: 'common',        label: 'Personal & work/school accounts' },
+      { value: 'consumers',     label: 'Personal Microsoft accounts only' },
+      { value: 'organizations', label: 'Work/school accounts only' },
+      { value: 'custom',        label: 'Specific tenant ID / domain' },
+    ];
+    const isCustomTenant = !['common','consumers','organizations'].includes(odTenant);
+    const tenantSelectVal = isCustomTenant ? 'custom' : odTenant;
+
+    const appRows = `
       <div class="settings-row">
         <div class="settings-label">
-          <span>Azure App Client ID</span>
-          <span class="settings-hint">Required — <a href="#" id="stgOdHowTo" style="color:var(--accent)">how to get one</a></span>
+          <span>Client ID</span>
+          <span class="settings-hint">Azure App — <a href="#" id="stgOdHowTo" style="color:var(--accent)">how to register</a></span>
         </div>
         <div class="settings-control">
-          <input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+          <input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">
+          <span>Account type</span>
+          <span class="settings-hint">Must match your app registration</span>
+        </div>
+        <div class="settings-control" style="display:flex;flex-direction:column;gap:0.4rem">
+          <select id="stgOdTenantSelect" class="settings-select">
+            ${tenantOptions.map((o) => `<option value="${o.value}" ${tenantSelectVal === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
+          </select>
+          <input type="text" id="stgOdTenantCustom" class="settings-input" style="display:${isCustomTenant ? 'block' : 'none'}" value="${escHtml(isCustomTenant ? odTenant : '')}" placeholder="e.g. contoso.com or tenant-uuid">
         </div>
       </div>
       <div id="stgOdHowToBox" style="display:none" class="od-howto-box">
-        <strong>Create a free Azure App (2 minutes):</strong>
+        <strong>Register a free Azure App (2 minutes):</strong>
         <ol>
           <li>Go to <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade" target="_blank" rel="noopener">portal.azure.com → App registrations → New registration</a></li>
-          <li>Name: <em>DoCompose</em> — Supported account types: <strong>Personal Microsoft accounts only</strong></li>
+          <li>Name: <em>DoCompose</em>. Supported account types: pick what matches the <strong>Account type</strong> above.</li>
           <li>Redirect URI: leave blank — click <strong>Register</strong></li>
           <li>Copy the <strong>Application (client) ID</strong> and paste it above</li>
-          <li>Go to <strong>API permissions → Add a permission → Microsoft Graph → Delegated → Files.ReadWrite, offline_access, User.Read</strong></li>
+          <li>Go to <strong>API permissions → Add → Microsoft Graph → Delegated</strong> and add: <code>Files.ReadWrite</code>, <code>offline_access</code>, <code>User.Read</code></li>
         </ol>
       </div>`;
 
@@ -427,7 +449,7 @@ async function settingsInit() {
       const savedFolder = settings.onedriveFolderPath || '/DoCompose Backups';
       el.innerHTML = `
         <div class="settings-group">
-          ${clientIdRow}
+          ${appRows}
           <div class="settings-row">
             <div class="settings-label"><span>Account</span></div>
             <div class="settings-control" style="display:flex;align-items:center;gap:0.75rem">
@@ -452,7 +474,7 @@ async function settingsInit() {
     } else {
       el.innerHTML = `
         <div class="settings-group">
-          ${clientIdRow}
+          ${appRows}
           <div class="settings-row">
             <div class="settings-label"><span>OneDrive account</span></div>
             <div class="settings-control">
@@ -463,13 +485,16 @@ async function settingsInit() {
         </div>`;
       document.getElementById('stgOdConnectBtn')?.addEventListener('click', async () => {
         const flowBox = document.getElementById('stgOdFlowBox');
-        // Save the client ID first so the backend can read it
         const cid = document.getElementById('stgOdClientId')?.value.trim();
         if (!cid) { flowBox.innerHTML = '<p style="color:var(--danger)">Enter your Azure App Client ID first.</p>'; return; }
+        const tenantSel = document.getElementById('stgOdTenantSelect')?.value;
+        const tenantCustom = document.getElementById('stgOdTenantCustom')?.value.trim();
+        const tenant = tenantSel === 'custom' ? (tenantCustom || 'common') : (tenantSel || 'common');
         odClientId = cid;
+        odTenant = tenant;
         try {
-          // Persist client ID before starting auth
-          await api('POST', '/api/settings', { onedrive: Object.assign({}, settings.onedrive || {}, { clientId: cid }) });
+          // Persist client ID + tenant before starting auth so backend reads them
+          await api('POST', '/api/settings', { onedrive: Object.assign({}, settings.onedrive || {}, { clientId: cid, tenant }) });
           const r = await api('POST', '/api/onedrive/auth/start');
           flowBox.innerHTML = `
             <div class="od-device-flow-box">
@@ -492,11 +517,14 @@ async function settingsInit() {
       });
     }
 
-    // Wire up client ID field changes and how-to toggle (shared between both states)
-    document.getElementById('stgOdClientId')?.addEventListener('input', (e) => {
-      odClientId = e.target.value;
-      markDirty();
+    // Wire up shared fields
+    document.getElementById('stgOdClientId')?.addEventListener('input', (e) => { odClientId = e.target.value; markDirty(); });
+    document.getElementById('stgOdTenantSelect')?.addEventListener('change', (e) => {
+      const custom = document.getElementById('stgOdTenantCustom');
+      if (custom) custom.style.display = e.target.value === 'custom' ? 'block' : 'none';
+      if (e.target.value !== 'custom') { odTenant = e.target.value; markDirty(); }
     });
+    document.getElementById('stgOdTenantCustom')?.addEventListener('input', (e) => { odTenant = e.target.value; markDirty(); });
     document.getElementById('stgOdHowTo')?.addEventListener('click', (e) => {
       e.preventDefault();
       const box = document.getElementById('stgOdHowToBox');
@@ -771,7 +799,7 @@ async function settingsInit() {
         timeFormat: document.getElementById('stgTimeFormat').value,
         backupJobs,
         onedriveFolderPath: folderPathEl ? folderPathEl.value.trim() || '/DoCompose Backups' : (settings.onedriveFolderPath || '/DoCompose Backups'),
-        onedrive: Object.assign({}, settings.onedrive || {}, { clientId: odClientId }),
+        onedrive: Object.assign({}, settings.onedrive || {}, { clientId: odClientId, tenant: odTenant }),
       };
       await api('POST', '/api/settings', payload);
       DC.settings = Object.assign({}, DC.settings, payload);
