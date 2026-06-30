@@ -396,13 +396,38 @@ async function settingsInit() {
     }
   }
 
+  let odClientId = (settings.onedrive && settings.onedrive.clientId) || '';
+
   function renderOdSection(connected, displayName) {
     const el = document.getElementById('stgOdSection');
     if (!el) return;
+
+    const clientIdRow = `
+      <div class="settings-row">
+        <div class="settings-label">
+          <span>Azure App Client ID</span>
+          <span class="settings-hint">Required — <a href="#" id="stgOdHowTo" style="color:var(--accent)">how to get one</a></span>
+        </div>
+        <div class="settings-control">
+          <input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+        </div>
+      </div>
+      <div id="stgOdHowToBox" style="display:none" class="od-howto-box">
+        <strong>Create a free Azure App (2 minutes):</strong>
+        <ol>
+          <li>Go to <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade" target="_blank" rel="noopener">portal.azure.com → App registrations → New registration</a></li>
+          <li>Name: <em>DoCompose</em> — Supported account types: <strong>Personal Microsoft accounts only</strong></li>
+          <li>Redirect URI: leave blank — click <strong>Register</strong></li>
+          <li>Copy the <strong>Application (client) ID</strong> and paste it above</li>
+          <li>Go to <strong>API permissions → Add a permission → Microsoft Graph → Delegated → Files.ReadWrite, offline_access, User.Read</strong></li>
+        </ol>
+      </div>`;
+
     if (connected) {
       const savedFolder = settings.onedriveFolderPath || '/DoCompose Backups';
       el.innerHTML = `
         <div class="settings-group">
+          ${clientIdRow}
           <div class="settings-row">
             <div class="settings-label"><span>Account</span></div>
             <div class="settings-control" style="display:flex;align-items:center;gap:0.75rem">
@@ -427,8 +452,9 @@ async function settingsInit() {
     } else {
       el.innerHTML = `
         <div class="settings-group">
+          ${clientIdRow}
           <div class="settings-row">
-            <div class="settings-label"><span>OneDrive account</span><span class="settings-hint">No Azure setup required.</span></div>
+            <div class="settings-label"><span>OneDrive account</span></div>
             <div class="settings-control">
               <button class="btn btn-primary btn-sm" id="stgOdConnectBtn">Connect OneDrive</button>
             </div>
@@ -437,11 +463,17 @@ async function settingsInit() {
         </div>`;
       document.getElementById('stgOdConnectBtn')?.addEventListener('click', async () => {
         const flowBox = document.getElementById('stgOdFlowBox');
+        // Save the client ID first so the backend can read it
+        const cid = document.getElementById('stgOdClientId')?.value.trim();
+        if (!cid) { flowBox.innerHTML = '<p style="color:var(--danger)">Enter your Azure App Client ID first.</p>'; return; }
+        odClientId = cid;
         try {
+          // Persist client ID before starting auth
+          await api('POST', '/api/settings', { onedrive: Object.assign({}, settings.onedrive || {}, { clientId: cid }) });
           const r = await api('POST', '/api/onedrive/auth/start');
           flowBox.innerHTML = `
             <div class="od-device-flow-box">
-              <p>Visit <strong><a href="${escHtml(r.verificationUrl)}" target="_blank" rel="noopener">${escHtml(r.verificationUrl)}</a></strong> and enter this code:</p>
+              <p>Visit <a href="${escHtml(r.verificationUrl)}" target="_blank" rel="noopener"><strong>${escHtml(r.verificationUrl)}</strong></a> and enter this code:</p>
               <div class="od-code">${escHtml(r.userCode)}</div>
               <p id="stgOdPollStatus">Waiting for authorisation…</p>
             </div>`;
@@ -459,9 +491,118 @@ async function settingsInit() {
         } catch (e) { if (flowBox) flowBox.innerHTML = `<p style="color:var(--danger)">${escHtml(e.message)}</p>`; }
       });
     }
+
+    // Wire up client ID field changes and how-to toggle (shared between both states)
+    document.getElementById('stgOdClientId')?.addEventListener('input', (e) => {
+      odClientId = e.target.value;
+      markDirty();
+    });
+    document.getElementById('stgOdHowTo')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const box = document.getElementById('stgOdHowToBox');
+      if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    });
   }
 
   refreshOdStatus();
+
+  // ── File browser modal ────────────────────────────────────────
+  function openFileBrowser(jobIdx) {
+    let currentPath = '/';
+    let selectedPath = null;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay fb-overlay';
+    overlay.innerHTML = `
+      <div class="modal fb-modal">
+        <div class="modal-header">
+          <span class="modal-title">Browse</span>
+          <button class="btn-icon fb-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+        <div class="fb-path-bar"><span id="fbCurrentPath">/</span></div>
+        <div class="fb-list" id="fbList"><div class="settings-loading">Loading…</div></div>
+        <div class="modal-footer" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;border-top:1px solid var(--border)">
+          <span class="fb-selected" id="fbSelected" style="flex:1;font-size:0.85rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">No folder selected</span>
+          <button class="btn btn-secondary btn-sm" id="fbAddThisBtn" disabled>Add This Folder</button>
+          <button class="btn btn-primary btn-sm" id="fbDoneBtn">Done</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    async function navigate(path) {
+      currentPath = path;
+      document.getElementById('fbCurrentPath').textContent = path;
+      const listEl = document.getElementById('fbList');
+      listEl.innerHTML = '<div class="settings-loading">Loading…</div>';
+      try {
+        const data = await api('GET', `/api/files/browse?path=${encodeURIComponent(path)}`);
+        const dirs = data.entries.filter((e) => e.isDir);
+        const files = data.entries.filter((e) => !e.isDir);
+        let html = '';
+        if (path !== '/') {
+          const parent = path.replace(/\/[^/]+\/?$/, '') || '/';
+          html += `<div class="fb-entry fb-up" data-path="${escHtml(parent)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> ..</div>`;
+        }
+        for (const e of dirs) {
+          html += `<div class="fb-entry fb-dir" data-path="${escHtml(e.path)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>${escHtml(e.name)}</div>`;
+        }
+        for (const e of files) {
+          html += `<div class="fb-entry fb-file" data-path="${escHtml(e.path)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>${escHtml(e.name)}</div>`;
+        }
+        if (!html) html = '<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem">Empty directory</div>';
+        listEl.innerHTML = html;
+
+        listEl.querySelectorAll('.fb-dir, .fb-up').forEach((el) => {
+          el.addEventListener('click', () => navigate(el.dataset.path));
+        });
+        listEl.querySelectorAll('.fb-entry').forEach((el) => {
+          el.addEventListener('click', () => {
+            listEl.querySelectorAll('.fb-entry').forEach((e) => e.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedPath = el.dataset.path;
+            const selEl = document.getElementById('fbSelected');
+            if (selEl) selEl.textContent = selectedPath;
+            const addBtn = document.getElementById('fbAddThisBtn');
+            if (addBtn) addBtn.disabled = false;
+          });
+          el.addEventListener('dblclick', () => {
+            if (el.classList.contains('fb-dir') || el.classList.contains('fb-up')) navigate(el.dataset.path);
+          });
+        });
+
+        // Select current folder button
+        const addBtn = document.getElementById('fbAddThisBtn');
+        if (addBtn) {
+          addBtn.textContent = 'Add This Folder';
+          addBtn.onclick = () => {
+            addPathToJob(jobIdx, selectedPath || currentPath);
+          };
+        }
+      } catch (e) {
+        listEl.innerHTML = `<div style="padding:1rem;color:var(--danger)">${escHtml(e.message)}</div>`;
+      }
+    }
+
+    function addPathToJob(idx, p) {
+      if (!p) return;
+      if (!backupJobs[idx].paths.includes(p)) {
+        backupJobs[idx].paths.push(p);
+        markDirty();
+        const ta = document.querySelector(`.bj-paths[data-idx="${idx}"]`);
+        if (ta) ta.value = backupJobs[idx].paths.join('\n');
+      }
+    }
+
+    overlay.querySelector('.fb-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.getElementById('fbDoneBtn').addEventListener('click', () => {
+      if (selectedPath) addPathToJob(jobIdx, selectedPath);
+      overlay.remove();
+    });
+
+    // Start at /compose if it exists, otherwise /
+    navigate('/compose').catch(() => navigate('/'));
+  }
 
   const SCHEDULE_PRESETS = [
     { label: 'Every hour', value: '0 * * * *' },
@@ -502,7 +643,13 @@ async function settingsInit() {
           </div>
           <div class="backup-job-row">
             <label>Paths</label>
-            <textarea class="settings-input bj-paths" data-idx="${idx}" placeholder="One path per line e.g. /compose/config/prometheus">${escHtml((job.paths || []).join('\n'))}</textarea>
+            <div style="display:flex;flex-direction:column;gap:0.35rem;flex:1;min-width:0">
+              <textarea class="settings-input bj-paths" data-idx="${idx}" placeholder="One path per line e.g. /compose/config/prometheus" style="min-height:60px">${escHtml((job.paths || []).join('\n'))}</textarea>
+              <button class="btn btn-secondary btn-sm bj-browse" type="button" data-idx="${idx}" style="align-self:flex-start">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                Browse
+              </button>
+            </div>
           </div>
           <div class="backup-job-row">
             <label>Schedule</label>
@@ -557,6 +704,9 @@ async function settingsInit() {
     });
     list.querySelectorAll('.bj-delete').forEach((btn) => {
       btn.addEventListener('click', () => { backupJobs.splice(+btn.dataset.idx, 1); renderBackupJobs(); markDirty(); });
+    });
+    list.querySelectorAll('.bj-browse').forEach((btn) => {
+      btn.addEventListener('click', () => openFileBrowser(+btn.dataset.idx));
     });
     list.querySelectorAll('.bj-run-now').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -621,6 +771,7 @@ async function settingsInit() {
         timeFormat: document.getElementById('stgTimeFormat').value,
         backupJobs,
         onedriveFolderPath: folderPathEl ? folderPathEl.value.trim() || '/DoCompose Backups' : (settings.onedriveFolderPath || '/DoCompose Backups'),
+        onedrive: Object.assign({}, settings.onedrive || {}, { clientId: odClientId }),
       };
       await api('POST', '/api/settings', payload);
       DC.settings = Object.assign({}, DC.settings, payload);

@@ -5,12 +5,15 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 
-// Public client ID for DoCompose — registered as a multi-tenant personal-account app.
-// Scopes: Files.ReadWrite offline_access User.Read
-const CLIENT_ID = process.env.ONEDRIVE_CLIENT_ID || 'b15665d9-efa2-4da7-bf9a-2031cf0f5c26';
 const SCOPES = 'Files.ReadWrite offline_access User.Read';
 const TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
+const DEVICE_CODE_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode';
 const GRAPH = 'https://graph.microsoft.com/v1.0';
+
+function getClientId() {
+  const s = require('./settings').readSettings();
+  return process.env.ONEDRIVE_CLIENT_ID || (s.onedrive && s.onedrive.clientId) || '';
+}
 
 // ── Settings helpers ─────────────────────────────────────────────────────────
 const { readSettings, writeSettings } = require('./settings');
@@ -32,7 +35,7 @@ async function getValidToken() {
   }
 
   const body = new URLSearchParams({
-    client_id: CLIENT_ID,
+    client_id: getClientId(),
     grant_type: 'refresh_token',
     refresh_token: od.refreshToken,
     scope: SCOPES,
@@ -145,8 +148,10 @@ module.exports.deleteItem = deleteItem;
 // POST /api/onedrive/auth/start
 router.post('/auth/start', async (req, res) => {
   try {
-    const body = new URLSearchParams({ client_id: CLIENT_ID, scope: SCOPES });
-    const r = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode', {
+    const clientId = getClientId();
+    if (!clientId) return res.status(400).json({ error: 'No Azure App Client ID configured. Add your Client ID in the OneDrive settings first.' });
+    const body = new URLSearchParams({ client_id: clientId, scope: SCOPES });
+    const r = await fetch(DEVICE_CODE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
@@ -169,7 +174,7 @@ router.post('/auth/poll', async (req, res) => {
     if (!od._deviceCode) return res.status(400).json({ error: 'No pending auth' });
 
     const body = new URLSearchParams({
-      client_id: CLIENT_ID,
+      client_id: getClientId(),
       grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
       device_code: od._deviceCode,
     });

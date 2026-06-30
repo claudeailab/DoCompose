@@ -1705,3 +1705,59 @@ body {
 }
 .od-device-flow-box p { font-size: 0.85rem; color: var(--text-secondary); margin: 0.35rem 0 0; }
 .od-device-flow-box a { color: var(--accent); }
+
+/* ---- File browser modal ---- */
+.fb-modal {
+  width: min(480px, 95vw);
+  height: min(520px, 85vh);
+  display: flex;
+  flex-direction: column;
+}
+.fb-path-bar {
+  padding: 0.45rem 1rem;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fb-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.35rem 0;
+}
+.fb-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.38rem 1rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  color: var(--text-primary);
+  user-select: none;
+}
+.fb-entry svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--text-secondary); }
+.fb-dir svg { color: var(--accent); }
+.fb-up { color: var(--text-secondary); }
+.fb-entry:hover { background: var(--bg-hover); }
+.fb-entry.selected { background: var(--accent-dim); color: var(--accent); }
+.fb-entry.selected svg { color: var(--accent); }
+.fb-file { color: var(--text-secondary); }
+
+/* ---- OneDrive how-to box ---- */
+.od-howto-box {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-top: 0.25rem;
+}
+.od-howto-box ol { margin: 0.4rem 0 0 1.25rem; padding: 0; }
+.od-howto-box li { margin-bottom: 0.25rem; }
+.od-howto-box a { color: var(--accent); }

@@ -324,4 +324,26 @@ router.post('/service/:name/env', (req, res) => {
   }
 });
 
+// GET /api/files/browse?path=/compose — list directory contents for file picker
+router.get('/browse', (req, res) => {
+  const fs = require('fs');
+  const p = require('path');
+  const reqPath = req.query.path || '/';
+  const safePath = p.resolve('/', reqPath);
+  try {
+    const stat = fs.statSync(safePath);
+    if (!stat.isDirectory()) return res.status(400).json({ error: 'Not a directory' });
+    const entries = fs.readdirSync(safePath, { withFileTypes: true })
+      .filter((e) => !e.name.startsWith('.'))
+      .sort((a, b) => {
+        if (a.isDirectory() !== b.isDirectory()) return a.isDirectory() ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      })
+      .map((e) => ({ name: e.name, isDir: e.isDirectory(), path: p.join(safePath, e.name) }));
+    res.json({ path: safePath, entries });
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
 module.exports = router;
