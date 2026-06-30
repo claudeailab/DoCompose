@@ -31,6 +31,10 @@ router.post('/', (req, res) => {
   try {
     const existing = readSettings();
     const merged = Object.assign({}, existing, req.body);
+    // Deep-merge onedrive so auth tokens set by the OAuth flow aren't overwritten
+    if (req.body.onedrive && existing.onedrive) {
+      merged.onedrive = Object.assign({}, existing.onedrive, req.body.onedrive);
+    }
     writeSettings(merged);
     try { require('../backup-scheduler').reschedule(); } catch {}
     res.json({ ok: true });
