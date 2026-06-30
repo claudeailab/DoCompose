@@ -435,12 +435,12 @@ async function settingsInit() {
         </div>
       </div>
       <div id="stgOdHowToBox" style="display:none" class="od-howto-box">
-        <strong>Register a free Azure App (2 minutes):</strong>
+        <strong>Register a free Azure App (3 minutes):</strong>
         <ol>
           <li>Go to <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade" target="_blank" rel="noopener">portal.azure.com → App registrations → New registration</a></li>
-          <li>Name: <em>DoCompose</em>. Supported account types: pick what matches the <strong>Account type</strong> above.</li>
-          <li>Redirect URI: leave blank — click <strong>Register</strong></li>
-          <li>Copy the <strong>Application (client) ID</strong> and paste it above</li>
+          <li>Name: <em>DoCompose</em>. Supported account types: pick what matches the <strong>Account type</strong> above. No redirect URI.</li>
+          <li>Click <strong>Register</strong>, then copy the <strong>Application (client) ID</strong> and paste it above.</li>
+          <li>Go to <strong>Authentication</strong> → scroll to <strong>Advanced settings</strong> → set <strong>"Allow public client flows"</strong> to <strong>Yes</strong> → Save. <em>(This is required — without it you get the client_secret error.)</em></li>
           <li>Go to <strong>API permissions → Add → Microsoft Graph → Delegated</strong> and add: <code>Files.ReadWrite</code>, <code>offline_access</code>, <code>User.Read</code></li>
         </ol>
       </div>`;
