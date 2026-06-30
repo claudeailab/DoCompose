@@ -1630,3 +1630,79 @@ body {
   .settings-row { flex-direction: column; gap: 0.5rem; }
   .settings-control { flex: none; width: 100%; }
 }
+
+/* ---- Backup jobs ---- */
+.backup-job-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.backup-job-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+}
+.backup-job-label-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 0;
+}
+.backup-job-body { padding: 0.85rem 1rem; display: grid; gap: 0.65rem; }
+.backup-job-row { display: flex; align-items: flex-start; gap: 0.75rem; }
+.backup-job-row label { font-size: 0.8rem; color: var(--text-secondary); min-width: 90px; padding-top: 6px; }
+.backup-job-row > * { flex: 1; min-width: 0; }
+.backup-job-row textarea { resize: vertical; min-height: 60px; font-family: var(--font-mono, monospace); font-size: 0.8rem; }
+.backup-job-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-tertiary);
+}
+.backup-job-status { flex: 1; font-size: 0.78rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.backup-status-ok { color: var(--success, #4caf50); }
+.backup-status-err { color: var(--danger, #f44336); }
+.schedule-presets { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.35rem; }
+.schedule-preset-btn {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.schedule-preset-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ---- OneDrive device code box ---- */
+.od-device-flow-box {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-top: 0.75rem;
+  text-align: center;
+}
+.od-code {
+  display: inline-block;
+  font-family: var(--font-mono, monospace);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  margin: 0.5rem 0;
+}
+.od-device-flow-box p { font-size: 0.85rem; color: var(--text-secondary); margin: 0.35rem 0 0; }
+.od-device-flow-box a { color: var(--accent); }

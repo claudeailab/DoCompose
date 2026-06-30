@@ -1,0 +1,108 @@
+'use strict';
+
+const cron = require('node-cron');
+const path = require('path');
+const { readSettings, writeSettings } = require('./routes/settings');
+const { getValidToken, uploadFile, walkDir, listFolder, deleteItem } = require('./routes/onedrive');
+
+const activeTasks = new Map(); // jobId → cron.ScheduledTask
+
+async function runJob(job) {
+  console.log(`[Backup] Running job "${job.label || job.id}" for ${job.containerName}`);
+  const settings = readSettings();
+  const od = settings.onedrive || {};
+  const folderPath = (od.folderPath || '/DoCompose Backups').replace(/\/$/, '');
+
+  const updateJobStatus = (status, lastRun) => {
+    const s = readSettings();
+    const jobs = s.backupJobs || [];
+    const idx = jobs.findIndex((j) => j.id === job.id);
+    if (idx !== -1) {
+      jobs[idx].lastStatus = status;
+      jobs[idx].lastRun = lastRun || new Date().toISOString();
+      s.backupJobs = jobs;
+      writeSettings(s);
+    }
+  };
+
+  try {
+    const token = await getValidToken();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
+    const snapshotBase = `${folderPath}/${job.containerName}/${timestamp}`;
+
+    // Upload each selected path
+    for (const localBase of (job.paths || [])) {
+      const files = walkDir(localBase, localBase);
+      const baseDir = localBase.endsWith('/') ? localBase.slice(0, -1) : localBase;
+      const baseName = path.basename(baseDir);
+
+      for (const { local, relative } of files) {
+        const remotePath = `${snapshotBase}/${baseName}/${relative}`;
+        try {
+          await uploadFile(token, local, remotePath);
+        } catch (err) {
+          console.warn(`[Backup] Failed to upload ${local}: ${err.message}`);
+        }
+      }
+    }
+
+    // Rotation — list snapshot folders and delete oldest beyond keepCount
+    const keepCount = job.keepCount || 10;
+    try {
+      const containerFolder = `${folderPath}/${job.containerName}`;
+      const children = await listFolder(token, containerFolder);
+      // Filter to folders (snapshots), sort by name asc (timestamps sort correctly)
+      const snapshots = children
+        .filter((c) => c.folder)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      if (snapshots.length > keepCount) {
+        const toDelete = snapshots.slice(0, snapshots.length - keepCount);
+        for (const item of toDelete) {
+          await deleteItem(token, item.id);
+          console.log(`[Backup] Rotated old snapshot: ${item.name}`);
+        }
+      }
+    } catch (err) {
+      console.warn(`[Backup] Rotation failed: ${err.message}`);
+    }
+
+    updateJobStatus('ok');
+    console.log(`[Backup] Job "${job.label || job.id}" completed`);
+  } catch (err) {
+    console.error(`[Backup] Job "${job.label || job.id}" failed: ${err.message}`);
+    updateJobStatus('error: ' + err.message);
+    throw err;
+  }
+}
+module.exports.runJob = runJob;
+
+function scheduleJobs() {
+  // Cancel all existing tasks
+  for (const task of activeTasks.values()) {
+    try { task.stop(); } catch {}
+  }
+  activeTasks.clear();
+
+  const settings = readSettings();
+  const od = settings.onedrive || {};
+  if (!od.connected || !od.refreshToken) return;
+
+  for (const job of (settings.backupJobs || [])) {
+    if (!job.enabled || !job.schedule) continue;
+    if (!cron.validate(job.schedule)) {
+      console.warn(`[Backup] Invalid cron expression for job "${job.id}": ${job.schedule}`);
+      continue;
+    }
+    const task = cron.schedule(job.schedule, () => runJob(job).catch(() => {}));
+    activeTasks.set(job.id, task);
+    console.log(`[Backup] Scheduled job "${job.label || job.id}" (${job.schedule})`);
+  }
+}
+module.exports.scheduleJobs = scheduleJobs;
+
+function reschedule() { scheduleJobs(); }
+module.exports.reschedule = reschedule;
+
+function init() { scheduleJobs(); }
+module.exports.init = init;

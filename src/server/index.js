@@ -12,6 +12,8 @@ const backupsRouter = require('./routes/backups');
 const searchRouter = require('./routes/search');
 const statsRouter = require('./routes/stats');
 const settingsRouter = require('./routes/settings');
+const { router: onedriveRouter } = require('./routes/onedrive');
+const backupScheduler = require('./backup-scheduler');
 const { handleTerminal } = require('./terminal');
 
 const app = express();
@@ -32,6 +34,7 @@ app.use('/api/logs', logsRouter);
 app.use('/api/backups', backupsRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/onedrive', onedriveRouter);
 
 // Version endpoint
 app.get('/api/version', (req, res) => {
@@ -53,6 +56,7 @@ wss.on('connection', handleTerminal);
 server.listen(PORT, () => {
   console.log(`DoCompose listening on port ${PORT}`);
   console.log(`COMPOSE_DIR: ${process.env.COMPOSE_DIR || '/compose'}`);
+  backupScheduler.init();
 });
 
 server.on('error', (err) => {

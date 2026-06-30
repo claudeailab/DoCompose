@@ -32,6 +32,7 @@ router.post('/', (req, res) => {
     const existing = readSettings();
     const merged = Object.assign({}, existing, req.body);
     writeSettings(merged);
+    try { require('../backup-scheduler').reschedule(); } catch {}
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -62,3 +63,4 @@ router.post('/test-registry', (req, res) => {
 
 module.exports = router;
 module.exports.readSettings = readSettings;
+module.exports.writeSettings = writeSettings;

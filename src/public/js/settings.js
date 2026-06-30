@@ -26,6 +26,10 @@ async function settingsInit() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
           Exclusions
         </button>
+        <button class="stg-tab" data-tab="backups">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Backups
+        </button>
       </nav>
 
       <div class="stg-content">
@@ -133,6 +137,27 @@ async function settingsInit() {
             <div class="settings-exclude-scroll" id="stgExcludeList">
               <div class="settings-loading">Loading services…</div>
             </div>
+          </div>
+        </div>
+
+        <!-- Backups -->
+        <div class="stg-pane" id="stgPaneBackups">
+          <h2 class="stg-pane-title">Backups</h2>
+
+          <div class="settings-section">
+            <div class="settings-section-label">OneDrive</div>
+            <div id="stgOdSection"><div class="settings-loading">Loading…</div></div>
+          </div>
+
+          <div class="settings-section" style="margin-top:1.5rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+              <div class="settings-section-label" style="margin-bottom:0">Backup Jobs</div>
+              <button class="btn btn-primary btn-sm" id="stgAddBackupJobBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Job
+              </button>
+            </div>
+            <div id="stgBackupJobsList"></div>
           </div>
         </div>
 
@@ -359,6 +384,210 @@ async function settingsInit() {
     markDirty();
   });
 
+  // ── Backups tab ───────────────────────────────────────────────
+  let backupJobs = (settings.backupJobs || []).map((j) => Object.assign({}, j));
+
+  async function refreshOdStatus() {
+    try {
+      const od = await api('GET', '/api/onedrive/status');
+      renderOdSection(od.connected, od.displayName);
+    } catch {
+      renderOdSection(false, '');
+    }
+  }
+
+  function renderOdSection(connected, displayName) {
+    const el = document.getElementById('stgOdSection');
+    if (!el) return;
+    if (connected) {
+      const savedFolder = settings.onedriveFolderPath || '/DoCompose Backups';
+      el.innerHTML = `
+        <div class="settings-group">
+          <div class="settings-row">
+            <div class="settings-label"><span>Account</span></div>
+            <div class="settings-control" style="display:flex;align-items:center;gap:0.75rem">
+              <span style="flex:1;font-size:0.9rem">${escHtml(displayName || 'Connected')}</span>
+              <button class="btn btn-secondary btn-sm" id="stgOdDisconnectBtn">Disconnect</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-label"><span>Backup folder</span><span class="settings-hint">Path in your OneDrive root</span></div>
+            <div class="settings-control">
+              <input type="text" id="stgOdFolderPath" class="settings-input" value="${escHtml(savedFolder)}" placeholder="/DoCompose Backups">
+            </div>
+          </div>
+        </div>`;
+      document.getElementById('stgOdFolderPath')?.addEventListener('input', markDirty);
+      document.getElementById('stgOdDisconnectBtn')?.addEventListener('click', async () => {
+        try {
+          await api('POST', '/api/onedrive/auth/disconnect');
+          refreshOdStatus();
+        } catch (e) { alert('Error: ' + e.message); }
+      });
+    } else {
+      el.innerHTML = `
+        <div class="settings-group">
+          <div class="settings-row">
+            <div class="settings-label"><span>OneDrive account</span><span class="settings-hint">No Azure setup required.</span></div>
+            <div class="settings-control">
+              <button class="btn btn-primary btn-sm" id="stgOdConnectBtn">Connect OneDrive</button>
+            </div>
+          </div>
+          <div id="stgOdFlowBox"></div>
+        </div>`;
+      document.getElementById('stgOdConnectBtn')?.addEventListener('click', async () => {
+        const flowBox = document.getElementById('stgOdFlowBox');
+        try {
+          const r = await api('POST', '/api/onedrive/auth/start');
+          flowBox.innerHTML = `
+            <div class="od-device-flow-box">
+              <p>Visit <strong><a href="${escHtml(r.verificationUrl)}" target="_blank" rel="noopener">${escHtml(r.verificationUrl)}</a></strong> and enter this code:</p>
+              <div class="od-code">${escHtml(r.userCode)}</div>
+              <p id="stgOdPollStatus">Waiting for authorisation…</p>
+            </div>`;
+          const deadline = Date.now() + (r.expiresIn || 900) * 1000;
+          const poll = setInterval(async () => {
+            if (Date.now() > deadline) { clearInterval(poll); document.getElementById('stgOdPollStatus').textContent = 'Code expired — click Connect again.'; return; }
+            try {
+              const p = await api('POST', '/api/onedrive/auth/poll');
+              if (p.pending) return;
+              clearInterval(poll);
+              if (p.error) { document.getElementById('stgOdPollStatus').textContent = 'Error: ' + p.error; return; }
+              await refreshOdStatus();
+            } catch {}
+          }, 5000);
+        } catch (e) { if (flowBox) flowBox.innerHTML = `<p style="color:var(--danger)">${escHtml(e.message)}</p>`; }
+      });
+    }
+  }
+
+  refreshOdStatus();
+
+  const SCHEDULE_PRESETS = [
+    { label: 'Every hour', value: '0 * * * *' },
+    { label: 'Daily 2am', value: '0 2 * * *' },
+    { label: 'Weekly Sun', value: '0 2 * * 0' },
+  ];
+
+  function renderBackupJobs() {
+    const list = document.getElementById('stgBackupJobsList');
+    if (!list) return;
+    if (!backupJobs.length) {
+      list.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:0.9rem">No backup jobs. Click "Add Job" to create one.</div>';
+      return;
+    }
+    const containers = (DC.services || []).map((s) => s.name);
+    list.innerHTML = backupJobs.map((job, idx) => {
+      const statusCls = job.lastStatus === 'ok' ? 'backup-status-ok' : job.lastStatus ? 'backup-status-err' : '';
+      const statusTxt = job.lastStatus ? (job.lastStatus === 'ok' ? `Last run: ${job.lastRun ? new Date(job.lastRun).toLocaleString() : 'unknown'} — OK` : `Error: ${job.lastStatus.replace(/^error:\s*/i, '')}`) : 'Never run';
+      return `
+      <div class="backup-job-card">
+        <div class="backup-job-header">
+          <label class="toggle-switch" title="${job.enabled ? 'Enabled' : 'Disabled'}">
+            <input type="checkbox" class="bj-enabled" data-idx="${idx}" ${job.enabled ? 'checked' : ''}>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <input type="text" class="backup-job-label-input bj-label" data-idx="${idx}" value="${escHtml(job.label || '')}" placeholder="Job label">
+          <button class="btn-icon bj-delete" data-idx="${idx}" title="Remove job" style="margin-left:auto">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+        <div class="backup-job-body">
+          <div class="backup-job-row">
+            <label>Container</label>
+            <select class="settings-select bj-container" data-idx="${idx}">
+              <option value="">— select —</option>
+              ${containers.map((n) => `<option value="${escHtml(n)}" ${job.containerName === n ? 'selected' : ''}>${escHtml(n)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="backup-job-row">
+            <label>Paths</label>
+            <textarea class="settings-input bj-paths" data-idx="${idx}" placeholder="One path per line e.g. /compose/config/prometheus">${escHtml((job.paths || []).join('\n'))}</textarea>
+          </div>
+          <div class="backup-job-row">
+            <label>Schedule</label>
+            <div>
+              <div class="schedule-presets">
+                ${SCHEDULE_PRESETS.map((p) => `<button class="schedule-preset-btn" type="button" data-idx="${idx}" data-cron="${escHtml(p.value)}">${escHtml(p.label)}</button>`).join('')}
+              </div>
+              <input type="text" class="settings-input bj-schedule" data-idx="${idx}" value="${escHtml(job.schedule || '')}" placeholder="cron e.g. 0 2 * * *" style="font-family:monospace">
+            </div>
+          </div>
+          <div class="backup-job-row">
+            <label>Keep copies</label>
+            <input type="number" class="settings-input bj-keep" data-idx="${idx}" value="${job.keepCount || 10}" min="1" max="365" style="max-width:80px">
+          </div>
+        </div>
+        <div class="backup-job-footer">
+          <span class="backup-job-status ${statusCls}">${escHtml(statusTxt)}</span>
+          <button class="btn btn-secondary btn-sm bj-run-now" data-idx="${idx}" data-jobid="${escHtml(job.id)}">Run Now</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    list.querySelectorAll('.bj-enabled').forEach((cb) => {
+      cb.addEventListener('change', (e) => { backupJobs[+e.target.dataset.idx].enabled = e.target.checked; markDirty(); });
+    });
+    list.querySelectorAll('.bj-label').forEach((el) => {
+      el.addEventListener('input', (e) => { backupJobs[+e.target.dataset.idx].label = e.target.value; markDirty(); });
+    });
+    list.querySelectorAll('.bj-container').forEach((el) => {
+      el.addEventListener('change', (e) => { backupJobs[+e.target.dataset.idx].containerName = e.target.value; markDirty(); });
+    });
+    list.querySelectorAll('.bj-paths').forEach((el) => {
+      el.addEventListener('input', (e) => {
+        backupJobs[+e.target.dataset.idx].paths = e.target.value.split('\n').map((l) => l.trim()).filter(Boolean);
+        markDirty();
+      });
+    });
+    list.querySelectorAll('.schedule-preset-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = +btn.dataset.idx;
+        backupJobs[idx].schedule = btn.dataset.cron;
+        const inp = list.querySelector(`.bj-schedule[data-idx="${idx}"]`);
+        if (inp) inp.value = btn.dataset.cron;
+        markDirty();
+      });
+    });
+    list.querySelectorAll('.bj-schedule').forEach((el) => {
+      el.addEventListener('input', (e) => { backupJobs[+e.target.dataset.idx].schedule = e.target.value; markDirty(); });
+    });
+    list.querySelectorAll('.bj-keep').forEach((el) => {
+      el.addEventListener('change', (e) => { backupJobs[+e.target.dataset.idx].keepCount = +e.target.value || 10; markDirty(); });
+    });
+    list.querySelectorAll('.bj-delete').forEach((btn) => {
+      btn.addEventListener('click', () => { backupJobs.splice(+btn.dataset.idx, 1); renderBackupJobs(); markDirty(); });
+    });
+    list.querySelectorAll('.bj-run-now').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const jobId = btn.dataset.jobid;
+        btn.disabled = true;
+        btn.textContent = 'Running…';
+        try {
+          await api('POST', `/api/onedrive/backup/${jobId}`);
+          const s = await api('GET', '/api/settings');
+          const idx = backupJobs.findIndex((j) => j.id === jobId);
+          const updated = (s.backupJobs || []).find((j) => j.id === jobId);
+          if (updated && idx !== -1) { backupJobs[idx].lastRun = updated.lastRun; backupJobs[idx].lastStatus = updated.lastStatus; }
+          renderBackupJobs();
+        } catch (e) {
+          btn.disabled = false;
+          btn.textContent = 'Run Now';
+          alert('Backup failed: ' + e.message);
+        }
+      });
+    });
+  }
+
+  renderBackupJobs();
+
+  document.getElementById('stgAddBackupJobBtn')?.addEventListener('click', () => {
+    backupJobs.push({ id: 'job-' + Date.now(), label: '', containerName: '', paths: [], schedule: '0 2 * * *', keepCount: 10, enabled: true });
+    renderBackupJobs();
+    markDirty();
+    document.getElementById('stgBackupJobsList')?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
   // ── Dirty tracking ────────────────────────────────────────────
   const saveBtn = document.getElementById('stgSaveBtn');
   function markDirty() { saveBtn.disabled = false; }
@@ -382,6 +611,7 @@ async function settingsInit() {
 
       const selectedTheme = document.querySelector('.theme-btn.active')?.dataset.theme || 'dark';
 
+      const folderPathEl = document.getElementById('stgOdFolderPath');
       const payload = {
         updateIntervalSeconds: parseInt(document.getElementById('stgUpdateInterval').value, 10),
         registries: finalRegistries,
@@ -389,6 +619,8 @@ async function settingsInit() {
         theme: selectedTheme,
         timezone: document.getElementById('stgTimezone').value,
         timeFormat: document.getElementById('stgTimeFormat').value,
+        backupJobs,
+        onedriveFolderPath: folderPathEl ? folderPathEl.value.trim() || '/DoCompose Backups' : (settings.onedriveFolderPath || '/DoCompose Backups'),
       };
       await api('POST', '/api/settings', payload);
       DC.settings = Object.assign({}, DC.settings, payload);
