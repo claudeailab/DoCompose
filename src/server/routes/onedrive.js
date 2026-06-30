@@ -9,7 +9,7 @@ const router = express.Router();
 // Scopes: Files.ReadWrite offline_access User.Read
 const CLIENT_ID = process.env.ONEDRIVE_CLIENT_ID || 'b15665d9-efa2-4da7-bf9a-2031cf0f5c26';
 const SCOPES = 'Files.ReadWrite offline_access User.Read';
-const TOKEN_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+const TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 
 // ── Settings helpers ─────────────────────────────────────────────────────────
@@ -146,7 +146,7 @@ module.exports.deleteItem = deleteItem;
 router.post('/auth/start', async (req, res) => {
   try {
     const body = new URLSearchParams({ client_id: CLIENT_ID, scope: SCOPES });
-    const r = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/devicecode', {
+    const r = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
