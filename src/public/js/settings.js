@@ -145,7 +145,14 @@ async function settingsInit() {
           <h2 class="stg-pane-title">Backups</h2>
 
           <div class="settings-section">
-            <div class="settings-section-label">Shared settings</div>
+            <div class="settings-section-label">Cloud Storage</div>
+            <div class="provider-cards">
+              <div id="stgOdSection"><div class="settings-loading">Loading…</div></div>
+              <div id="stgDbSection"><div class="settings-loading">Loading…</div></div>
+            </div>
+          </div>
+
+          <div class="settings-section" style="margin-top:1.25rem">
             <div class="settings-group">
               <div class="settings-row">
                 <div class="settings-label"><span>Backup folder name</span><span class="settings-hint">Root folder created in OneDrive / Dropbox</span></div>
@@ -156,17 +163,7 @@ async function settingsInit() {
             </div>
           </div>
 
-          <div class="settings-section" style="margin-top:1.5rem">
-            <div class="settings-section-label">OneDrive</div>
-            <div id="stgOdSection"><div class="settings-loading">Loading…</div></div>
-          </div>
-
-          <div class="settings-section" style="margin-top:1.5rem">
-            <div class="settings-section-label">Dropbox</div>
-            <div id="stgDbSection"><div class="settings-loading">Loading…</div></div>
-          </div>
-
-          <div class="settings-section" style="margin-top:1.5rem">
+          <div class="settings-section" style="margin-top:1.25rem">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
               <div class="settings-section-label" style="margin-bottom:0">Backup Jobs</div>
               <button class="btn btn-primary btn-sm" id="stgAddBackupJobBtn">
@@ -421,50 +418,66 @@ async function settingsInit() {
   function renderOdSection(connected, displayName) {
     const el = document.getElementById('stgOdSection');
     if (!el) return;
-    const credRows = `
-      <div class="settings-row">
-        <div class="settings-label"><span>Client ID</span><span class="settings-hint">Azure App — <a href="#" id="stgOdHowTo" style="color:var(--accent)">how to register</a></span></div>
-        <div class="settings-control"><input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false"></div>
+    // OneDrive SVG icon
+    const odIcon = `<svg class="provider-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9.5 13.5C9.5 13.5 10.5 9 15.5 9C19 9 21 11.5 21 11.5C21 11.5 23 12 23 14.5C23 17 21 17.5 21 17.5H6C6 17.5 4 17 4 14.5C4 12 6 11.5 6 11.5C6 11.5 6.5 13.5 9.5 13.5Z" fill="#0078D4" stroke="none"/>
+      <path d="M5.5 11.5C5.5 11.5 6 8 9.5 7C11.5 6.5 13 7.5 13 7.5C13 7.5 14 4 17.5 4C20.5 4 22 6.5 22 6.5" stroke="#0078D4" stroke-width="0" fill="none"/>
+      <ellipse cx="14" cy="10" rx="7" ry="4.5" fill="#0078D4" opacity="0.55"/>
+      <ellipse cx="8.5" cy="12.5" rx="4.5" ry="3" fill="#0078D4" opacity="0.8"/>
+      <rect x="4" y="13" width="17" height="5" rx="2.5" fill="#0078D4"/>
+    </svg>`;
+    const badge = connected
+      ? `<span class="provider-badge connected">Connected</span>`
+      : `<span class="provider-badge">Not connected</span>`;
+    const credFields = `
+      <div class="provider-field">
+        <label>Client ID</label>
+        <input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
       </div>
-      <div id="stgOdHowToBox" style="display:none" class="od-howto-box">
-        <strong>Register a free Azure App (~3 min):</strong>
+      <details class="provider-howto">
+        <summary>How to register a free Azure App</summary>
         <ol>
           <li>Go to <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade" target="_blank" rel="noopener">portal.azure.com → App registrations → New registration</a></li>
-          <li>Name it anything. Supported account types: <strong>Accounts in any organizational directory and personal Microsoft accounts</strong> covers everyone. No redirect URI.</li>
+          <li>Name it anything. Account types: <strong>Accounts in any organizational directory and personal Microsoft accounts</strong>. No redirect URI.</li>
           <li>Click <strong>Register</strong>. Copy the <strong>Application (client) ID</strong> and paste above.</li>
-          <li><strong>Authentication → Advanced settings → Allow public client flows → Yes → Save.</strong> (Required for device code flow.)</li>
+          <li><strong>Authentication → Allow public client flows → Yes → Save.</strong></li>
           <li><strong>API permissions → Add → Microsoft Graph → Delegated:</strong> <code>Files.ReadWrite</code>, <code>offline_access</code>, <code>User.Read</code></li>
         </ol>
-      </div>`;
+      </details>`;
     if (connected) {
-      el.innerHTML = `<div class="settings-group">${credRows}
-        <div class="settings-row">
-          <div class="settings-label"><span>Account</span></div>
-          <div class="settings-control" style="display:flex;align-items:center;gap:0.75rem">
-            <span style="flex:1;font-size:0.9rem">${escHtml(displayName || 'Connected')}</span>
-            <button class="btn btn-secondary btn-sm" id="stgOdDisconnectBtn">Disconnect</button>
+      el.innerHTML = `<div class="provider-card">
+        <div class="provider-card-header">${odIcon}<span class="provider-name">OneDrive</span>${badge}</div>
+        <div class="provider-card-body">
+          ${credFields}
+          <div class="provider-connected-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(displayName || 'Connected')}</span>
           </div>
-        </div></div>`;
+          <button class="btn btn-secondary btn-sm" id="stgOdDisconnectBtn" style="width:100%">Disconnect</button>
+        </div>
+      </div>`;
       document.getElementById('stgOdDisconnectBtn')?.addEventListener('click', async () => {
         try { await api('POST', '/api/onedrive/auth/disconnect'); refreshOdStatus(); } catch (e) { alert(e.message); }
       });
     } else {
-      el.innerHTML = `<div class="settings-group">${credRows}
-        <div class="settings-row">
-          <div class="settings-label"><span>Account</span></div>
-          <div class="settings-control"><button class="btn btn-primary btn-sm" id="stgOdConnectBtn">Connect OneDrive</button></div>
+      el.innerHTML = `<div class="provider-card">
+        <div class="provider-card-header">${odIcon}<span class="provider-name">OneDrive</span>${badge}</div>
+        <div class="provider-card-body">
+          ${credFields}
+          <button class="btn btn-primary btn-sm" id="stgOdConnectBtn" style="width:100%">Connect OneDrive</button>
+          <div id="stgOdFlowBox"></div>
         </div>
-        <div id="stgOdFlowBox"></div></div>`;
+      </div>`;
       document.getElementById('stgOdConnectBtn')?.addEventListener('click', async () => {
         const flowBox = document.getElementById('stgOdFlowBox');
         const cid = document.getElementById('stgOdClientId')?.value.trim();
-        if (!cid) { flowBox.innerHTML = '<p style="color:var(--danger)">Enter your Client ID first.</p>'; return; }
+        if (!cid) { flowBox.innerHTML = '<p style="color:var(--danger);font-size:0.82rem">Enter your Client ID first.</p>'; return; }
         odClientId = cid;
         try {
           await api('POST', '/api/settings', { onedrive: Object.assign({}, settings.onedrive || {}, { clientId: cid, tenant: 'common' }) });
           const r = await api('POST', '/api/onedrive/auth/start');
           flowBox.innerHTML = `<div class="od-device-flow-box">
-            <p>Visit <a href="${escHtml(r.verificationUrl)}" target="_blank" rel="noopener"><strong>${escHtml(r.verificationUrl)}</strong></a> and enter this code:</p>
+            <p>Visit <a href="${escHtml(r.verificationUrl)}" target="_blank" rel="noopener"><strong>${escHtml(r.verificationUrl)}</strong></a> and enter:</p>
             <div class="od-code">${escHtml(r.userCode)}</div>
             <p id="stgOdPollStatus">Waiting for authorisation…</p>
           </div>`;
@@ -479,15 +492,10 @@ async function settingsInit() {
               await refreshOdStatus();
             } catch {}
           }, 5000);
-        } catch (e) { if (flowBox) flowBox.innerHTML = `<p style="color:var(--danger)">${escHtml(e.message)}</p>`; }
+        } catch (e) { if (flowBox) flowBox.innerHTML = `<p style="color:var(--danger);font-size:0.82rem">${escHtml(e.message)}</p>`; }
       });
     }
     document.getElementById('stgOdClientId')?.addEventListener('input', (e) => { odClientId = e.target.value; markDirty(); });
-    document.getElementById('stgOdHowTo')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const box = document.getElementById('stgOdHowToBox');
-      if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
-    });
   }
 
   refreshOdStatus();
@@ -507,42 +515,56 @@ async function settingsInit() {
     const el = document.getElementById('stgDbSection');
     if (!el) return;
     const redirectUri = window.location.origin + '/api/dropbox/callback';
-    const credRows = `
-      <div class="settings-row">
-        <div class="settings-label"><span>App key</span><span class="settings-hint"><a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener" style="color:var(--accent)">dropbox.com/developers</a></span></div>
-        <div class="settings-control"><input type="text" id="stgDbAppKey" class="settings-input" value="${escHtml(dbAppKey)}" placeholder="xxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false"></div>
+    // Dropbox SVG icon
+    const dbIcon = `<svg class="provider-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 2L12 6.5L6 11L0 6.5L6 2Z" fill="#0061FF"/>
+      <path d="M18 2L24 6.5L18 11L12 6.5L18 2Z" fill="#0061FF"/>
+      <path d="M0 13.5L6 9L12 13.5L6 18L0 13.5Z" fill="#0061FF"/>
+      <path d="M24 13.5L18 9L12 13.5L18 18L24 13.5Z" fill="#0061FF"/>
+      <path d="M6 19.5L12 15L18 19.5L12 24L6 19.5Z" fill="#0061FF"/>
+    </svg>`;
+    const badge = connected
+      ? `<span class="provider-badge connected">Connected</span>`
+      : `<span class="provider-badge">Not connected</span>`;
+    const credFields = `
+      <div class="provider-field">
+        <label>App key &nbsp;<a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener" style="color:var(--accent);font-weight:400">dropbox.com/developers ↗</a></label>
+        <input type="text" id="stgDbAppKey" class="settings-input" value="${escHtml(dbAppKey)}" placeholder="xxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
       </div>
-      <div class="settings-row">
-        <div class="settings-label"><span>App secret</span></div>
-        <div class="settings-control"><input type="password" id="stgDbAppSecret" class="settings-input" value="${escHtml(dbAppSecret)}" placeholder="••••••••••••••" autocomplete="new-password"></div>
+      <div class="provider-field">
+        <label>App secret</label>
+        <input type="password" id="stgDbAppSecret" class="settings-input" value="${escHtml(dbAppSecret)}" placeholder="••••••••••••••" autocomplete="new-password">
       </div>
-      <div class="settings-row">
-        <div class="settings-label"><span>Redirect URI</span><span class="settings-hint">Add this to your Dropbox app's OAuth 2 redirect URIs</span></div>
-        <div class="settings-control">
-          <div style="display:flex;align-items:center;gap:0.5rem">
-            <code style="flex:1;font-size:0.8rem;word-break:break-all;color:var(--accent)">${escHtml(redirectUri)}</code>
-            <button class="btn btn-secondary btn-sm" id="stgDbCopyUri" type="button">Copy</button>
-          </div>
+      <div class="provider-field">
+        <label>Redirect URI <span class="settings-hint">— add to your Dropbox app's OAuth 2 settings</span></label>
+        <div class="provider-uri-row">
+          <code>${escHtml(redirectUri)}</code>
+          <button class="btn btn-secondary btn-sm" id="stgDbCopyUri" type="button" style="flex-shrink:0">Copy</button>
         </div>
       </div>`;
     if (connected) {
-      el.innerHTML = `<div class="settings-group">${credRows}
-        <div class="settings-row">
-          <div class="settings-label"><span>Account</span></div>
-          <div class="settings-control" style="display:flex;align-items:center;gap:0.75rem">
-            <span style="flex:1;font-size:0.9rem">${escHtml(displayName || 'Connected')}</span>
-            <button class="btn btn-secondary btn-sm" id="stgDbDisconnectBtn">Disconnect</button>
+      el.innerHTML = `<div class="provider-card">
+        <div class="provider-card-header">${dbIcon}<span class="provider-name">Dropbox</span>${badge}</div>
+        <div class="provider-card-body">
+          ${credFields}
+          <div class="provider-connected-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(displayName || 'Connected')}</span>
           </div>
-        </div></div>`;
+          <button class="btn btn-secondary btn-sm" id="stgDbDisconnectBtn" style="width:100%">Disconnect</button>
+        </div>
+      </div>`;
       document.getElementById('stgDbDisconnectBtn')?.addEventListener('click', async () => {
         try { await api('POST', '/api/dropbox/auth/disconnect'); refreshDbStatus(); } catch (e) { alert(e.message); }
       });
     } else {
-      el.innerHTML = `<div class="settings-group">${credRows}
-        <div class="settings-row">
-          <div class="settings-label"><span>Account</span></div>
-          <div class="settings-control"><button class="btn btn-primary btn-sm" id="stgDbConnectBtn">Connect Dropbox</button></div>
-        </div></div>`;
+      el.innerHTML = `<div class="provider-card">
+        <div class="provider-card-header">${dbIcon}<span class="provider-name">Dropbox</span>${badge}</div>
+        <div class="provider-card-body">
+          ${credFields}
+          <button class="btn btn-primary btn-sm" id="stgDbConnectBtn" style="width:100%">Connect Dropbox</button>
+        </div>
+      </div>`;
       document.getElementById('stgDbConnectBtn')?.addEventListener('click', async () => {
         const key = document.getElementById('stgDbAppKey')?.value.trim();
         const secret = document.getElementById('stgDbAppSecret')?.value.trim();
@@ -551,7 +573,7 @@ async function settingsInit() {
         try {
           await api('POST', '/api/settings', { dropbox: Object.assign({}, settings.dropbox || {}, { appKey: key, appSecret: secret }) });
           const { url } = await api('GET', `/api/dropbox/auth/url?redirectUri=${encodeURIComponent(redirectUri)}`);
-          const popup = window.open(url, 'dropbox-auth', 'width=600,height=700,noopener');
+          window.open(url, 'dropbox-auth', 'width=600,height=700,noopener');
           const handler = (e) => {
             if (e.data === 'dropbox-auth-ok') { window.removeEventListener('message', handler); refreshDbStatus(); }
             else if (typeof e.data === 'string' && e.data.startsWith('dropbox-auth-error:')) {
