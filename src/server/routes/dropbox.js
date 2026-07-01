@@ -59,23 +59,28 @@ module.exports.getValidToken = getValidToken;
 // ── File operations ───────────────────────────────────────────────────────────
 async function uploadFile(token, localPath, remotePath) {
   const content = fs.readFileSync(localPath);
+  const dropboxPath = remotePath.startsWith('/') ? remotePath : '/' + remotePath;
   const res = await fetch(`${CONTENT_API}/files/upload`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/octet-stream',
       'Dropbox-API-Arg': JSON.stringify({
-        path: remotePath.startsWith('/') ? remotePath : '/' + remotePath,
-        mode: 'overwrite',
+        path: dropboxPath,
+        mode: { '.tag': 'overwrite' },
         autorename: false,
         mute: true,
+        strict_conflict: false,
       }),
     },
-    body: content,
+    body: new Uint8Array(content),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error_summary || `Upload failed: HTTP ${res.status}`);
+    const raw = await res.text().catch(() => '');
+    console.error(`[Dropbox] Upload failed for ${dropboxPath}: HTTP ${res.status} — ${raw}`);
+    let msg = `Upload failed: HTTP ${res.status}`;
+    try { const j = JSON.parse(raw); msg = j.error_summary || (typeof j.error === 'string' ? j.error : msg); } catch {}
+    throw new Error(msg);
   }
 }
 module.exports.uploadFile = uploadFile;
