@@ -39,6 +39,7 @@ async function runJob(job) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
     const snapshotBase = `${folderPath}/${job.containerName}/${timestamp}`;
 
+    let uploaded = 0, failed = 0;
     for (const localBase of (job.paths || [])) {
       const { walkDir } = require('./routes/onedrive');
       const files = walkDir(localBase, localBase);
@@ -51,10 +52,16 @@ async function runJob(job) {
           : `${snapshotBase}/${baseName}/${relative}`;
         try {
           await uploadFile(token, local, remotePath);
+          uploaded++;
         } catch (err) {
           console.warn(`[Backup] Failed to upload ${local}: ${err.message}`);
+          failed++;
         }
       }
+    }
+
+    if (uploaded === 0 && failed === 0) {
+      console.warn(`[Backup] Job "${job.label || job.id}": no files found in specified paths`);
     }
 
     // Rotation
@@ -78,8 +85,9 @@ async function runJob(job) {
       console.warn(`[Backup] Rotation failed: ${err.message}`);
     }
 
-    updateJobStatus('ok');
-    console.log(`[Backup] Job "${job.label || job.id}" completed`);
+    const statusMsg = failed > 0 ? `ok (${uploaded} uploaded, ${failed} failed)` : `ok (${uploaded} file${uploaded !== 1 ? 's' : ''})`;
+    updateJobStatus(statusMsg);
+    console.log(`[Backup] Job "${job.label || job.id}" completed — ${uploaded} uploaded, ${failed} failed`);
   } catch (err) {
     console.error(`[Backup] Job "${job.label || job.id}" failed: ${err.message}`);
     updateJobStatus('error: ' + err.message);

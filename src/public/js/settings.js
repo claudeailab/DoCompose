@@ -567,7 +567,7 @@ async function settingsInit() {
         try {
           await api('POST', '/api/settings', { dropbox: Object.assign({}, settings.dropbox || {}, { appKey: key, appSecret: secret }) });
           const { url } = await api('GET', `/api/dropbox/auth/url?redirectUri=${encodeURIComponent(redirectUri)}`);
-          window.open(url, 'dropbox-auth', 'width=600,height=700,noopener');
+          window.open(url, 'dropbox-auth', 'width=600,height=700');
           const handler = (e) => {
             if (e.data === 'dropbox-auth-ok') { window.removeEventListener('message', handler); refreshDbStatus(); }
             else if (typeof e.data === 'string' && e.data.startsWith('dropbox-auth-error:')) {
@@ -704,57 +704,61 @@ async function settingsInit() {
     }
     const containers = (DC.services || []).map((s) => s.name);
     list.innerHTML = backupJobs.map((job, idx) => {
-      const statusCls = job.lastStatus === 'ok' ? 'backup-status-ok' : job.lastStatus ? 'backup-status-err' : '';
-      const statusTxt = job.lastStatus ? (job.lastStatus === 'ok' ? `Last run: ${job.lastRun ? new Date(job.lastRun).toLocaleString() : 'unknown'} — OK` : `Error: ${job.lastStatus.replace(/^error:\s*/i, '')}`) : 'Never run';
+      const isOk = job.lastStatus && job.lastStatus.startsWith('ok');
+      const isErr = job.lastStatus && !isOk;
+      const statusCls = isOk ? 'backup-status-ok' : isErr ? 'backup-status-err' : '';
+      const statusDetail = job.lastStatus ? job.lastStatus.replace(/^ok\s*/i, '').replace(/^error:\s*/i, '') : '';
+      const runTime = job.lastRun ? new Date(job.lastRun).toLocaleString() : 'unknown';
+      const statusTxt = !job.lastStatus ? 'Never run' : isOk ? `${runTime} — OK ${statusDetail}` : `Error: ${statusDetail}`;
+      const dest = job.destination === 'dropbox' ? 'Dropbox' : 'OneDrive';
       return `
       <div class="backup-job-card">
         <div class="backup-job-header">
-          <label class="toggle-switch" title="${job.enabled ? 'Enabled' : 'Disabled'}">
+          <label class="toggle-switch">
             <input type="checkbox" class="bj-enabled" data-idx="${idx}" ${job.enabled ? 'checked' : ''}>
             <span class="toggle-track"><span class="toggle-thumb"></span></span>
           </label>
           <input type="text" class="backup-job-label-input bj-label" data-idx="${idx}" value="${escHtml(job.label || '')}" placeholder="Job label">
-          <button class="btn-icon bj-delete" data-idx="${idx}" title="Remove job" style="margin-left:auto">
+          <span class="bj-dest-badge">${dest}</span>
+          <button class="btn-icon bj-delete" data-idx="${idx}" title="Remove job">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
           </button>
         </div>
         <div class="backup-job-body">
-          <div class="backup-job-row">
+          <div class="backup-job-field">
             <label>Destination</label>
-            <select class="settings-select bj-destination" data-idx="${idx}">
+            <select class="settings-input bj-destination" data-idx="${idx}">
               <option value="onedrive" ${(job.destination || 'onedrive') === 'onedrive' ? 'selected' : ''}>OneDrive</option>
               <option value="dropbox" ${job.destination === 'dropbox' ? 'selected' : ''}>Dropbox</option>
             </select>
           </div>
-          <div class="backup-job-row">
+          <div class="backup-job-field">
             <label>Container</label>
-            <select class="settings-select bj-container" data-idx="${idx}">
+            <select class="settings-input bj-container" data-idx="${idx}">
               <option value="">— select —</option>
               ${containers.map((n) => `<option value="${escHtml(n)}" ${job.containerName === n ? 'selected' : ''}>${escHtml(n)}</option>`).join('')}
             </select>
           </div>
-          <div class="backup-job-row">
-            <label>Paths</label>
-            <div style="display:flex;flex-direction:column;gap:0.35rem;flex:1;min-width:0">
-              <textarea class="settings-input bj-paths" data-idx="${idx}" placeholder="One path per line e.g. /compose/config/prometheus" style="min-height:60px">${escHtml((job.paths || []).join('\n'))}</textarea>
-              <button class="btn btn-secondary btn-sm bj-browse" type="button" data-idx="${idx}" style="align-self:flex-start">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <div class="backup-job-field">
+            <label>Schedule</label>
+            <div class="bj-schedule-row">
+              <input type="text" class="settings-input bj-schedule" data-idx="${idx}" value="${escHtml(job.schedule || '')}" placeholder="0 2 * * *" style="font-family:monospace">
+              ${SCHEDULE_PRESETS.map((p) => `<button class="bj-preset-btn" type="button" data-idx="${idx}" data-cron="${escHtml(p.value)}" title="${escHtml(p.value)}">${escHtml(p.label)}</button>`).join('')}
+            </div>
+          </div>
+          <div class="backup-job-field">
+            <label>Keep copies</label>
+            <input type="number" class="settings-input bj-keep" data-idx="${idx}" value="${job.keepCount || 10}" min="1" max="365">
+          </div>
+          <div class="backup-job-field full">
+            <label>Paths to back up</label>
+            <div class="bj-paths-wrap">
+              <textarea class="settings-input bj-paths" data-idx="${idx}" placeholder="One path per line, e.g. /compose/config/myapp">${escHtml((job.paths || []).join('\n'))}</textarea>
+              <button class="btn btn-secondary btn-sm bj-browse bj-browse-btn" type="button" data-idx="${idx}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                 Browse
               </button>
             </div>
-          </div>
-          <div class="backup-job-row">
-            <label>Schedule</label>
-            <div>
-              <div class="schedule-presets">
-                ${SCHEDULE_PRESETS.map((p) => `<button class="schedule-preset-btn" type="button" data-idx="${idx}" data-cron="${escHtml(p.value)}">${escHtml(p.label)}</button>`).join('')}
-              </div>
-              <input type="text" class="settings-input bj-schedule" data-idx="${idx}" value="${escHtml(job.schedule || '')}" placeholder="cron e.g. 0 2 * * *" style="font-family:monospace">
-            </div>
-          </div>
-          <div class="backup-job-row">
-            <label>Keep copies</label>
-            <input type="number" class="settings-input bj-keep" data-idx="${idx}" value="${job.keepCount || 10}" min="1" max="365" style="max-width:80px">
           </div>
         </div>
         <div class="backup-job-footer">
@@ -771,7 +775,13 @@ async function settingsInit() {
       el.addEventListener('input', (e) => { backupJobs[+e.target.dataset.idx].label = e.target.value; markDirty(); });
     });
     list.querySelectorAll('.bj-destination').forEach((el) => {
-      el.addEventListener('change', (e) => { backupJobs[+e.target.dataset.idx].destination = e.target.value; markDirty(); });
+      el.addEventListener('change', (e) => {
+        const idx = +e.target.dataset.idx;
+        backupJobs[idx].destination = e.target.value;
+        const badge = e.target.closest('.backup-job-card')?.querySelector('.bj-dest-badge');
+        if (badge) badge.textContent = e.target.value === 'dropbox' ? 'Dropbox' : 'OneDrive';
+        markDirty();
+      });
     });
     list.querySelectorAll('.bj-container').forEach((el) => {
       el.addEventListener('change', (e) => { backupJobs[+e.target.dataset.idx].containerName = e.target.value; markDirty(); });
@@ -782,7 +792,7 @@ async function settingsInit() {
         markDirty();
       });
     });
-    list.querySelectorAll('.schedule-preset-btn').forEach((btn) => {
+    list.querySelectorAll('.bj-preset-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const idx = +btn.dataset.idx;
         backupJobs[idx].schedule = btn.dataset.cron;
