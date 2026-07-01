@@ -1633,63 +1633,74 @@ body {
 .provider-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.85rem;
+  gap: 1rem;
 }
 @media (max-width: 640px) { .provider-cards { grid-template-columns: 1fr; } }
 
 .provider-card {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
 }
 .provider-card-header {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.75rem 1rem;
+  gap: 0.65rem;
+  padding: 0.85rem 1.1rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg-tertiary);
 }
-.provider-icon { width: 22px; height: 22px; flex-shrink: 0; }
-.provider-name { font-size: 0.9rem; font-weight: 600; flex: 1; }
-.provider-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.15rem 0.5rem;
-  border-radius: 99px;
-  background: var(--accent-dim);
-  color: var(--accent);
+.provider-icon { width: 20px; height: 20px; flex-shrink: 0; }
+.provider-name { font-size: 0.92rem; font-weight: 600; flex: 1; }
+.provider-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
 }
-.provider-badge.connected {
-  background: rgba(34,197,94,0.15);
-  color: var(--success);
-}
-.provider-card-body { padding: 0.85rem 1rem; display: grid; gap: 0.6rem; }
+.provider-dot.connected { background: var(--success); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+
+.provider-card-body { padding: 1rem 1.1rem; display: grid; gap: 0.75rem; flex: 1; }
 .provider-field { display: flex; flex-direction: column; gap: 0.3rem; }
-.provider-field label { font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; }
-.provider-field .settings-hint { font-size: 0.72rem; color: var(--text-muted); }
+.provider-field label { font-size: 0.73rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.02em; text-transform: uppercase; }
 .provider-field input { font-size: 0.85rem; }
-.provider-connected-row {
+
+.provider-card-footer {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: var(--text-primary);
-  padding: 0.3rem 0;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1.1rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  min-height: 52px;
 }
-.provider-connected-row svg { width: 14px; height: 14px; color: var(--success); flex-shrink: 0; }
+.provider-account {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+}
+.provider-account svg { width: 13px; height: 13px; color: var(--success); flex-shrink: 0; }
+.provider-account span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.provider-not-connected { font-size: 0.8rem; color: var(--text-muted); }
+
 .provider-uri-row {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: var(--bg-tertiary);
+  background: var(--bg-primary);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 0.35rem 0.5rem 0.35rem 0.65rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.65rem;
 }
-.provider-uri-row code { flex: 1; font-size: 0.72rem; color: var(--accent); word-break: break-all; min-width: 0; }
-.provider-howto { margin-top: 0.25rem; }
+.provider-uri-row code { flex: 1; font-size: 0.71rem; color: var(--accent); word-break: break-all; min-width: 0; }
+.provider-howto { margin-top: 0.1rem; }
 .provider-howto summary {
   font-size: 0.75rem;
   color: var(--accent);
@@ -1697,11 +1708,22 @@ body {
   list-style: none;
   user-select: none;
 }
+.provider-howto summary::-webkit-details-marker { display: none; }
 .provider-howto summary::before { content: '▸ '; }
 details[open].provider-howto summary::before { content: '▾ '; }
-.provider-howto ol { margin: 0.5rem 0 0 1rem; padding: 0; font-size: 0.78rem; color: var(--text-secondary); display: grid; gap: 0.35rem; }
+.provider-howto ol { margin: 0.5rem 0 0 1.1rem; padding: 0; font-size: 0.78rem; color: var(--text-secondary); display: grid; gap: 0.35rem; }
 .provider-howto a { color: var(--accent); }
 .provider-howto code { font-size: 0.78rem; }
+.provider-flow-box {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  text-align: center;
+  margin-top: 0.25rem;
+}
+.provider-flow-box p { font-size: 0.82rem; color: var(--text-secondary); margin: 0.3rem 0 0; }
+.provider-flow-box a { color: var(--accent); }
 
 /* ---- Backup jobs ---- */
 .backup-job-card {

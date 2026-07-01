@@ -418,18 +418,14 @@ async function settingsInit() {
   function renderOdSection(connected, displayName) {
     const el = document.getElementById('stgOdSection');
     if (!el) return;
-    // OneDrive SVG icon
-    const odIcon = `<svg class="provider-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M9.5 13.5C9.5 13.5 10.5 9 15.5 9C19 9 21 11.5 21 11.5C21 11.5 23 12 23 14.5C23 17 21 17.5 21 17.5H6C6 17.5 4 17 4 14.5C4 12 6 11.5 6 11.5C6 11.5 6.5 13.5 9.5 13.5Z" fill="#0078D4" stroke="none"/>
-      <path d="M5.5 11.5C5.5 11.5 6 8 9.5 7C11.5 6.5 13 7.5 13 7.5C13 7.5 14 4 17.5 4C20.5 4 22 6.5 22 6.5" stroke="#0078D4" stroke-width="0" fill="none"/>
-      <ellipse cx="14" cy="10" rx="7" ry="4.5" fill="#0078D4" opacity="0.55"/>
-      <ellipse cx="8.5" cy="12.5" rx="4.5" ry="3" fill="#0078D4" opacity="0.8"/>
-      <rect x="4" y="13" width="17" height="5" rx="2.5" fill="#0078D4"/>
+    const odIcon = `<svg class="provider-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <path d="M19.2 13.2C20.3 10.1 23.3 8 26.7 8C29.6 8 32 10.4 32 13.3C32 13.4 32 13.6 32 13.7C33.2 14.4 34 15.7 34 17.3C34 19.7 32 21.3 29.7 21.3H13.3C11 21.3 9.3 19.7 9.3 17.3C9.3 15.3 10.7 13.6 12.5 13.1C12.4 12.8 12.4 12.4 12.4 12C12.4 9.3 14.5 7.1 17.2 7C18 7 18.7 7.2 19.3 7.5" fill="none"/>
+      <ellipse cx="22" cy="16" rx="10" ry="6" fill="#0078D4" opacity="0.6"/>
+      <ellipse cx="14" cy="18" rx="6" ry="4" fill="#0078D4" opacity="0.8"/>
+      <rect x="8" y="16" width="22" height="6" rx="3" fill="#0078D4"/>
     </svg>`;
-    const badge = connected
-      ? `<span class="provider-badge connected">Connected</span>`
-      : `<span class="provider-badge">Not connected</span>`;
-    const credFields = `
+    const dot = `<span class="provider-dot${connected ? ' connected' : ''}"></span>`;
+    const credBody = `
       <div class="provider-field">
         <label>Client ID</label>
         <input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
@@ -438,7 +434,7 @@ async function settingsInit() {
         <summary>How to register a free Azure App</summary>
         <ol>
           <li>Go to <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade" target="_blank" rel="noopener">portal.azure.com → App registrations → New registration</a></li>
-          <li>Name it anything. Account types: <strong>Accounts in any organizational directory and personal Microsoft accounts</strong>. No redirect URI.</li>
+          <li>Name it anything. Account types: <strong>Accounts in any org directory and personal Microsoft accounts</strong>. No redirect URI.</li>
           <li>Click <strong>Register</strong>. Copy the <strong>Application (client) ID</strong> and paste above.</li>
           <li><strong>Authentication → Allow public client flows → Yes → Save.</strong></li>
           <li><strong>API permissions → Add → Microsoft Graph → Delegated:</strong> <code>Files.ReadWrite</code>, <code>offline_access</code>, <code>User.Read</code></li>
@@ -446,14 +442,14 @@ async function settingsInit() {
       </details>`;
     if (connected) {
       el.innerHTML = `<div class="provider-card">
-        <div class="provider-card-header">${odIcon}<span class="provider-name">OneDrive</span>${badge}</div>
-        <div class="provider-card-body">
-          ${credFields}
-          <div class="provider-connected-row">
+        <div class="provider-card-header">${odIcon}<span class="provider-name">OneDrive</span>${dot}</div>
+        <div class="provider-card-body">${credBody}</div>
+        <div class="provider-card-footer">
+          <div class="provider-account">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(displayName || 'Connected')}</span>
+            <span>${escHtml(displayName || 'Connected')}</span>
           </div>
-          <button class="btn btn-secondary btn-sm" id="stgOdDisconnectBtn" style="width:100%">Disconnect</button>
+          <button class="btn btn-secondary btn-sm" id="stgOdDisconnectBtn">Disconnect</button>
         </div>
       </div>`;
       document.getElementById('stgOdDisconnectBtn')?.addEventListener('click', async () => {
@@ -461,22 +457,22 @@ async function settingsInit() {
       });
     } else {
       el.innerHTML = `<div class="provider-card">
-        <div class="provider-card-header">${odIcon}<span class="provider-name">OneDrive</span>${badge}</div>
-        <div class="provider-card-body">
-          ${credFields}
-          <button class="btn btn-primary btn-sm" id="stgOdConnectBtn" style="width:100%">Connect OneDrive</button>
-          <div id="stgOdFlowBox"></div>
+        <div class="provider-card-header">${odIcon}<span class="provider-name">OneDrive</span>${dot}</div>
+        <div class="provider-card-body">${credBody}<div id="stgOdFlowBox"></div></div>
+        <div class="provider-card-footer">
+          <span class="provider-not-connected">Not connected</span>
+          <button class="btn btn-primary btn-sm" id="stgOdConnectBtn">Connect</button>
         </div>
       </div>`;
       document.getElementById('stgOdConnectBtn')?.addEventListener('click', async () => {
         const flowBox = document.getElementById('stgOdFlowBox');
         const cid = document.getElementById('stgOdClientId')?.value.trim();
-        if (!cid) { flowBox.innerHTML = '<p style="color:var(--danger);font-size:0.82rem">Enter your Client ID first.</p>'; return; }
+        if (!cid) { flowBox.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;margin-top:0.5rem">Enter your Client ID first.</p>'; return; }
         odClientId = cid;
         try {
           await api('POST', '/api/settings', { onedrive: Object.assign({}, settings.onedrive || {}, { clientId: cid, tenant: 'common' }) });
           const r = await api('POST', '/api/onedrive/auth/start');
-          flowBox.innerHTML = `<div class="od-device-flow-box">
+          flowBox.innerHTML = `<div class="provider-flow-box">
             <p>Visit <a href="${escHtml(r.verificationUrl)}" target="_blank" rel="noopener"><strong>${escHtml(r.verificationUrl)}</strong></a> and enter:</p>
             <div class="od-code">${escHtml(r.userCode)}</div>
             <p id="stgOdPollStatus">Waiting for authorisation…</p>
@@ -492,7 +488,7 @@ async function settingsInit() {
               await refreshOdStatus();
             } catch {}
           }, 5000);
-        } catch (e) { if (flowBox) flowBox.innerHTML = `<p style="color:var(--danger);font-size:0.82rem">${escHtml(e.message)}</p>`; }
+        } catch (e) { if (flowBox) flowBox.innerHTML = `<p style="color:var(--danger);font-size:0.82rem;margin-top:0.5rem">${escHtml(e.message)}</p>`; }
       });
     }
     document.getElementById('stgOdClientId')?.addEventListener('input', (e) => { odClientId = e.target.value; markDirty(); });
@@ -515,20 +511,17 @@ async function settingsInit() {
     const el = document.getElementById('stgDbSection');
     if (!el) return;
     const redirectUri = window.location.origin + '/api/dropbox/callback';
-    // Dropbox SVG icon
-    const dbIcon = `<svg class="provider-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M6 2L12 6.5L6 11L0 6.5L6 2Z" fill="#0061FF"/>
-      <path d="M18 2L24 6.5L18 11L12 6.5L18 2Z" fill="#0061FF"/>
-      <path d="M0 13.5L6 9L12 13.5L6 18L0 13.5Z" fill="#0061FF"/>
-      <path d="M24 13.5L18 9L12 13.5L18 18L24 13.5Z" fill="#0061FF"/>
-      <path d="M6 19.5L12 15L18 19.5L12 24L6 19.5Z" fill="#0061FF"/>
+    const dbIcon = `<svg class="provider-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 2L12 6.5L6 11L0 6.5Z" fill="#0061FF"/>
+      <path d="M18 2L24 6.5L18 11L12 6.5Z" fill="#0061FF"/>
+      <path d="M0 13.5L6 9L12 13.5L6 18Z" fill="#0061FF"/>
+      <path d="M24 13.5L18 9L12 13.5L18 18Z" fill="#0061FF"/>
+      <path d="M6 19.5L12 15L18 19.5L12 24Z" fill="#0061FF"/>
     </svg>`;
-    const badge = connected
-      ? `<span class="provider-badge connected">Connected</span>`
-      : `<span class="provider-badge">Not connected</span>`;
-    const credFields = `
+    const dot = `<span class="provider-dot${connected ? ' connected' : ''}"></span>`;
+    const credBody = `
       <div class="provider-field">
-        <label>App key &nbsp;<a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener" style="color:var(--accent);font-weight:400">dropbox.com/developers ↗</a></label>
+        <label>App key &nbsp;<a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener" style="color:var(--accent);font-weight:400;text-transform:none;letter-spacing:0">developers.dropbox.com ↗</a></label>
         <input type="text" id="stgDbAppKey" class="settings-input" value="${escHtml(dbAppKey)}" placeholder="xxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
       </div>
       <div class="provider-field">
@@ -536,22 +529,22 @@ async function settingsInit() {
         <input type="password" id="stgDbAppSecret" class="settings-input" value="${escHtml(dbAppSecret)}" placeholder="••••••••••••••" autocomplete="new-password">
       </div>
       <div class="provider-field">
-        <label>Redirect URI <span class="settings-hint">— add to your Dropbox app's OAuth 2 settings</span></label>
+        <label>Redirect URI <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted)">— add to your Dropbox app's OAuth 2 settings</span></label>
         <div class="provider-uri-row">
           <code>${escHtml(redirectUri)}</code>
-          <button class="btn btn-secondary btn-sm" id="stgDbCopyUri" type="button" style="flex-shrink:0">Copy</button>
+          <button class="btn btn-secondary btn-sm" id="stgDbCopyUri" type="button" style="flex-shrink:0;font-size:0.75rem;padding:0.2rem 0.5rem">Copy</button>
         </div>
       </div>`;
     if (connected) {
       el.innerHTML = `<div class="provider-card">
-        <div class="provider-card-header">${dbIcon}<span class="provider-name">Dropbox</span>${badge}</div>
-        <div class="provider-card-body">
-          ${credFields}
-          <div class="provider-connected-row">
+        <div class="provider-card-header">${dbIcon}<span class="provider-name">Dropbox</span>${dot}</div>
+        <div class="provider-card-body">${credBody}</div>
+        <div class="provider-card-footer">
+          <div class="provider-account">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(displayName || 'Connected')}</span>
+            <span>${escHtml(displayName || 'Connected')}</span>
           </div>
-          <button class="btn btn-secondary btn-sm" id="stgDbDisconnectBtn" style="width:100%">Disconnect</button>
+          <button class="btn btn-secondary btn-sm" id="stgDbDisconnectBtn">Disconnect</button>
         </div>
       </div>`;
       document.getElementById('stgDbDisconnectBtn')?.addEventListener('click', async () => {
@@ -559,10 +552,11 @@ async function settingsInit() {
       });
     } else {
       el.innerHTML = `<div class="provider-card">
-        <div class="provider-card-header">${dbIcon}<span class="provider-name">Dropbox</span>${badge}</div>
-        <div class="provider-card-body">
-          ${credFields}
-          <button class="btn btn-primary btn-sm" id="stgDbConnectBtn" style="width:100%">Connect Dropbox</button>
+        <div class="provider-card-header">${dbIcon}<span class="provider-name">Dropbox</span>${dot}</div>
+        <div class="provider-card-body">${credBody}</div>
+        <div class="provider-card-footer">
+          <span class="provider-not-connected">Not connected</span>
+          <button class="btn btn-primary btn-sm" id="stgDbConnectBtn">Connect</button>
         </div>
       </div>`;
       document.getElementById('stgDbConnectBtn')?.addEventListener('click', async () => {
