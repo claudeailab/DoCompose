@@ -13,6 +13,7 @@ const searchRouter = require('./routes/search');
 const statsRouter = require('./routes/stats');
 const settingsRouter = require('./routes/settings');
 const { router: onedriveRouter } = require('./routes/onedrive');
+const { router: dropboxRouter } = require('./routes/dropbox');
 const backupScheduler = require('./backup-scheduler');
 const { handleTerminal } = require('./terminal');
 
@@ -35,6 +36,7 @@ app.use('/api/backups', backupsRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/onedrive', onedriveRouter);
+app.use('/api/dropbox', dropboxRouter);
 
 // Version endpoint
 app.get('/api/version', (req, res) => {

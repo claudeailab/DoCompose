@@ -145,8 +145,25 @@ async function settingsInit() {
           <h2 class="stg-pane-title">Backups</h2>
 
           <div class="settings-section">
+            <div class="settings-section-label">Shared settings</div>
+            <div class="settings-group">
+              <div class="settings-row">
+                <div class="settings-label"><span>Backup folder name</span><span class="settings-hint">Root folder created in OneDrive / Dropbox</span></div>
+                <div class="settings-control">
+                  <input type="text" id="stgBackupFolderPath" class="settings-input" placeholder="DoCompose Backups">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section" style="margin-top:1.5rem">
             <div class="settings-section-label">OneDrive</div>
             <div id="stgOdSection"><div class="settings-loading">Loading…</div></div>
+          </div>
+
+          <div class="settings-section" style="margin-top:1.5rem">
+            <div class="settings-section-label">Dropbox</div>
+            <div id="stgDbSection"><div class="settings-loading">Loading…</div></div>
           </div>
 
           <div class="settings-section" style="margin-top:1.5rem">
@@ -387,121 +404,70 @@ async function settingsInit() {
   // ── Backups tab ───────────────────────────────────────────────
   let backupJobs = (settings.backupJobs || []).map((j) => Object.assign({}, j));
 
+  // Shared folder path
+  const bfpEl = document.getElementById('stgBackupFolderPath');
+  if (bfpEl) { bfpEl.value = settings.backupFolderPath || 'DoCompose Backups'; bfpEl.addEventListener('input', markDirty); }
+
+  // ── OneDrive ──────────────────────────────────────────────────
+  let odClientId = (settings.onedrive && settings.onedrive.clientId) || '';
+
   async function refreshOdStatus() {
     try {
       const od = await api('GET', '/api/onedrive/status');
       renderOdSection(od.connected, od.displayName);
-    } catch {
-      renderOdSection(false, '');
-    }
+    } catch { renderOdSection(false, ''); }
   }
-
-  let odClientId = (settings.onedrive && settings.onedrive.clientId) || '';
-  let odTenant = (settings.onedrive && settings.onedrive.tenant) || 'common';
 
   function renderOdSection(connected, displayName) {
     const el = document.getElementById('stgOdSection');
     if (!el) return;
-
-    const tenantOptions = [
-      { value: 'common',        label: 'Personal & work/school accounts' },
-      { value: 'consumers',     label: 'Personal Microsoft accounts only' },
-      { value: 'organizations', label: 'Work/school accounts only' },
-      { value: 'custom',        label: 'Specific tenant ID / domain' },
-    ];
-    const isCustomTenant = !['common','consumers','organizations'].includes(odTenant);
-    const tenantSelectVal = isCustomTenant ? 'custom' : odTenant;
-
-    const appRows = `
+    const credRows = `
       <div class="settings-row">
-        <div class="settings-label">
-          <span>Client ID</span>
-          <span class="settings-hint">Azure App — <a href="#" id="stgOdHowTo" style="color:var(--accent)">how to register</a></span>
-        </div>
-        <div class="settings-control">
-          <input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
-        </div>
-      </div>
-      <div class="settings-row">
-        <div class="settings-label">
-          <span>Account type</span>
-          <span class="settings-hint">Must match your app registration</span>
-        </div>
-        <div class="settings-control" style="display:flex;flex-direction:column;gap:0.4rem">
-          <select id="stgOdTenantSelect" class="settings-select">
-            ${tenantOptions.map((o) => `<option value="${o.value}" ${tenantSelectVal === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
-          </select>
-          <input type="text" id="stgOdTenantCustom" class="settings-input" style="display:${isCustomTenant ? 'block' : 'none'}" value="${escHtml(isCustomTenant ? odTenant : '')}" placeholder="e.g. contoso.com or tenant-uuid">
-        </div>
+        <div class="settings-label"><span>Client ID</span><span class="settings-hint">Azure App — <a href="#" id="stgOdHowTo" style="color:var(--accent)">how to register</a></span></div>
+        <div class="settings-control"><input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false"></div>
       </div>
       <div id="stgOdHowToBox" style="display:none" class="od-howto-box">
-        <strong>Register a free Azure App (3 minutes):</strong>
+        <strong>Register a free Azure App (~3 min):</strong>
         <ol>
           <li>Go to <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade" target="_blank" rel="noopener">portal.azure.com → App registrations → New registration</a></li>
-          <li>Name: <em>DoCompose</em>. Supported account types: pick what matches the <strong>Account type</strong> above. No redirect URI.</li>
-          <li>Click <strong>Register</strong>, then copy the <strong>Application (client) ID</strong> and paste it above.</li>
-          <li>Go to <strong>Authentication</strong> → scroll to <strong>Advanced settings</strong> → set <strong>"Allow public client flows"</strong> to <strong>Yes</strong> → Save. <em>(This is required — without it you get the client_secret error.)</em></li>
-          <li>Go to <strong>API permissions → Add → Microsoft Graph → Delegated</strong> and add: <code>Files.ReadWrite</code>, <code>offline_access</code>, <code>User.Read</code></li>
+          <li>Name it anything. Supported account types: <strong>Accounts in any organizational directory and personal Microsoft accounts</strong> covers everyone. No redirect URI.</li>
+          <li>Click <strong>Register</strong>. Copy the <strong>Application (client) ID</strong> and paste above.</li>
+          <li><strong>Authentication → Advanced settings → Allow public client flows → Yes → Save.</strong> (Required for device code flow.)</li>
+          <li><strong>API permissions → Add → Microsoft Graph → Delegated:</strong> <code>Files.ReadWrite</code>, <code>offline_access</code>, <code>User.Read</code></li>
         </ol>
       </div>`;
-
     if (connected) {
-      const savedFolder = settings.onedriveFolderPath || '/DoCompose Backups';
-      el.innerHTML = `
-        <div class="settings-group">
-          ${appRows}
-          <div class="settings-row">
-            <div class="settings-label"><span>Account</span></div>
-            <div class="settings-control" style="display:flex;align-items:center;gap:0.75rem">
-              <span style="flex:1;font-size:0.9rem">${escHtml(displayName || 'Connected')}</span>
-              <button class="btn btn-secondary btn-sm" id="stgOdDisconnectBtn">Disconnect</button>
-            </div>
+      el.innerHTML = `<div class="settings-group">${credRows}
+        <div class="settings-row">
+          <div class="settings-label"><span>Account</span></div>
+          <div class="settings-control" style="display:flex;align-items:center;gap:0.75rem">
+            <span style="flex:1;font-size:0.9rem">${escHtml(displayName || 'Connected')}</span>
+            <button class="btn btn-secondary btn-sm" id="stgOdDisconnectBtn">Disconnect</button>
           </div>
-          <div class="settings-row">
-            <div class="settings-label"><span>Backup folder</span><span class="settings-hint">Path in your OneDrive root</span></div>
-            <div class="settings-control">
-              <input type="text" id="stgOdFolderPath" class="settings-input" value="${escHtml(savedFolder)}" placeholder="/DoCompose Backups">
-            </div>
-          </div>
-        </div>`;
-      document.getElementById('stgOdFolderPath')?.addEventListener('input', markDirty);
+        </div></div>`;
       document.getElementById('stgOdDisconnectBtn')?.addEventListener('click', async () => {
-        try {
-          await api('POST', '/api/onedrive/auth/disconnect');
-          refreshOdStatus();
-        } catch (e) { alert('Error: ' + e.message); }
+        try { await api('POST', '/api/onedrive/auth/disconnect'); refreshOdStatus(); } catch (e) { alert(e.message); }
       });
     } else {
-      el.innerHTML = `
-        <div class="settings-group">
-          ${appRows}
-          <div class="settings-row">
-            <div class="settings-label"><span>OneDrive account</span></div>
-            <div class="settings-control">
-              <button class="btn btn-primary btn-sm" id="stgOdConnectBtn">Connect OneDrive</button>
-            </div>
-          </div>
-          <div id="stgOdFlowBox"></div>
-        </div>`;
+      el.innerHTML = `<div class="settings-group">${credRows}
+        <div class="settings-row">
+          <div class="settings-label"><span>Account</span></div>
+          <div class="settings-control"><button class="btn btn-primary btn-sm" id="stgOdConnectBtn">Connect OneDrive</button></div>
+        </div>
+        <div id="stgOdFlowBox"></div></div>`;
       document.getElementById('stgOdConnectBtn')?.addEventListener('click', async () => {
         const flowBox = document.getElementById('stgOdFlowBox');
         const cid = document.getElementById('stgOdClientId')?.value.trim();
-        if (!cid) { flowBox.innerHTML = '<p style="color:var(--danger)">Enter your Azure App Client ID first.</p>'; return; }
-        const tenantSel = document.getElementById('stgOdTenantSelect')?.value;
-        const tenantCustom = document.getElementById('stgOdTenantCustom')?.value.trim();
-        const tenant = tenantSel === 'custom' ? (tenantCustom || 'common') : (tenantSel || 'common');
+        if (!cid) { flowBox.innerHTML = '<p style="color:var(--danger)">Enter your Client ID first.</p>'; return; }
         odClientId = cid;
-        odTenant = tenant;
         try {
-          // Persist client ID + tenant before starting auth so backend reads them
-          await api('POST', '/api/settings', { onedrive: Object.assign({}, settings.onedrive || {}, { clientId: cid, tenant }) });
+          await api('POST', '/api/settings', { onedrive: Object.assign({}, settings.onedrive || {}, { clientId: cid, tenant: 'common' }) });
           const r = await api('POST', '/api/onedrive/auth/start');
-          flowBox.innerHTML = `
-            <div class="od-device-flow-box">
-              <p>Visit <a href="${escHtml(r.verificationUrl)}" target="_blank" rel="noopener"><strong>${escHtml(r.verificationUrl)}</strong></a> and enter this code:</p>
-              <div class="od-code">${escHtml(r.userCode)}</div>
-              <p id="stgOdPollStatus">Waiting for authorisation…</p>
-            </div>`;
+          flowBox.innerHTML = `<div class="od-device-flow-box">
+            <p>Visit <a href="${escHtml(r.verificationUrl)}" target="_blank" rel="noopener"><strong>${escHtml(r.verificationUrl)}</strong></a> and enter this code:</p>
+            <div class="od-code">${escHtml(r.userCode)}</div>
+            <p id="stgOdPollStatus">Waiting for authorisation…</p>
+          </div>`;
           const deadline = Date.now() + (r.expiresIn || 900) * 1000;
           const poll = setInterval(async () => {
             if (Date.now() > deadline) { clearInterval(poll); document.getElementById('stgOdPollStatus').textContent = 'Code expired — click Connect again.'; return; }
@@ -516,15 +482,7 @@ async function settingsInit() {
         } catch (e) { if (flowBox) flowBox.innerHTML = `<p style="color:var(--danger)">${escHtml(e.message)}</p>`; }
       });
     }
-
-    // Wire up shared fields
     document.getElementById('stgOdClientId')?.addEventListener('input', (e) => { odClientId = e.target.value; markDirty(); });
-    document.getElementById('stgOdTenantSelect')?.addEventListener('change', (e) => {
-      const custom = document.getElementById('stgOdTenantCustom');
-      if (custom) custom.style.display = e.target.value === 'custom' ? 'block' : 'none';
-      if (e.target.value !== 'custom') { odTenant = e.target.value; markDirty(); }
-    });
-    document.getElementById('stgOdTenantCustom')?.addEventListener('input', (e) => { odTenant = e.target.value; markDirty(); });
     document.getElementById('stgOdHowTo')?.addEventListener('click', (e) => {
       e.preventDefault();
       const box = document.getElementById('stgOdHowToBox');
@@ -533,6 +491,89 @@ async function settingsInit() {
   }
 
   refreshOdStatus();
+
+  // ── Dropbox ───────────────────────────────────────────────────
+  let dbAppKey = (settings.dropbox && settings.dropbox.appKey) || '';
+  let dbAppSecret = (settings.dropbox && settings.dropbox.appSecret) || '';
+
+  async function refreshDbStatus() {
+    try {
+      const db = await api('GET', '/api/dropbox/status');
+      renderDbSection(db.connected, db.displayName);
+    } catch { renderDbSection(false, ''); }
+  }
+
+  function renderDbSection(connected, displayName) {
+    const el = document.getElementById('stgDbSection');
+    if (!el) return;
+    const redirectUri = window.location.origin + '/api/dropbox/callback';
+    const credRows = `
+      <div class="settings-row">
+        <div class="settings-label"><span>App key</span><span class="settings-hint"><a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener" style="color:var(--accent)">dropbox.com/developers</a></span></div>
+        <div class="settings-control"><input type="text" id="stgDbAppKey" class="settings-input" value="${escHtml(dbAppKey)}" placeholder="xxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false"></div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label"><span>App secret</span></div>
+        <div class="settings-control"><input type="password" id="stgDbAppSecret" class="settings-input" value="${escHtml(dbAppSecret)}" placeholder="••••••••••••••" autocomplete="new-password"></div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label"><span>Redirect URI</span><span class="settings-hint">Add this to your Dropbox app's OAuth 2 redirect URIs</span></div>
+        <div class="settings-control">
+          <div style="display:flex;align-items:center;gap:0.5rem">
+            <code style="flex:1;font-size:0.8rem;word-break:break-all;color:var(--accent)">${escHtml(redirectUri)}</code>
+            <button class="btn btn-secondary btn-sm" id="stgDbCopyUri" type="button">Copy</button>
+          </div>
+        </div>
+      </div>`;
+    if (connected) {
+      el.innerHTML = `<div class="settings-group">${credRows}
+        <div class="settings-row">
+          <div class="settings-label"><span>Account</span></div>
+          <div class="settings-control" style="display:flex;align-items:center;gap:0.75rem">
+            <span style="flex:1;font-size:0.9rem">${escHtml(displayName || 'Connected')}</span>
+            <button class="btn btn-secondary btn-sm" id="stgDbDisconnectBtn">Disconnect</button>
+          </div>
+        </div></div>`;
+      document.getElementById('stgDbDisconnectBtn')?.addEventListener('click', async () => {
+        try { await api('POST', '/api/dropbox/auth/disconnect'); refreshDbStatus(); } catch (e) { alert(e.message); }
+      });
+    } else {
+      el.innerHTML = `<div class="settings-group">${credRows}
+        <div class="settings-row">
+          <div class="settings-label"><span>Account</span></div>
+          <div class="settings-control"><button class="btn btn-primary btn-sm" id="stgDbConnectBtn">Connect Dropbox</button></div>
+        </div></div>`;
+      document.getElementById('stgDbConnectBtn')?.addEventListener('click', async () => {
+        const key = document.getElementById('stgDbAppKey')?.value.trim();
+        const secret = document.getElementById('stgDbAppSecret')?.value.trim();
+        if (!key || !secret) { alert('Enter App key and App secret first.'); return; }
+        dbAppKey = key; dbAppSecret = secret;
+        try {
+          await api('POST', '/api/settings', { dropbox: Object.assign({}, settings.dropbox || {}, { appKey: key, appSecret: secret }) });
+          const { url } = await api('GET', `/api/dropbox/auth/url?redirectUri=${encodeURIComponent(redirectUri)}`);
+          const popup = window.open(url, 'dropbox-auth', 'width=600,height=700,noopener');
+          const handler = (e) => {
+            if (e.data === 'dropbox-auth-ok') { window.removeEventListener('message', handler); refreshDbStatus(); }
+            else if (typeof e.data === 'string' && e.data.startsWith('dropbox-auth-error:')) {
+              window.removeEventListener('message', handler);
+              alert('Dropbox auth failed: ' + e.data.replace('dropbox-auth-error:', ''));
+            }
+          };
+          window.addEventListener('message', handler);
+        } catch (e) { alert('Error: ' + e.message); }
+      });
+    }
+    document.getElementById('stgDbAppKey')?.addEventListener('input', (e) => { dbAppKey = e.target.value; markDirty(); });
+    document.getElementById('stgDbAppSecret')?.addEventListener('input', (e) => { dbAppSecret = e.target.value; markDirty(); });
+    document.getElementById('stgDbCopyUri')?.addEventListener('click', () => {
+      navigator.clipboard.writeText(redirectUri).then(() => {
+        const btn = document.getElementById('stgDbCopyUri');
+        if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000); }
+      });
+    });
+  }
+
+  refreshDbStatus();
 
   // ── File browser modal ────────────────────────────────────────
   function openFileBrowser(jobIdx) {
@@ -663,6 +704,13 @@ async function settingsInit() {
         </div>
         <div class="backup-job-body">
           <div class="backup-job-row">
+            <label>Destination</label>
+            <select class="settings-select bj-destination" data-idx="${idx}">
+              <option value="onedrive" ${(job.destination || 'onedrive') === 'onedrive' ? 'selected' : ''}>OneDrive</option>
+              <option value="dropbox" ${job.destination === 'dropbox' ? 'selected' : ''}>Dropbox</option>
+            </select>
+          </div>
+          <div class="backup-job-row">
             <label>Container</label>
             <select class="settings-select bj-container" data-idx="${idx}">
               <option value="">— select —</option>
@@ -706,6 +754,9 @@ async function settingsInit() {
     list.querySelectorAll('.bj-label').forEach((el) => {
       el.addEventListener('input', (e) => { backupJobs[+e.target.dataset.idx].label = e.target.value; markDirty(); });
     });
+    list.querySelectorAll('.bj-destination').forEach((el) => {
+      el.addEventListener('change', (e) => { backupJobs[+e.target.dataset.idx].destination = e.target.value; markDirty(); });
+    });
     list.querySelectorAll('.bj-container').forEach((el) => {
       el.addEventListener('change', (e) => { backupJobs[+e.target.dataset.idx].containerName = e.target.value; markDirty(); });
     });
@@ -742,7 +793,9 @@ async function settingsInit() {
         btn.disabled = true;
         btn.textContent = 'Running…';
         try {
-          await api('POST', `/api/onedrive/backup/${jobId}`);
+          const dest = backupJobs.find((j) => j.id === jobId)?.destination || 'onedrive';
+          const endpoint = dest === 'dropbox' ? `/api/dropbox/backup/${jobId}` : `/api/onedrive/backup/${jobId}`;
+          await api('POST', endpoint);
           const s = await api('GET', '/api/settings');
           const idx = backupJobs.findIndex((j) => j.id === jobId);
           const updated = (s.backupJobs || []).find((j) => j.id === jobId);
@@ -789,7 +842,6 @@ async function settingsInit() {
 
       const selectedTheme = document.querySelector('.theme-btn.active')?.dataset.theme || 'dark';
 
-      const folderPathEl = document.getElementById('stgOdFolderPath');
       const payload = {
         updateIntervalSeconds: parseInt(document.getElementById('stgUpdateInterval').value, 10),
         registries: finalRegistries,
@@ -798,8 +850,9 @@ async function settingsInit() {
         timezone: document.getElementById('stgTimezone').value,
         timeFormat: document.getElementById('stgTimeFormat').value,
         backupJobs,
-        onedriveFolderPath: folderPathEl ? folderPathEl.value.trim() || '/DoCompose Backups' : (settings.onedriveFolderPath || '/DoCompose Backups'),
-        onedrive: Object.assign({}, settings.onedrive || {}, { clientId: odClientId, tenant: odTenant }),
+        backupFolderPath: document.getElementById('stgBackupFolderPath')?.value.trim() || 'DoCompose Backups',
+        onedrive: Object.assign({}, settings.onedrive || {}, { clientId: odClientId }),
+        dropbox: Object.assign({}, settings.dropbox || {}, { appKey: dbAppKey, appSecret: dbAppSecret }),
       };
       await api('POST', '/api/settings', payload);
       DC.settings = Object.assign({}, DC.settings, payload);
