@@ -1731,15 +1731,19 @@ details[open].provider-howto summary::before { content: '▾ '; }
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+  transition: border-color 0.15s;
 }
-.backup-job-header {
+.backup-job-card:has(.bj-body-inner:not([hidden])) { border-color: var(--accent); }
+
+/* Summary row — always visible */
+.backup-job-summary {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0.5rem 0.85rem;
-  background: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 0.85rem;
+  cursor: default;
+  user-select: none;
 }
 .backup-job-label-input {
   flex: 1;
@@ -1750,66 +1754,78 @@ details[open].provider-howto summary::before { content: '▾ '; }
   font-weight: 600;
   color: var(--text-primary);
   min-width: 0;
+  cursor: text;
+}
+.bj-summary-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 .bj-dest-badge {
   font-size: 0.68rem;
   font-weight: 600;
-  padding: 0.15rem 0.45rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 99px;
   background: var(--bg-primary);
   border: 1px solid var(--border);
   color: var(--text-muted);
   white-space: nowrap;
-  cursor: default;
 }
-.backup-job-body {
-  padding: 0.65rem 0.85rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem 1rem;
+.bj-status-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  background: var(--text-muted);
 }
-.backup-job-field { display: flex; flex-direction: column; gap: 0.25rem; }
-.backup-job-field.full { grid-column: 1 / -1; }
-.backup-job-field label { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-.backup-job-field select,
-.backup-job-field input[type="text"],
-.backup-job-field input[type="number"] { font-size: 0.82rem; padding: 0.3rem 0.5rem; }
-.backup-job-field textarea {
-  font-size: 0.78rem;
-  font-family: var(--font-mono, monospace);
-  resize: vertical;
-  min-height: 48px;
-  padding: 0.35rem 0.5rem;
-}
-.bj-schedule-row { display: flex; gap: 0.4rem; align-items: center; }
-.bj-schedule-row input { flex: 1; min-width: 0; }
-.bj-preset-btn {
-  font-size: 0.7rem;
-  padding: 0.2rem 0.4rem;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+.bj-status-dot.ok { background: var(--success); }
+.bj-status-dot.err { background: var(--danger); }
+.bj-expand-btn {
+  background: none; border: none; padding: 0.2rem;
+  color: var(--text-muted); cursor: pointer; line-height: 0;
+  transition: color 0.15s, transform 0.2s;
   flex-shrink: 0;
 }
+.bj-expand-btn:hover { color: var(--text-primary); }
+.bj-expand-btn svg { width: 15px; height: 15px; }
+.bj-expand-btn.open { transform: rotate(180deg); }
+
+/* Expanded body */
+.bj-body-inner {
+  border-top: 1px solid var(--border);
+  padding: 0.85rem 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem 1.25rem;
+}
+.bj-field { display: flex; flex-direction: column; gap: 0.28rem; }
+.bj-field.span2 { grid-column: 1 / -1; }
+.bj-field label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.02em; }
+.bj-field select, .bj-field input[type="text"], .bj-field input[type="number"] { font-size: 0.84rem; }
+.bj-field textarea { font-size: 0.8rem; font-family: var(--font-mono, monospace); resize: vertical; min-height: 52px; }
+.bj-presets { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.35rem; }
+.bj-preset-btn {
+  font-size: 0.72rem; padding: 0.2rem 0.55rem;
+  border-radius: 5px; border: 1px solid var(--border);
+  background: var(--bg-primary); color: var(--text-secondary);
+  cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap;
+}
 .bj-preset-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
-.backup-job-footer {
+.bj-body-footer {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.45rem 0.85rem;
+  padding-top: 0.6rem;
   border-top: 1px solid var(--border);
-  background: var(--bg-tertiary);
+  margin-top: 0.15rem;
 }
-.backup-job-status { font-size: 0.75rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.backup-job-status { font-size: 0.78rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .backup-status-ok { color: var(--success); }
 .backup-status-err { color: var(--danger); }
-.bj-paths-wrap { display: flex; flex-direction: column; gap: 0.3rem; }
-.bj-browse-btn { align-self: flex-start; font-size: 0.75rem; padding: 0.2rem 0.55rem; }
+.bj-paths-wrap { display: flex; flex-direction: column; gap: 0.35rem; }
+.bj-browse-btn { align-self: flex-start; }
 
 /* ---- OneDrive device code box ---- */
 .od-device-flow-box {
