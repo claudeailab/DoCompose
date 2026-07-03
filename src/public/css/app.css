@@ -870,7 +870,7 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 .stg-dirty-hint { font-size: 0.8rem; color: var(--warning); display: flex; align-items: center; gap: 0.4rem; }
 
 /* checkbox rows (exclusions) */
-.check-list { display: flex; flex-direction: column; max-height: calc(100vh - 340px); overflow-y: auto; }
+.check-list { display: flex; flex-direction: column; }
 .check-row {
   display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 0.35rem; cursor: pointer;
   transition: background var(--t-fast); border-radius: var(--r-sm); border-bottom: 1px solid var(--border);
