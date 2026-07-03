@@ -119,13 +119,13 @@ async function settingsInit() {
           <div class="stg-grid" style="margin-bottom:1.1rem">
             <div class="card" id="stgOdSection"><div class="loading"><div class="spinner"></div> Loading…</div></div>
             <div class="card" id="stgDbSection"><div class="loading"><div class="spinner"></div> Loading…</div></div>
-          </div>
-          <div class="card" style="margin-bottom:1.1rem">
-            <div class="card-head"><div class="card-head-icon">${IC.folder}</div><div class="card-head-text"><div class="card-head-title">Destination</div><div class="card-head-sub">Root folder created in your cloud storage</div></div></div>
-            <div class="card-body">
-              <div class="field">
-                <div class="field-label">Backup folder name</div>
-                <input type="text" id="stgBackupFolderPath" class="settings-input" placeholder="DoCompose Backups" style="max-width:340px">
+            <div class="card">
+              <div class="card-head"><div class="card-head-icon">${IC.folder}</div><div class="card-head-text"><div class="card-head-title">Destination</div><div class="card-head-sub">Root folder created in your cloud storage</div></div></div>
+              <div class="card-body">
+                <div class="field">
+                  <div class="field-label">Backup folder name</div>
+                  <input type="text" id="stgBackupFolderPath" class="settings-input" placeholder="DoCompose Backups">
+                </div>
               </div>
             </div>
           </div>
