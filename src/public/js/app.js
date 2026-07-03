@@ -363,16 +363,6 @@ async function refreshStats() {
   } catch {}
 }
 
-// ---- Refresh button ----
-const topbarRefreshBtn = document.getElementById('topbarRefreshBtn');
-if (topbarRefreshBtn) {
-  topbarRefreshBtn.addEventListener('click', async () => {
-    topbarRefreshBtn.classList.add('spinning');
-    await Promise.all([refreshServiceList(), refreshStats()]);
-    setTimeout(() => topbarRefreshBtn.classList.remove('spinning'), 400);
-  });
-}
-
 // ---- Topbar date/time ----
 function updateTopbarDatetime() {
   const dateEl = document.getElementById('tsDate');
