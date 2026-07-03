@@ -37,78 +37,80 @@ async function settingsInit() {
         <div class="stg-pane active" id="stgPaneGeneral">
           <h2 class="stg-pane-title">General</h2>
 
-          <div class="settings-section">
-            <div class="settings-section-label">Appearance</div>
-            <div class="settings-group">
-              <div class="settings-row">
-                <div class="settings-label">
-                  <span>Color scheme</span>
-                  <span class="settings-hint">Auto follows your system preference.</span>
-                </div>
-                <div class="settings-control">
-                  <div class="theme-picker" id="stgThemePicker">
-                    <button class="theme-btn" data-theme="light">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                      Light
-                    </button>
-                    <button class="theme-btn" data-theme="dark">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                      Dark
-                    </button>
-                    <button class="theme-btn" data-theme="auto">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20" stroke-dasharray="2 2"/></svg>
-                      Auto
-                    </button>
+          <div class="stg-sections-grid">
+            <div class="settings-section">
+              <div class="settings-section-label">Appearance</div>
+              <div class="settings-group">
+                <div class="settings-row">
+                  <div class="settings-label">
+                    <span>Color scheme</span>
+                    <span class="settings-hint">Auto follows your system preference.</span>
+                  </div>
+                  <div class="settings-control">
+                    <div class="theme-picker" id="stgThemePicker">
+                      <button class="theme-btn" data-theme="light">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        Light
+                      </button>
+                      <button class="theme-btn" data-theme="dark">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                        Dark
+                      </button>
+                      <button class="theme-btn" data-theme="auto">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20" stroke-dasharray="2 2"/></svg>
+                        Auto
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="settings-section">
-            <div class="settings-section-label">Date &amp; Time</div>
-            <div class="settings-group">
-              <div class="settings-row">
-                <div class="settings-label">
-                  <span>Timezone</span>
-                  <span class="settings-hint">Used for the clock in the top bar.</span>
+            <div class="settings-section">
+              <div class="settings-section-label">Date &amp; Time</div>
+              <div class="settings-group">
+                <div class="settings-row">
+                  <div class="settings-label">
+                    <span>Timezone</span>
+                    <span class="settings-hint">Used for the clock in the top bar.</span>
+                  </div>
+                  <div class="settings-control">
+                    <select id="stgTimezone" class="settings-select">
+                      <option value="">System default</option>
+                    </select>
+                  </div>
                 </div>
-                <div class="settings-control">
-                  <select id="stgTimezone" class="settings-select">
-                    <option value="">System default</option>
-                  </select>
-                </div>
-              </div>
-              <div class="settings-row">
-                <div class="settings-label">
-                  <span>Time format</span>
-                </div>
-                <div class="settings-control">
-                  <select id="stgTimeFormat" class="settings-select">
-                    <option value="12">12-hour (3:45 PM)</option>
-                    <option value="24">24-hour (15:45)</option>
-                  </select>
+                <div class="settings-row">
+                  <div class="settings-label">
+                    <span>Time format</span>
+                  </div>
+                  <div class="settings-control">
+                    <select id="stgTimeFormat" class="settings-select">
+                      <option value="12">12-hour (3:45 PM)</option>
+                      <option value="24">24-hour (15:45)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="settings-section">
-            <div class="settings-section-label">Updates</div>
-            <div class="settings-group">
-              <div class="settings-row">
-                <div class="settings-label">
-                  <span>Update check interval</span>
-                  <span class="settings-hint">How often to automatically check for image updates.</span>
-                </div>
-                <div class="settings-control">
-                  <select id="stgUpdateInterval" class="settings-select">
-                    <option value="0">Disabled (manual only)</option>
-                    <option value="3600">Every hour</option>
-                    <option value="21600">Every 6 hours</option>
-                    <option value="43200">Every 12 hours</option>
-                    <option value="86400">Every 24 hours</option>
-                  </select>
+            <div class="settings-section span2">
+              <div class="settings-section-label">Updates</div>
+              <div class="settings-group">
+                <div class="settings-row">
+                  <div class="settings-label">
+                    <span>Update check interval</span>
+                    <span class="settings-hint">How often to automatically check for image updates.</span>
+                  </div>
+                  <div class="settings-control">
+                    <select id="stgUpdateInterval" class="settings-select">
+                      <option value="0">Disabled (manual only)</option>
+                      <option value="3600">Every hour</option>
+                      <option value="21600">Every 6 hours</option>
+                      <option value="43200">Every 12 hours</option>
+                      <option value="86400">Every 24 hours</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -144,34 +146,31 @@ async function settingsInit() {
         <div class="stg-pane" id="stgPaneBackups">
           <h2 class="stg-pane-title">Backups</h2>
 
-          <div class="settings-section">
-            <div class="settings-section-label">Cloud Storage</div>
-            <div class="provider-cards">
-              <div id="stgOdSection"><div class="settings-loading">Loading…</div></div>
-              <div id="stgDbSection"><div class="settings-loading">Loading…</div></div>
-            </div>
-          </div>
-
-          <div class="settings-section" style="margin-top:1.25rem">
-            <div class="settings-group">
-              <div class="settings-row">
-                <div class="settings-label"><span>Backup folder name</span><span class="settings-hint">Root folder created in OneDrive / Dropbox</span></div>
-                <div class="settings-control">
-                  <input type="text" id="stgBackupFolderPath" class="settings-input" placeholder="DoCompose Backups">
+          <div class="stg-sections-grid">
+            <div id="stgOdSection" class="settings-section"><div class="settings-loading">Loading…</div></div>
+            <div id="stgDbSection" class="settings-section"><div class="settings-loading">Loading…</div></div>
+            <div class="settings-section">
+              <div class="settings-section-label">Storage</div>
+              <div class="settings-group">
+                <div class="settings-row">
+                  <div class="settings-label"><span>Backup folder name</span><span class="settings-hint">Root folder created in OneDrive / Dropbox</span></div>
+                  <div class="settings-control">
+                    <input type="text" id="stgBackupFolderPath" class="settings-input" placeholder="DoCompose Backups">
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="settings-section" style="margin-top:1.25rem">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+          <div class="settings-section" style="margin-bottom:1.25rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;padding:0.75rem 1rem 0">
               <div class="settings-section-label" style="margin-bottom:0">Backup Jobs</div>
               <button class="btn btn-primary btn-sm" id="stgAddBackupJobBtn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Add Job
               </button>
             </div>
-            <div id="stgBackupJobsList"></div>
+            <div id="stgBackupJobsList" style="padding:0 1rem 0.75rem"></div>
           </div>
         </div>
 
@@ -440,8 +439,9 @@ async function settingsInit() {
           <li><strong>API permissions → Add → Microsoft Graph → Delegated:</strong> <code>Files.ReadWrite</code>, <code>offline_access</code>, <code>User.Read</code></li>
         </ol>
       </details>`;
+    el.classList.add('provider-card');
     if (connected) {
-      el.innerHTML = `<div class="provider-card">
+      el.innerHTML = `
         <div class="provider-card-header">${odIcon}<span class="provider-name">OneDrive</span>${dot}</div>
         <div class="provider-card-body">${credBody}</div>
         <div class="provider-card-footer">
@@ -450,20 +450,18 @@ async function settingsInit() {
             <span>${escHtml(displayName || 'Connected')}</span>
           </div>
           <button class="btn btn-secondary btn-sm" id="stgOdDisconnectBtn">Disconnect</button>
-        </div>
-      </div>`;
+        </div>`;
       document.getElementById('stgOdDisconnectBtn')?.addEventListener('click', async () => {
         try { await api('POST', '/api/onedrive/auth/disconnect'); refreshOdStatus(); } catch (e) { alert(e.message); }
       });
     } else {
-      el.innerHTML = `<div class="provider-card">
+      el.innerHTML = `
         <div class="provider-card-header">${odIcon}<span class="provider-name">OneDrive</span>${dot}</div>
         <div class="provider-card-body">${credBody}<div id="stgOdFlowBox"></div></div>
         <div class="provider-card-footer">
           <span class="provider-not-connected">Not connected</span>
           <button class="btn btn-primary btn-sm" id="stgOdConnectBtn">Connect</button>
-        </div>
-      </div>`;
+        </div>`;
       document.getElementById('stgOdConnectBtn')?.addEventListener('click', async () => {
         const flowBox = document.getElementById('stgOdFlowBox');
         const cid = document.getElementById('stgOdClientId')?.value.trim();
@@ -535,8 +533,9 @@ async function settingsInit() {
           <button class="btn btn-secondary btn-sm" id="stgDbCopyUri" type="button" style="flex-shrink:0;font-size:0.75rem;padding:0.2rem 0.5rem">Copy</button>
         </div>
       </div>`;
+    el.classList.add('provider-card');
     if (connected) {
-      el.innerHTML = `<div class="provider-card">
+      el.innerHTML = `
         <div class="provider-card-header">${dbIcon}<span class="provider-name">Dropbox</span>${dot}</div>
         <div class="provider-card-body">${credBody}</div>
         <div class="provider-card-footer">
@@ -545,20 +544,18 @@ async function settingsInit() {
             <span>${escHtml(displayName || 'Connected')}</span>
           </div>
           <button class="btn btn-secondary btn-sm" id="stgDbDisconnectBtn">Disconnect</button>
-        </div>
-      </div>`;
+        </div>`;
       document.getElementById('stgDbDisconnectBtn')?.addEventListener('click', async () => {
         try { await api('POST', '/api/dropbox/auth/disconnect'); refreshDbStatus(); } catch (e) { alert(e.message); }
       });
     } else {
-      el.innerHTML = `<div class="provider-card">
+      el.innerHTML = `
         <div class="provider-card-header">${dbIcon}<span class="provider-name">Dropbox</span>${dot}</div>
         <div class="provider-card-body">${credBody}</div>
         <div class="provider-card-footer">
           <span class="provider-not-connected">Not connected</span>
           <button class="btn btn-primary btn-sm" id="stgDbConnectBtn">Connect</button>
-        </div>
-      </div>`;
+        </div>`;
       document.getElementById('stgDbConnectBtn')?.addEventListener('click', async () => {
         const key = document.getElementById('stgDbAppKey')?.value.trim();
         const secret = document.getElementById('stgDbAppSecret')?.value.trim();

@@ -1446,7 +1446,18 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
+  margin-bottom: 0;
+}
+
+.stg-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
   margin-bottom: 1.25rem;
+}
+.stg-sections-grid .settings-section { margin-bottom: 0; }
+.stg-sections-grid .settings-section.span2 {
+  grid-column: 1 / -1;
 }
 
 .settings-section-desc {
@@ -1592,12 +1603,17 @@ body {
 .toggle-switch input:checked + .toggle-track .toggle-thumb { left: 18px; }
 
 /* ---- Registry cards ---- */
+#stgRegistryList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
 .registry-card {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
 }
 .registry-card-header {
   display: flex;
@@ -1638,7 +1654,6 @@ body {
 @media (max-width: 640px) { .provider-cards { grid-template-columns: 1fr; } }
 
 .provider-card {
-  border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
   background: var(--bg-secondary);
