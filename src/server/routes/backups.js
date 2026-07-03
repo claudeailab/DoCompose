@@ -3,7 +3,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { readCompose, writeCompose, getComposePath } = require('../compose');
+const { readCompose, writeCompose } = require('../compose');
 
 const router = express.Router();
 

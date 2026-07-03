@@ -17,24 +17,74 @@ function readSettings() {
   }
 }
 
+// Atomic write (temp file + rename) so a concurrent reader never observes a
+// half-written file — a truncated read used to make readSettings() return {}
+// and silently wipe all settings/jobs.
 function writeSettings(data) {
-  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(data, null, 2), 'utf8');
+  const tmp = `${SETTINGS_PATH}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
+  fs.renameSync(tmp, SETTINGS_PATH);
+}
+
+// Strip secrets before sending settings to the browser. Presence is exposed as
+// boolean flags so the UI can show "(saved — enter to change)" placeholders.
+function redactSettings(s) {
+  const out = JSON.parse(JSON.stringify(s || {}));
+  if (out.onedrive && typeof out.onedrive === 'object') {
+    ['accessToken', 'refreshToken', 'tokenExpiry', 'deviceCode'].forEach((k) => delete out.onedrive[k]);
+  }
+  if (out.dropbox && typeof out.dropbox === 'object') {
+    out.dropbox.hasAppSecret = !!out.dropbox.appSecret;
+    ['appSecret', 'accessToken', 'refreshToken', 'tokenExpiry', '_pendingRedirectUri', '_pendingState'].forEach((k) => delete out.dropbox[k]);
+  }
+  if (Array.isArray(out.registries)) {
+    out.registries = out.registries.map((r) => {
+      const c = Object.assign({}, r);
+      c.hasPassword = !!c.password;
+      delete c.password;
+      return c;
+    });
+  }
+  return out;
 }
 
 // GET /api/settings
 router.get('/', (req, res) => {
-  res.json(readSettings());
+  res.json(redactSettings(readSettings()));
 });
 
 // POST /api/settings
 router.post('/', (req, res) => {
   try {
     const existing = readSettings();
-    const merged = Object.assign({}, existing, req.body);
-    // Deep-merge onedrive so auth tokens set by the OAuth flow aren't overwritten
-    if (req.body.onedrive && existing.onedrive) {
-      merged.onedrive = Object.assign({}, existing.onedrive, req.body.onedrive);
+    const body = req.body || {};
+    const merged = Object.assign({}, existing, body);
+
+    // Deep-merge provider objects so tokens/secrets set by the OAuth flow (and
+    // never sent back to the browser) survive partial settings updates.
+    if (body.onedrive) merged.onedrive = Object.assign({}, existing.onedrive, body.onedrive);
+    if (body.dropbox) {
+      merged.dropbox = Object.assign({}, existing.dropbox, body.dropbox);
+      if ((body.dropbox.appSecret === undefined || body.dropbox.appSecret === '') && existing.dropbox && existing.dropbox.appSecret) {
+        merged.dropbox.appSecret = existing.dropbox.appSecret;
+      }
     }
+
+    // Registries: honor the keepPassword flag to preserve a stored secret the
+    // browser never received (matched by server + username).
+    if (Array.isArray(body.registries)) {
+      const prev = Array.isArray(existing.registries) ? existing.registries : [];
+      merged.registries = body.registries.map((r) => {
+        const out = Object.assign({}, r);
+        if (out.keepPassword) {
+          const match = prev.find((p) => (p.server || '') === (r.server || '') && (p.username || '') === (r.username || ''));
+          if (match && match.password) out.password = match.password;
+        }
+        delete out.keepPassword;
+        return out;
+      });
+    }
+
     writeSettings(merged);
     try { require('../backup-scheduler').reschedule(); } catch {}
     res.json({ ok: true });
@@ -48,6 +98,10 @@ router.post('/test-registry', (req, res) => {
   const { server, username, password } = req.body || {};
   if (!username || !password) {
     return res.status(400).json({ ok: false, error: 'Username and password are required' });
+  }
+  // Guard against argument injection — a leading '-' would be parsed as a docker flag.
+  if (/^-/.test(username) || (server && /^-/.test(server))) {
+    return res.status(400).json({ ok: false, error: 'Invalid username or server' });
   }
   const args = ['login', '--username', username, '--password-stdin'];
   if (server) args.push(server);

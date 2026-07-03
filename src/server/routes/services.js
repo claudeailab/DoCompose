@@ -3,9 +3,18 @@
 const express = require('express');
 const { execFile } = require('child_process');
 const { listContainers, inspectContainer } = require('../docker');
-const { readCompose, getComposePath } = require('../compose');
+const { readCompose } = require('../compose');
 
 const router = express.Router();
+
+// Reject unsafe service names before they reach docker argv (a leading '-'
+// would be parsed as a flag; only compose-legal characters are allowed).
+router.param('name', (req, res, next, name) => {
+  if (typeof name !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(name)) {
+    return res.status(400).json({ error: 'Invalid service name' });
+  }
+  next();
+});
 
 // Detect the compose project name from container labels so DoCompose
 // uses the same project name as the user's host `docker compose` invocation.

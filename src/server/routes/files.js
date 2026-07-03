@@ -2,7 +2,7 @@
 
 const express = require('express');
 const YAML = require('yaml');
-const { readCompose, writeCompose, validateCompose, readEnv, writeEnv, listProjects, getComposePath, normalizeCompose, serializeCompose } = require('../compose');
+const { readCompose, writeCompose, validateCompose, readEnv, writeEnv, listProjects, normalizeCompose, serializeCompose } = require('../compose');
 
 const router = express.Router();
 
@@ -34,14 +34,7 @@ router.post('/compose', async (req, res) => {
     const projectDir = req.query.project || '';
 
     if (validate) {
-      // Write to temp file to validate
-      const fs = require('fs');
-      const os = require('os');
-      const path = require('path');
-      const tmpFile = path.join(os.tmpdir(), `docompose-validate-${Date.now()}.yml`);
-      fs.writeFileSync(tmpFile, content, 'utf8');
-      const result = await validateCompose(tmpFile);
-      fs.unlinkSync(tmpFile);
+      const result = await validateInTemp(content);
       if (!result.valid) {
         return res.status(422).json({ error: result.error, valid: false });
       }
@@ -54,20 +47,28 @@ router.post('/compose', async (req, res) => {
   }
 });
 
+// Validate compose YAML by writing it to a private temp file (unpredictable name,
+// always cleaned up) and running `docker compose config` against it.
+async function validateInTemp(content) {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const crypto = require('crypto');
+  const tmpFile = path.join(os.tmpdir(), `docompose-validate-${crypto.randomBytes(8).toString('hex')}.yml`);
+  try {
+    fs.writeFileSync(tmpFile, content, 'utf8');
+    return await validateCompose(tmpFile);
+  } finally {
+    try { fs.unlinkSync(tmpFile); } catch {}
+  }
+}
+
 // POST /api/files/validate?project=<dir>
 router.post('/validate', async (req, res) => {
   try {
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: 'content is required' });
-
-    const fs = require('fs');
-    const os = require('os');
-    const path = require('path');
-    const tmpFile = path.join(os.tmpdir(), `docompose-validate-${Date.now()}.yml`);
-    fs.writeFileSync(tmpFile, content, 'utf8');
-    const result = await validateCompose(tmpFile);
-    fs.unlinkSync(tmpFile);
-    res.json(result);
+    res.json(await validateInTemp(content));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

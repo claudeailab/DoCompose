@@ -98,7 +98,9 @@ async function uploadFile(token, localPath, remoteItemPath) {
 }
 module.exports.uploadFile = uploadFile;
 
-// Walk directory and return all file paths with their relative counterparts
+// Walk directory and return all file paths with their relative counterparts.
+// Symlinks are not followed and real paths are tracked, so a symlink loop under
+// a backup path can't cause infinite recursion / unbounded uploads.
 function walkDir(dir, baseDir) {
   const results = [];
   if (!fs.existsSync(dir)) return results;
@@ -107,13 +109,20 @@ function walkDir(dir, baseDir) {
     results.push({ local: dir, relative: path.basename(dir) });
     return results;
   }
+  const seen = new Set();
   function walk(current, rel) {
+    let real;
+    try { real = fs.realpathSync(current); } catch { return; }
+    if (seen.has(real)) return;
+    seen.add(real);
     for (const entry of fs.readdirSync(current)) {
       const full = path.join(current, entry);
       const relPath = rel ? `${rel}/${entry}` : entry;
-      const s = fs.statSync(full);
+      let s;
+      try { s = fs.lstatSync(full); } catch { continue; }
+      if (s.isSymbolicLink()) continue;
       if (s.isDirectory()) walk(full, relPath);
-      else results.push({ local: full, relative: relPath });
+      else if (s.isFile()) results.push({ local: full, relative: relPath });
     }
   }
   walk(dir, '');
