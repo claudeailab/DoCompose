@@ -2,6 +2,7 @@
 
 const express = require('express');
 const fs = require('fs');
+const crypto = require('crypto');
 const router = express.Router();
 
 const API = 'https://api.dropboxapi.com/2';
@@ -10,6 +11,28 @@ const TOKEN_URL = 'https://api.dropboxapi.com/oauth2/token';
 const AUTH_URL = 'https://www.dropbox.com/oauth2/authorize';
 
 const { readSettings, writeSettings } = require('./settings');
+
+function htmlEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+// Origin we post the auth result to — derived from the redirect URI the browser
+// supplied (never a wildcard), falling back to the request host.
+function popupOrigin(req) {
+  try {
+    const db = readSettings().dropbox || {};
+    if (db._pendingRedirectUri) return new URL(db._pendingRedirectUri).origin;
+  } catch {}
+  return `${req.protocol}://${req.get('host')}`;
+}
+
+function popupPage(targetOrigin, message, note) {
+  return `<!doctype html><html><body style="font-family:system-ui,sans-serif;background:#0e1428;color:#eef2fb;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><p>${htmlEsc(note || 'You can close this window.')}</p><script>
+    (function(){ try { if (window.opener) window.opener.postMessage(${JSON.stringify(message)}, ${JSON.stringify(targetOrigin)}); } catch (e) {} window.close(); })();
+  </script></body></html>`;
+}
 
 function getDropbox() { return readSettings().dropbox || {}; }
 function saveDropbox(data) {
@@ -126,29 +149,35 @@ router.get('/auth/url', (req, res) => {
   const redirectUri = req.query.redirectUri;
   if (!redirectUri) return res.status(400).json({ error: 'redirectUri required' });
 
-  // Store redirect URI so callback can use it
-  saveDropbox({ _pendingRedirectUri: redirectUri });
+  // Store redirect URI + a CSRF state token so the callback can validate the flow
+  const state = crypto.randomBytes(16).toString('hex');
+  saveDropbox({ _pendingRedirectUri: redirectUri, _pendingState: state });
 
   const url = `${AUTH_URL}?` + new URLSearchParams({
     client_id: appKey,
     redirect_uri: redirectUri,
     response_type: 'code',
     token_access_type: 'offline',
+    state,
   });
   res.json({ url });
 });
 
 // GET /api/dropbox/callback — Dropbox redirects here after auth
 router.get('/callback', async (req, res) => {
-  const { code, error } = req.query;
-  if (error) return res.status(400).send(`<h3>Dropbox auth failed: ${error}</h3><script>window.close()</script>`);
-  if (!code) return res.status(400).send('<h3>Missing code</h3>');
+  const { code, error, state } = req.query;
+  const origin = popupOrigin(req);
+  if (error) return res.status(400).send(popupPage(origin, `dropbox-auth-error:${error}`, `Dropbox auth failed: ${error}`));
+  if (!code) return res.status(400).send(popupPage(origin, 'dropbox-auth-error:missing code', 'Missing authorization code.'));
 
   try {
     const { appKey, appSecret } = getAppCreds();
     const db = getDropbox();
     const redirectUri = db._pendingRedirectUri;
-    if (!redirectUri) return res.status(400).send('<h3>No pending auth session</h3>');
+    if (!redirectUri) return res.status(400).send(popupPage(origin, 'dropbox-auth-error:no session', 'No pending auth session.'));
+    if (!db._pendingState || state !== db._pendingState) {
+      return res.status(400).send(popupPage(origin, 'dropbox-auth-error:invalid state', 'Invalid authorization state.'));
+    }
 
     const body = new URLSearchParams({
       code,
@@ -178,6 +207,8 @@ router.get('/callback', async (req, res) => {
       displayName = me.name?.display_name || me.email || displayName;
     } catch {}
 
+    const targetOrigin = (() => { try { return new URL(redirectUri).origin; } catch { return origin; } })();
+
     saveDropbox({
       connected: true,
       displayName,
@@ -185,15 +216,13 @@ router.get('/callback', async (req, res) => {
       refreshToken: data.refresh_token,
       tokenExpiry: Date.now() + (data.expires_in || 14400) * 1000,
       _pendingRedirectUri: null,
+      _pendingState: null,
     });
 
-    // Close the popup and signal success to the opener
-    res.send(`<!doctype html><html><body><script>
-      if (window.opener) { window.opener.postMessage('dropbox-auth-ok', '*'); window.close(); }
-      else { document.body.innerHTML = '<p>Connected! You can close this tab.</p>'; }
-    </script></body></html>`);
+    // Close the popup and signal success to the opener (specific origin, escaped)
+    res.send(popupPage(targetOrigin, 'dropbox-auth-ok', 'Connected! You can close this window.'));
   } catch (err) {
-    res.status(500).send(`<h3>Error: ${err.message}</h3><script>if(window.opener){window.opener.postMessage('dropbox-auth-error:${err.message}','*');window.close();}</script>`);
+    res.status(500).send(popupPage(origin, `dropbox-auth-error:${err.message}`, `Error: ${err.message}`));
   }
 });
 

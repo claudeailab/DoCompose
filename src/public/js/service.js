@@ -259,20 +259,19 @@ function svcRenderLogs(containerName) {
         </svg>
         Clear
       </button>
-      <label class="btn btn-secondary btn-sm" style="cursor:pointer;user-select:none">
-        <input type="checkbox" id="svcLogsAutoScroll" checked style="margin-right:4px">Auto-scroll
+      <label class="toolbar-check">
+        <input type="checkbox" id="svcLogsAutoScroll" checked>Auto-scroll
       </label>
-      <label class="btn btn-secondary btn-sm" style="cursor:pointer;user-select:none">
-        <input type="checkbox" id="svcLogsTimestamps" checked style="margin-right:4px">Timestamps
+      <label class="toolbar-check">
+        <input type="checkbox" id="svcLogsTimestamps" checked>Timestamps
       </label>
-      <select id="svcLogsTail" style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:0.3rem 0.5rem;font-size:0.82rem;outline:none;cursor:pointer">
+      <select id="svcLogsTail" class="toolbar-select">
         <option value="100">Last 100</option>
         <option value="500">Last 500</option>
         <option value="1000">Last 1000</option>
         <option value="all">All</option>
       </select>
-      <input type="text" id="svcLogsSearch" placeholder="Filter…"
-        style="width:130px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:0.3rem 0.55rem;font-size:0.85rem;outline:none">
+      <input type="text" id="svcLogsSearch" class="toolbar-input" placeholder="Filter…">
       <span id="svcLogsCount" style="font-size:0.82rem;color:var(--text-muted)">0 lines</span>
       <span id="svcLogsStatus" style="font-size:0.85rem;color:var(--text-muted);margin-left:auto">Connecting…</span>
     </div>
@@ -407,9 +406,9 @@ function svcRenderTerminal(containerName) {
 
   svcTerm = new Terminal({
     theme: {
-      background: '#0a0f1a', foreground: '#c9d1d9', cursor: '#3b82f6',
-      selection: 'rgba(59,130,246,0.3)',
-      black: '#0a0f1a', brightBlack: '#6e7681',
+      background: '#0e1428', foreground: '#c9d6ea', cursor: '#4f8cff',
+      selection: 'rgba(79,140,255,0.32)',
+      black: '#0e1428', brightBlack: '#6e7d95',
       red: '#ff7b72', brightRed: '#ffa198',
       green: '#3fb950', brightGreen: '#56d364',
       yellow: '#d29922', brightYellow: '#e3b341',

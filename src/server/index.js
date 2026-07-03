@@ -65,3 +65,8 @@ server.on('error', (err) => {
   console.error('Server error:', err);
   process.exit(1);
 });
+
+// Keep the process alive through stray async failures (SSE/backup paths) instead
+// of crashing the whole app.
+process.on('unhandledRejection', (err) => console.error('Unhandled promise rejection:', err));
+process.on('uncaughtException', (err) => console.error('Uncaught exception:', err));

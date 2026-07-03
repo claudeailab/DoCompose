@@ -65,16 +65,22 @@ function handleTerminal(ws, req) {
   });
 
   ws.on('message', (msg) => {
+    let message;
     try {
-      const message = JSON.parse(msg.toString());
-      if (message.type === 'input') {
-        ptyProcess.write(message.data);
-      } else if (message.type === 'resize') {
-        ptyProcess.resize(message.cols || cols, message.rows || rows);
-      }
+      message = JSON.parse(msg.toString());
     } catch {
-      // Treat raw string as input
+      // Not JSON — treat the raw string as terminal input
       ptyProcess.write(msg.toString());
+      return;
+    }
+    if (message.type === 'input') {
+      ptyProcess.write(message.data);
+    } else if (message.type === 'resize') {
+      const c = Number(message.cols);
+      const r = Number(message.rows);
+      if (Number.isInteger(c) && Number.isInteger(r) && c > 0 && r > 0 && c <= 1000 && r <= 1000) {
+        try { ptyProcess.resize(c, r); } catch {}
+      }
     }
   });
 

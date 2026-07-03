@@ -26,12 +26,23 @@ function findComposeFile(dir) {
   return path.join(dir, 'docker-compose.yml'); // fallback for writes
 }
 
+// Resolve a project directory and guarantee it stays within COMPOSE_DIR.
+// Prevents path-traversal via the `project` query parameter (e.g. ?project=../../etc).
+function safeProjectDir(projectDir) {
+  const base = path.resolve(COMPOSE_DIR);
+  const target = path.resolve(base, projectDir || '');
+  if (target !== base && !target.startsWith(base + path.sep)) {
+    throw new Error('Invalid project path');
+  }
+  return target;
+}
+
 function getComposePath(projectDir) {
-  return findComposeFile(path.join(COMPOSE_DIR, projectDir || ''));
+  return findComposeFile(safeProjectDir(projectDir));
 }
 
 function getEnvPath(projectDir) {
-  return path.join(COMPOSE_DIR, projectDir || '', '.env');
+  return path.join(safeProjectDir(projectDir), '.env');
 }
 
 /**
@@ -191,7 +202,6 @@ function writeEnv(projectDir, content) {
 
 module.exports = {
   COMPOSE_DIR,
-  COMPOSE_FILE,
   listProjects,
   readCompose,
   writeCompose,
@@ -200,7 +210,5 @@ module.exports = {
   writeEnv,
   normalizeCompose,
   serializeCompose,
-  addServiceSpacing,
   getComposePath,
-  getEnvPath,
 };

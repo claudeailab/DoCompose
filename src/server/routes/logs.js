@@ -19,12 +19,15 @@ router.get('/:containerName', async (req, res) => {
   if (res.socket) res.socket.setNoDelay(true);
   res.flushHeaders();
 
-  res.write(': connected\n\n');
+  // Guarded writer — never throws if the client already disconnected.
+  const safeWrite = (s) => { if (res.writableEnded) return false; try { res.write(s); return true; } catch { return false; } };
+
+  safeWrite(': connected\n\n');
 
   const send = (line) => {
     const t = String(line || '').trimEnd();
     if (!t) return;
-    try { res.write(`data: ${JSON.stringify(t)}\n\n`); } catch {}
+    safeWrite(`data: ${JSON.stringify(t)}\n\n`);
   };
 
   try {
@@ -36,8 +39,8 @@ router.get('/:containerName', async (req, res) => {
 
     if (!found) {
       send(`[DoCompose] container "${containerName}" not found`);
-      res.write('event: close\ndata: "stream ended"\n\n');
-      res.end();
+      safeWrite('event: close\ndata: "stream ended"\n\n');
+      if (!res.writableEnded) res.end();
       return;
     }
 
@@ -63,20 +66,20 @@ router.get('/:containerName', async (req, res) => {
 
     proc.on('close', () => {
       if (buf) send(buf);
-      res.write('event: close\ndata: "stream ended"\n\n');
-      try { res.end(); } catch {}
+      safeWrite('event: close\ndata: "stream ended"\n\n');
+      if (!res.writableEnded) { try { res.end(); } catch {} }
     });
 
     proc.on('error', (err) => {
       send(`[DoCompose] docker error: ${err.message}`);
-      res.write('event: close\ndata: "stream ended"\n\n');
-      try { res.end(); } catch {}
+      safeWrite('event: close\ndata: "stream ended"\n\n');
+      if (!res.writableEnded) { try { res.end(); } catch {} }
     });
 
   } catch (err) {
     send(`[DoCompose] error: ${err.message}`);
-    res.write('event: close\ndata: "stream ended"\n\n');
-    res.end();
+    safeWrite('event: close\ndata: "stream ended"\n\n');
+    if (!res.writableEnded) { try { res.end(); } catch {} }
   }
 });
 

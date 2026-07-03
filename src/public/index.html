@@ -2,20 +2,18 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>DoCompose</title>
 
-  <!-- xterm.js -->
+  <!-- xterm.js (service terminal) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
   <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
-  <!-- js-yaml for client-side YAML formatting -->
-  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="/css/app.css?v=0.5.66" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="/css/app.css?v=0.6.0" />
 </head>
 <body>
   <!-- Top bar -->
@@ -23,37 +21,33 @@
     <button class="hamburger" id="hamburgerBtn" aria-label="Toggle sidebar">
       <span></span><span></span><span></span>
     </button>
-    <div class="topbar-brand">
+    <a class="topbar-brand" href="#" onclick="showView('dashboard');return false">
       <svg class="brand-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient>
-          <linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient>
+          <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient>
+          <linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#22d3ee"/></linearGradient>
           <linearGradient id="lg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#6366f1"/></linearGradient>
         </defs>
-        <!-- Top layer -->
         <rect x="4"  y="4"  width="28" height="8" rx="3" fill="url(#lg1)"/>
-        <!-- Middle layer -->
         <rect x="4"  y="14" width="28" height="8" rx="3" fill="url(#lg2)"/>
-        <!-- Bottom layer -->
         <rect x="4"  y="24" width="28" height="8" rx="3" fill="url(#lg3)"/>
-        <!-- Dots -->
-        <circle cx="10" cy="8"  r="2" fill="white" opacity="0.7"/>
-        <circle cx="16" cy="8"  r="2" fill="white" opacity="0.7"/>
-        <circle cx="10" cy="18" r="2" fill="white" opacity="0.7"/>
-        <circle cx="16" cy="18" r="2" fill="white" opacity="0.7"/>
-        <circle cx="10" cy="28" r="2" fill="white" opacity="0.7"/>
-        <circle cx="16" cy="28" r="2" fill="white" opacity="0.7"/>
+        <circle cx="10" cy="8"  r="2" fill="white" opacity="0.75"/>
+        <circle cx="16" cy="8"  r="2" fill="white" opacity="0.75"/>
+        <circle cx="10" cy="18" r="2" fill="white" opacity="0.75"/>
+        <circle cx="16" cy="18" r="2" fill="white" opacity="0.75"/>
+        <circle cx="10" cy="28" r="2" fill="white" opacity="0.75"/>
+        <circle cx="16" cy="28" r="2" fill="white" opacity="0.75"/>
       </svg>
       <span class="brand-name">Do<span class="brand-name-accent">Compose</span></span>
-      <span class="brand-version" id="versionBadge">v0.5.66</span>
-    </div>
+      <span class="brand-version" id="versionBadge">v0.6.0</span>
+    </a>
 
     <!-- project select kept hidden for multi-project API logic -->
     <select id="projectSelect" style="display:none"></select>
 
     <div class="topbar-stats" id="topbarStats">
-      <!-- Network widget -->
-      <div class="ts-widget ts-widget-net" title="Container network I/O">
+      <!-- Network / disk I/O widget -->
+      <div class="ts-widget ts-widget-net" title="Container network &amp; disk I/O">
         <div class="ts-net-rows">
           <div class="ts-net-row">
             <svg class="ts-net-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="2" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="2" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="2" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
@@ -71,7 +65,7 @@
       <div class="ts-widget ts-widget-cpu" title="Total CPU usage across all containers">
         <div class="ts-widget-label"><span id="tsCpu">—</span></div>
         <svg class="ts-sparkline" id="tsCpuSparkline" viewBox="0 0 120 20" preserveAspectRatio="none">
-          <polyline id="tsCpuLine" points="" fill="none" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="3 2"/>
+          <polyline id="tsCpuLine" points="" fill="none" stroke-width="1.5"/>
         </svg>
       </div>
       <!-- Memory widget -->
@@ -81,14 +75,13 @@
       </div>
       <!-- Date/time -->
       <div class="ts-widget ts-widget-datetime" id="topbarDatetime" title="Current date &amp; time">
-        <span id="tsDate" style="font-size:0.7rem;opacity:0.75"></span>
-        <span id="tsTime" style="font-size:0.85rem;font-weight:700"></span>
+        <span id="tsDate"></span>
+        <span id="tsTime"></span>
       </div>
     </div>
 
-    <!-- Refresh + search (right of stats) -->
     <div class="topbar-search">
-      <input type="text" id="searchInput" placeholder="Search…" autocomplete="off" />
+      <input type="text" id="searchInput" placeholder="Search services…" autocomplete="off" />
       <div class="search-results" id="searchResults" hidden></div>
     </div>
   </header>
@@ -99,8 +92,8 @@
       <nav class="sidebar-nav">
         <button class="nav-item active" data-view="dashboard">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>
           </svg>
           Dashboard
         </button>
@@ -111,7 +104,7 @@
       </nav>
 
       <div class="sidebar-services" id="sidebarServices">
-        <div class="services-header">Services</div>
+        <div class="services-header"><span>Services</span></div>
         <div id="serviceList" class="service-list"></div>
       </div>
     </aside>
@@ -122,7 +115,6 @@
     <!-- Main content -->
     <main class="main-content">
       <div id="view-dashboard" class="view active"></div>
-      <div id="view-env" class="view"></div>
       <div id="view-service" class="view"></div>
       <div id="view-settings" class="view"></div>
     </main>
@@ -131,9 +123,9 @@
   <!-- Toast notifications -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/js/app.js?v=0.5.66"></script>
-  <script src="/js/dashboard.js?v=0.5.66"></script>
-  <script src="/js/service.js?v=0.5.66"></script>
-  <script src="/js/settings.js?v=0.5.66"></script>
+  <script src="/js/app.js?v=0.6.0"></script>
+  <script src="/js/dashboard.js?v=0.6.0"></script>
+  <script src="/js/service.js?v=0.6.0"></script>
+  <script src="/js/settings.js?v=0.6.0"></script>
 </body>
 </html>

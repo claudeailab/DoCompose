@@ -12,30 +12,34 @@ function dashboardInit() {
   const container = document.getElementById('view-dashboard');
   container.innerHTML = `
     <div class="view-header">
-      <h1 class="view-title">Dashboard</h1>
+      <div class="pane-head">
+        <div class="pane-head-text">
+          <div class="pane-title">Dashboard</div>
+          <div class="pane-desc">Your Docker Compose services at a glance</div>
+        </div>
+        <div class="pane-head-actions">
+          <button class="btn btn-secondary btn-sm" id="dashCheckAllBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            Check for Updates
+          </button>
+          <button class="btn btn-primary btn-sm" id="dashRefreshBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </div>
 
       <div class="dash-stats-inline" id="dashStats" style="display:none">
         <span class="stat-chip stat-chip-filter" data-filter="all"><span class="stat-num" id="statTotal">0</span> Total</span>
         <span class="stat-chip stat-chip-run stat-chip-filter" data-filter="running"><span class="stat-num" id="statRunning">0</span> Running</span>
         <span class="stat-chip stat-chip-stop stat-chip-filter" data-filter="stopped"><span class="stat-num" id="statStopped">0</span> Stopped</span>
         <span class="stat-chip stat-chip-upd stat-chip-filter" id="statUpdateChip" data-filter="updates"><span class="stat-num" id="statUpdates">—</span> Updates</span>
-      </div>
-
-      <div style="margin-left:auto;display:flex;gap:0.4rem">
-        <button class="btn btn-secondary btn-sm" id="dashCheckAllBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-          </svg>
-          Check for Updates
-        </button>
-        <button class="btn btn-secondary btn-sm" id="dashRefreshBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-          </svg>
-          Refresh
-        </button>
       </div>
     </div>
 

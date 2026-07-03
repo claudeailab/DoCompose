@@ -85,7 +85,6 @@ function showView(viewName) {
 
   switch (viewName) {
     case 'dashboard': if (window.dashboardInit) dashboardInit(); break;
-    case 'env':       if (window.envInit) envInit(); break;
     case 'service':   if (window.serviceInit) serviceInit(); break;
     case 'settings':  if (window.settingsInit) settingsInit(); break;
   }
@@ -194,7 +193,7 @@ function confirm(message, title = 'Confirm') {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.innerHTML = `
-      <div class="modal">
+      <div class="modal modal-plain">
         <div class="modal-title">${escHtml(title)}</div>
         <div class="modal-body">${escHtml(message)}</div>
         <div class="modal-footer">
