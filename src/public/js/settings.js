@@ -73,12 +73,12 @@ async function settingsInit() {
               </div>
             </div>
 
-            <div class="card span2">
+            <div class="card">
               <div class="card-head"><div class="card-head-icon">${IC.refresh}</div><div class="card-head-text"><div class="card-head-title">Updates</div><div class="card-head-sub">Automatic image update checks</div></div></div>
               <div class="card-body">
                 <div class="field">
                   <div class="field-label">Check interval</div>
-                  <select id="stgUpdateInterval" class="settings-select" style="max-width:320px">
+                  <select id="stgUpdateInterval" class="settings-select">
                     <option value="0">Disabled (manual only)</option>
                     <option value="3600">Every hour</option>
                     <option value="21600">Every 6 hours</option>
