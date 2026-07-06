@@ -637,8 +637,9 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
    ============================================================ */
 
 /* ---- Shared view header ---- */
-.view-header { padding: 1.1rem 1.5rem 0; }
+.view-header { padding: 0.85rem 1.5rem 0; }
 .view-body { padding: 0 1.5rem 1.5rem; flex: 1; overflow-y: auto; }
+#view-dashboard .pane-head { margin-bottom: 0; }
 
 /* ---- Dashboard ---- */
 .dash-stats-inline { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
@@ -658,7 +659,7 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 
 .dashboard-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-  gap: 0.85rem; padding: 1.25rem 1.5rem 1.5rem; align-content: start;
+  gap: 0.85rem; padding: 0.75rem 1.5rem 1.5rem; align-content: start;
 }
 
 .service-card {
@@ -861,14 +862,18 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 .stg-stack { display: flex; flex-direction: column; gap: 0; }
 
 /* Section list — replaces card grids in General / Registries / Exclusions / Backups */
-.stg-section-list { display: flex; flex-direction: column; }
-.stg-section { padding: 1.25rem 0; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.9rem; }
-.stg-section:first-child { padding-top: 0; }
-.stg-section:last-child { border-bottom: none; padding-bottom: 0; }
+.stg-section-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.stg-section {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  padding: 1.1rem 1.25rem;
+  display: flex; flex-direction: column; gap: 0.85rem;
+}
 .stg-section-head { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }
 .stg-section-title { font-size: 0.92rem; font-weight: 700; color: var(--text-primary); flex: 1; min-width: 0; }
 .stg-section-foot { display: flex; align-items: center; gap: 0.6rem; justify-content: flex-end; padding-top: 0.15rem; }
-.stg-empty { color: var(--text-muted); font-size: 0.87rem; padding: 1rem 0; }
+.stg-empty { color: var(--text-muted); font-size: 0.87rem; padding: 0.25rem 0; }
 .stg-empty code { background: var(--surface-inset); padding: 0.1em 0.35em; border-radius: var(--r-sm); font-size: 0.9em; }
 .stg-count-badge { font-size: 0.78rem; color: var(--text-muted); }
 
