@@ -111,16 +111,15 @@ async function settingsInit() {
 
         <!-- BACKUPS -->
         <div class="stg-pane" id="stgPaneBackups">
-          <div class="pane-head"><div class="pane-title">Backups</div></div>
+          <div class="pane-head">
+            <div class="pane-title">Backups</div>
+            <div class="pane-head-actions" id="stgAddProviderBar"></div>
+          </div>
           <div class="stg-section-list">
-            <div class="stg-section" id="stgOdSection"><div class="loading"><div class="spinner"></div> Loading…</div></div>
-            <div class="stg-section" id="stgDbSection"><div class="loading"><div class="spinner"></div> Loading…</div></div>
-            <div class="stg-section">
-              <div class="stg-section-title">Destination</div>
-              <div class="field">
-                <div class="field-label">Backup folder name</div>
-                <input type="text" id="stgBackupFolderPath" class="settings-input" placeholder="DoCompose Backups">
-              </div>
+            <div class="stg-section" id="stgOdSection" style="display:none"><div class="loading"><div class="spinner"></div> Loading…</div></div>
+            <div class="stg-section" id="stgDbSection" style="display:none"><div class="loading"><div class="spinner"></div> Loading…</div></div>
+            <div class="stg-section" id="stgNoProviderHint">
+              <div class="stg-empty">No backup providers configured. Use the buttons above to add OneDrive or Dropbox.</div>
             </div>
             <div class="stg-section">
               <div class="stg-section-head">
@@ -310,9 +309,30 @@ async function settingsInit() {
 
   // ── Backups tab ───────────────────────────────────────────────
   let backupJobs = (settings.backupJobs || []).map((j) => Object.assign({}, j));
+  let odEnabled = !!(settings.onedrive && settings.onedrive.clientId);
+  let dbEnabled = !!(settings.dropbox && settings.dropbox.appKey);
+  let odBackupFolder = (settings.onedrive && settings.onedrive.backupFolderPath) || 'DoCompose Backups';
+  let dbBackupFolder = (settings.dropbox && settings.dropbox.backupFolderPath) || 'DoCompose Backups';
 
-  const bfpEl = document.getElementById('stgBackupFolderPath');
-  if (bfpEl) { bfpEl.value = settings.backupFolderPath || 'DoCompose Backups'; bfpEl.addEventListener('input', markDirty); }
+  const odIcon = `<svg class="provider-icon" viewBox="0 0 32 22" xmlns="http://www.w3.org/2000/svg"><ellipse cx="22" cy="14" rx="10" ry="6" fill="#0078D4" opacity="0.65"/><ellipse cx="13" cy="16" rx="6" ry="4" fill="#0078D4" opacity="0.85"/><rect x="6" y="14" width="22" height="6" rx="3" fill="#0078D4"/></svg>`;
+  const dbIcon = `<svg class="provider-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 2L12 6.5L6 11L0 6.5Z" fill="#0061FF"/><path d="M18 2L24 6.5L18 11L12 6.5Z" fill="#0061FF"/><path d="M0 13.5L6 9L12 13.5L6 18Z" fill="#0061FF"/><path d="M24 13.5L18 9L12 13.5L18 18Z" fill="#0061FF"/><path d="M6 19.5L12 15L18 19.5L12 24Z" fill="#0061FF"/></svg>`;
+
+  function renderProviderBar() {
+    const bar = document.getElementById('stgAddProviderBar');
+    const hint = document.getElementById('stgNoProviderHint');
+    const odSec = document.getElementById('stgOdSection');
+    const dbSec = document.getElementById('stgDbSection');
+    if (odSec) odSec.style.display = odEnabled ? '' : 'none';
+    if (dbSec) dbSec.style.display = dbEnabled ? '' : 'none';
+    if (hint) hint.style.display = (!odEnabled && !dbEnabled) ? '' : 'none';
+    if (!bar) return;
+    let html = '';
+    if (!odEnabled) html += `<button class="btn btn-secondary btn-sm" id="stgAddOdBtn">${odIcon}Add OneDrive</button>`;
+    if (!dbEnabled) html += `<button class="btn btn-secondary btn-sm" id="stgAddDbBtn">${dbIcon}Add Dropbox</button>`;
+    bar.innerHTML = html;
+    document.getElementById('stgAddOdBtn')?.addEventListener('click', () => { odEnabled = true; renderProviderBar(); refreshOdStatus(); markDirty(); });
+    document.getElementById('stgAddDbBtn')?.addEventListener('click', () => { dbEnabled = true; renderProviderBar(); refreshDbStatus(); markDirty(); });
+  }
 
   // ── OneDrive ──────────────────────────────────────────────────
   let odClientId = (settings.onedrive && settings.onedrive.clientId) || '';
@@ -325,16 +345,20 @@ async function settingsInit() {
   function renderOdSection(connected, displayName) {
     const el = document.getElementById('stgOdSection');
     if (!el) return;
-    const odIcon = `<svg class="provider-icon" viewBox="0 0 32 22" xmlns="http://www.w3.org/2000/svg"><ellipse cx="22" cy="14" rx="10" ry="6" fill="#0078D4" opacity="0.65"/><ellipse cx="13" cy="16" rx="6" ry="4" fill="#0078D4" opacity="0.85"/><rect x="6" y="14" width="22" height="6" rx="3" fill="#0078D4"/></svg>`;
     el.innerHTML = `
       <div class="stg-section-head">${odIcon}<span class="stg-section-title">OneDrive</span><span class="provider-dot${connected ? ' connected' : ''}"></span>
         ${connected
           ? `<div class="provider-account">${IC.check}<span>${escHtml(displayName || 'Connected')}</span></div><button class="btn btn-secondary btn-sm" id="stgOdDisconnectBtn">Disconnect</button>`
           : `<button class="btn btn-primary btn-sm" id="stgOdConnectBtn">Connect</button>`}
+        <button class="btn-icon" id="stgOdRemoveBtn" title="Remove OneDrive">${IC.trash}</button>
       </div>
       <div class="field">
         <div class="field-label">Client ID</div>
         <input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <div class="field-label">Backup folder name</div>
+        <input type="text" id="stgOdBackupFolder" class="settings-input" value="${escHtml(odBackupFolder)}" placeholder="DoCompose Backups">
       </div>
       <details class="howto">
         <summary>How to register a free Azure App</summary>
@@ -349,6 +373,11 @@ async function settingsInit() {
       ${connected ? '' : '<div id="stgOdFlowBox"></div>'}`;
 
     document.getElementById('stgOdClientId')?.addEventListener('input', (e) => { odClientId = e.target.value; markDirty(); });
+    document.getElementById('stgOdBackupFolder')?.addEventListener('input', (e) => { odBackupFolder = e.target.value; markDirty(); });
+    document.getElementById('stgOdRemoveBtn')?.addEventListener('click', async () => {
+      if (connected) { try { await api('POST', '/api/onedrive/auth/disconnect'); } catch {} }
+      odClientId = ''; odEnabled = false; renderProviderBar(); markDirty();
+    });
     document.getElementById('stgOdDisconnectBtn')?.addEventListener('click', async () => {
       try { await api('POST', '/api/onedrive/auth/disconnect'); refreshOdStatus(); } catch (e) { showToast(e.message, 'error'); }
     });
@@ -379,7 +408,8 @@ async function settingsInit() {
       } catch (e) { if (flowBox) flowBox.innerHTML = `<p style="color:var(--danger);font-size:0.82rem;margin-top:0.5rem">${escHtml(e.message)}</p>`; }
     });
   }
-  refreshOdStatus();
+  renderProviderBar();
+  if (odEnabled) refreshOdStatus();
 
   // ── Dropbox ───────────────────────────────────────────────────
   let dbAppKey = (settings.dropbox && settings.dropbox.appKey) || '';
@@ -396,12 +426,12 @@ async function settingsInit() {
     const el = document.getElementById('stgDbSection');
     if (!el) return;
     const redirectUri = window.location.origin + '/api/dropbox/callback';
-    const dbIcon = `<svg class="provider-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 2L12 6.5L6 11L0 6.5Z" fill="#0061FF"/><path d="M18 2L24 6.5L18 11L12 6.5Z" fill="#0061FF"/><path d="M0 13.5L6 9L12 13.5L6 18Z" fill="#0061FF"/><path d="M24 13.5L18 9L12 13.5L18 18Z" fill="#0061FF"/><path d="M6 19.5L12 15L18 19.5L12 24Z" fill="#0061FF"/></svg>`;
     el.innerHTML = `
       <div class="stg-section-head">${dbIcon}<span class="stg-section-title">Dropbox</span><span class="provider-dot${connected ? ' connected' : ''}"></span>
         ${connected
           ? `<div class="provider-account">${IC.check}<span>${escHtml(displayName || 'Connected')}</span></div><button class="btn btn-secondary btn-sm" id="stgDbDisconnectBtn">Disconnect</button>`
           : `<button class="btn btn-primary btn-sm" id="stgDbConnectBtn">Connect</button>`}
+        <button class="btn-icon" id="stgDbRemoveBtn" title="Remove Dropbox">${IC.trash}</button>
       </div>
       <div class="field">
         <div class="field-label">App key <a class="field-link" href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener">developers.dropbox.com ↗</a></div>
@@ -412,12 +442,21 @@ async function settingsInit() {
         <input type="password" id="stgDbAppSecret" class="settings-input" placeholder="${dbHasSecret ? '(saved — enter to change)' : '••••••••••••••'}" autocomplete="new-password">
       </div>
       <div class="field">
+        <div class="field-label">Backup folder name</div>
+        <input type="text" id="stgDbBackupFolder" class="settings-input" value="${escHtml(dbBackupFolder)}" placeholder="DoCompose Backups">
+      </div>
+      <div class="field">
         <div class="field-label">Redirect URI <span class="field-hint" style="font-weight:400">add to your app's OAuth 2 settings</span></div>
         <div class="code-row"><code>${escHtml(redirectUri)}</code><button class="btn btn-secondary btn-sm" id="stgDbCopyUri" type="button" style="flex-shrink:0">Copy</button></div>
       </div>`;
 
     document.getElementById('stgDbAppKey')?.addEventListener('input', (e) => { dbAppKey = e.target.value; markDirty(); });
     document.getElementById('stgDbAppSecret')?.addEventListener('input', (e) => { dbAppSecret = e.target.value; dbAppSecretDirty = true; markDirty(); });
+    document.getElementById('stgDbBackupFolder')?.addEventListener('input', (e) => { dbBackupFolder = e.target.value; markDirty(); });
+    document.getElementById('stgDbRemoveBtn')?.addEventListener('click', async () => {
+      if (connected) { try { await api('POST', '/api/dropbox/auth/disconnect'); } catch {} }
+      dbAppKey = ''; dbEnabled = false; renderProviderBar(); markDirty();
+    });
     document.getElementById('stgDbCopyUri')?.addEventListener('click', () => {
       navigator.clipboard.writeText(redirectUri).then(() => {
         const btn = document.getElementById('stgDbCopyUri');
@@ -450,7 +489,7 @@ async function settingsInit() {
       } catch (e) { showToast('Error: ' + e.message, 'error'); }
     });
   }
-  refreshDbStatus();
+  if (dbEnabled) refreshDbStatus();
 
   // ── File browser modal ────────────────────────────────────────
   function openFileBrowser(jobIdx) {
@@ -711,9 +750,8 @@ async function settingsInit() {
         timezone: document.getElementById('stgTimezone').value,
         timeFormat: document.getElementById('stgTimeFormat').value,
         backupJobs,
-        backupFolderPath: document.getElementById('stgBackupFolderPath')?.value.trim() || 'DoCompose Backups',
-        onedrive: { clientId: odClientId },
-        dropbox: dropboxPayload,
+        onedrive: { clientId: odClientId, backupFolderPath: odBackupFolder },
+        dropbox: Object.assign(dropboxPayload, { backupFolderPath: dbBackupFolder }),
       };
       await api('POST', '/api/settings', payload);
       DC.settings = Object.assign({}, DC.settings, {
