@@ -579,6 +579,7 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 .pane-head-text { min-width: 0; }
 .pane-title { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary); }
 .pane-desc { font-size: 0.84rem; color: var(--text-muted); margin-top: 0.15rem; }
+.pane-head .dash-stats-inline { flex: 1; }
 .pane-head-actions { margin-left: auto; display: flex; gap: 0.45rem; align-items: center; }
 .section-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-faint); }
 
@@ -857,7 +858,19 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 
 .stg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.1rem; align-items: start; }
 .stg-grid .span2 { grid-column: 1 / -1; }
-.stg-stack { display: flex; flex-direction: column; gap: 1.1rem; }
+.stg-stack { display: flex; flex-direction: column; gap: 0; }
+
+/* Section list — replaces card grids in General / Registries / Exclusions / Backups */
+.stg-section-list { display: flex; flex-direction: column; }
+.stg-section { padding: 1.25rem 0; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.9rem; }
+.stg-section:first-child { padding-top: 0; }
+.stg-section:last-child { border-bottom: none; padding-bottom: 0; }
+.stg-section-head { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }
+.stg-section-title { font-size: 0.92rem; font-weight: 700; color: var(--text-primary); flex: 1; min-width: 0; }
+.stg-section-foot { display: flex; align-items: center; gap: 0.6rem; justify-content: flex-end; padding-top: 0.15rem; }
+.stg-empty { color: var(--text-muted); font-size: 0.87rem; padding: 1rem 0; }
+.stg-empty code { background: var(--surface-inset); padding: 0.1em 0.35em; border-radius: var(--r-sm); font-size: 0.9em; }
+.stg-count-badge { font-size: 0.78rem; color: var(--text-muted); }
 
 .stg-footer {
   display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1.75rem;

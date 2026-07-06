@@ -39,54 +39,48 @@ async function settingsInit() {
       <div class="stg-content">
         <!-- GENERAL -->
         <div class="stg-pane active" id="stgPaneGeneral">
-          <div class="pane-head"><div class="pane-head-text"><div class="pane-title">General</div><div class="pane-desc">Appearance, clock, and update preferences.</div></div></div>
-          <div class="stg-grid">
-            <div class="card">
-              <div class="card-head"><div class="card-head-icon">${IC.paint}</div><div class="card-head-text"><div class="card-head-title">Appearance</div><div class="card-head-sub">Theme &amp; color scheme</div></div></div>
-              <div class="card-body">
-                <div class="field">
-                  <div class="field-label">Color scheme</div>
-                  <div class="segmented" id="stgThemePicker">
-                    <button class="segmented-btn theme-btn" data-theme="light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>Light</button>
-                    <button class="segmented-btn theme-btn" data-theme="dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Dark</button>
-                    <button class="segmented-btn theme-btn" data-theme="auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20" stroke-dasharray="2 2"/></svg>Auto</button>
-                  </div>
-                  <div class="field-hint">Auto follows your operating system preference.</div>
+          <div class="pane-head"><div class="pane-title">General</div></div>
+          <div class="stg-section-list">
+            <div class="stg-section">
+              <div class="stg-section-title">Appearance</div>
+              <div class="field">
+                <div class="field-label">Color scheme</div>
+                <div class="segmented" id="stgThemePicker">
+                  <button class="segmented-btn theme-btn" data-theme="light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>Light</button>
+                  <button class="segmented-btn theme-btn" data-theme="dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Dark</button>
+                  <button class="segmented-btn theme-btn" data-theme="auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20" stroke-dasharray="2 2"/></svg>Auto</button>
                 </div>
+                <div class="field-hint">Auto follows your operating system preference.</div>
               </div>
             </div>
 
-            <div class="card">
-              <div class="card-head"><div class="card-head-icon">${IC.clock}</div><div class="card-head-text"><div class="card-head-title">Date &amp; Time</div><div class="card-head-sub">Clock shown in the top bar</div></div></div>
-              <div class="card-body">
-                <div class="field">
-                  <div class="field-label">Timezone</div>
-                  <select id="stgTimezone" class="settings-select"><option value="">System default</option></select>
-                </div>
-                <div class="field">
-                  <div class="field-label">Time format</div>
-                  <select id="stgTimeFormat" class="settings-select">
-                    <option value="12">12-hour (3:45 PM)</option>
-                    <option value="24">24-hour (15:45)</option>
-                  </select>
-                </div>
+            <div class="stg-section">
+              <div class="stg-section-title">Date &amp; Time</div>
+              <div class="field">
+                <div class="field-label">Timezone</div>
+                <select id="stgTimezone" class="settings-select"><option value="">System default</option></select>
+              </div>
+              <div class="field">
+                <div class="field-label">Time format</div>
+                <select id="stgTimeFormat" class="settings-select">
+                  <option value="12">12-hour (3:45 PM)</option>
+                  <option value="24">24-hour (15:45)</option>
+                </select>
               </div>
             </div>
 
-            <div class="card">
-              <div class="card-head"><div class="card-head-icon">${IC.refresh}</div><div class="card-head-text"><div class="card-head-title">Updates</div><div class="card-head-sub">Automatic image update checks</div></div></div>
-              <div class="card-body">
-                <div class="field">
-                  <div class="field-label">Check interval</div>
-                  <select id="stgUpdateInterval" class="settings-select">
-                    <option value="0">Disabled (manual only)</option>
-                    <option value="3600">Every hour</option>
-                    <option value="21600">Every 6 hours</option>
-                    <option value="43200">Every 12 hours</option>
-                    <option value="86400">Every 24 hours</option>
-                  </select>
-                  <div class="field-hint">How often to automatically check registries for newer images.</div>
-                </div>
+            <div class="stg-section">
+              <div class="stg-section-title">Updates</div>
+              <div class="field">
+                <div class="field-label">Check interval</div>
+                <select id="stgUpdateInterval" class="settings-select">
+                  <option value="0">Disabled (manual only)</option>
+                  <option value="3600">Every hour</option>
+                  <option value="21600">Every 6 hours</option>
+                  <option value="43200">Every 12 hours</option>
+                  <option value="86400">Every 24 hours</option>
+                </select>
+                <div class="field-hint">How often to automatically check registries for newer images.</div>
               </div>
             </div>
           </div>
@@ -95,19 +89,21 @@ async function settingsInit() {
         <!-- REGISTRIES -->
         <div class="stg-pane" id="stgPaneRegistry">
           <div class="pane-head">
-            <div class="pane-head-text"><div class="pane-title">Registries</div><div class="pane-desc">Credentials for private container registries. Disabled entries are skipped during update checks.</div></div>
+            <div class="pane-title">Registries</div>
             <div class="pane-head-actions"><button class="btn btn-primary btn-sm" id="stgAddRegistryBtn">${IC.plus}Add Registry</button></div>
           </div>
-          <div class="stg-grid" id="stgRegistryList"></div>
+          <div class="stg-section-list" id="stgRegistryList"></div>
         </div>
 
         <!-- EXCLUSIONS -->
         <div class="stg-pane" id="stgPaneExcluded">
-          <div class="pane-head"><div class="pane-head-text"><div class="pane-title">Exclusions</div><div class="pane-desc">Checked containers are skipped during update checks and auto-pulls.</div></div></div>
-          <div class="card">
-            <div class="card-head"><div class="card-head-icon">${IC.block}</div><div class="card-head-text"><div class="card-head-title">Excluded from Updates</div><div class="card-head-sub" id="stgExcludeCount"></div></div></div>
-            <div class="card-body">
-              <input type="text" id="stgExcludeSearch" class="settings-input" placeholder="Search containers…" style="max-width:340px">
+          <div class="pane-head">
+            <div class="pane-title">Exclusions</div>
+            <div class="pane-head-actions"><span class="stg-count-badge" id="stgExcludeCount"></span></div>
+          </div>
+          <div class="stg-section-list">
+            <div class="stg-section">
+              <input type="text" id="stgExcludeSearch" class="settings-input" placeholder="Search containers…">
               <div class="check-list" id="stgExcludeList"><div class="loading"><div class="spinner"></div> Loading services…</div></div>
             </div>
           </div>
@@ -115,25 +111,25 @@ async function settingsInit() {
 
         <!-- BACKUPS -->
         <div class="stg-pane" id="stgPaneBackups">
-          <div class="pane-head"><div class="pane-head-text"><div class="pane-title">Backups</div><div class="pane-desc">Back up container data to the cloud on a schedule.</div></div></div>
-          <div class="stg-grid" style="margin-bottom:1.1rem">
-            <div class="card" id="stgOdSection"><div class="loading"><div class="spinner"></div> Loading…</div></div>
-            <div class="card" id="stgDbSection"><div class="loading"><div class="spinner"></div> Loading…</div></div>
-            <div class="card">
-              <div class="card-head"><div class="card-head-icon">${IC.folder}</div><div class="card-head-text"><div class="card-head-title">Destination</div><div class="card-head-sub">Root folder created in your cloud storage</div></div></div>
-              <div class="card-body">
-                <div class="field">
-                  <div class="field-label">Backup folder name</div>
-                  <input type="text" id="stgBackupFolderPath" class="settings-input" placeholder="DoCompose Backups">
-                </div>
+          <div class="pane-head"><div class="pane-title">Backups</div></div>
+          <div class="stg-section-list">
+            <div class="stg-section" id="stgOdSection"><div class="loading"><div class="spinner"></div> Loading…</div></div>
+            <div class="stg-section" id="stgDbSection"><div class="loading"><div class="spinner"></div> Loading…</div></div>
+            <div class="stg-section">
+              <div class="stg-section-title">Destination</div>
+              <div class="field">
+                <div class="field-label">Backup folder name</div>
+                <input type="text" id="stgBackupFolderPath" class="settings-input" placeholder="DoCompose Backups">
               </div>
             </div>
+            <div class="stg-section">
+              <div class="stg-section-head">
+                <div class="stg-section-title">Backup Jobs</div>
+                <button class="btn btn-primary btn-sm" id="stgAddBackupJobBtn">${IC.plus}Add Job</button>
+              </div>
+              <div id="stgBackupJobsList" class="stg-stack"></div>
+            </div>
           </div>
-          <div class="pane-head" style="margin:0.5rem 0 1rem">
-            <div class="pane-head-text"><div class="section-label">Backup Jobs</div></div>
-            <div class="pane-head-actions"><button class="btn btn-primary btn-sm" id="stgAddBackupJobBtn">${IC.plus}Add Job</button></div>
-          </div>
-          <div id="stgBackupJobsList" class="stg-stack"></div>
         </div>
 
         <div class="stg-footer">
@@ -206,40 +202,38 @@ async function settingsInit() {
     const list = document.getElementById('stgRegistryList');
     if (!list) return;
     if (!registries.length) {
-      list.innerHTML = `<div class="empty-state span2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><p>No registries configured. Add one to authenticate against a private registry like <code>ghcr.io</code>.</p></div>`;
+      list.innerHTML = `<div class="stg-empty"><p>No registries configured. Add one to authenticate against a private registry like <code>ghcr.io</code>.</p></div>`;
       return;
     }
     list.innerHTML = registries.map((reg, idx) => `
-      <div class="card" id="regCard${idx}">
-        <div class="card-head">
+      <div class="stg-section" id="regCard${idx}">
+        <div class="stg-section-head">
           <label class="toggle" title="${reg.enabled !== false ? 'Enabled' : 'Disabled'}">
             <input type="checkbox" class="reg-enabled" data-idx="${idx}" ${reg.enabled !== false ? 'checked' : ''}>
             <span class="toggle-track"><span class="toggle-thumb"></span></span>
           </label>
-          <div class="card-head-text"><div class="card-head-title">${escHtml(reg.name || reg.server || 'Docker Hub')}</div></div>
-          <div class="card-head-actions"><button class="btn-icon reg-delete" data-idx="${idx}" title="Remove registry">${IC.trash}</button></div>
+          <span class="stg-section-title">${escHtml(reg.name || reg.server || 'Docker Hub')}</span>
+          <button class="btn-icon reg-delete" data-idx="${idx}" title="Remove registry">${IC.trash}</button>
         </div>
-        <div class="card-body">
-          <div class="field">
-            <div class="field-label">Registry server</div>
-            <input type="text" class="settings-input reg-server" data-idx="${idx}" value="${escHtml(reg.server || '')}" placeholder="ghcr.io" autocomplete="off">
-            <div class="field-hint">e.g. <code>ghcr.io</code> — leave blank for Docker Hub.</div>
-          </div>
-          <div class="field">
-            <div class="field-label">Username</div>
-            <input type="text" class="settings-input reg-username" data-idx="${idx}" value="${escHtml(reg.username || '')}" placeholder="username" autocomplete="off">
-          </div>
-          <div class="field">
-            <div class="field-label">Password / Token</div>
-            <div class="input-wrap">
-              <input type="password" class="settings-input reg-password" data-idx="${idx}" placeholder="${reg.hasPassword ? '(saved — enter to change)' : '••••••••'}" autocomplete="new-password">
-              <button class="input-eye reg-eye" type="button" data-idx="${idx}" title="Show/hide">${IC.eye}</button>
-            </div>
-            <div class="field-hint">GitHub PAT needs <code>read:packages</code>.</div>
-          </div>
+        <div class="field">
+          <div class="field-label">Registry server</div>
+          <input type="text" class="settings-input reg-server" data-idx="${idx}" value="${escHtml(reg.server || '')}" placeholder="ghcr.io" autocomplete="off">
+          <div class="field-hint">e.g. <code>ghcr.io</code> — leave blank for Docker Hub.</div>
         </div>
-        <div class="card-foot">
-          <span class="reg-test-status" id="regTestStatus${idx}" style="font-size:0.82rem"></span>
+        <div class="field">
+          <div class="field-label">Username</div>
+          <input type="text" class="settings-input reg-username" data-idx="${idx}" value="${escHtml(reg.username || '')}" placeholder="username" autocomplete="off">
+        </div>
+        <div class="field">
+          <div class="field-label">Password / Token</div>
+          <div class="input-wrap">
+            <input type="password" class="settings-input reg-password" data-idx="${idx}" placeholder="${reg.hasPassword ? '(saved — enter to change)' : '••••••••'}" autocomplete="new-password">
+            <button class="input-eye reg-eye" type="button" data-idx="${idx}" title="Show/hide">${IC.eye}</button>
+          </div>
+          <div class="field-hint">GitHub PAT needs <code>read:packages</code>.</div>
+        </div>
+        <div class="stg-section-foot">
+          <span class="reg-test-status" id="regTestStatus${idx}"></span>
           <button class="btn btn-secondary btn-sm reg-test" data-idx="${idx}">${IC.check}Test Connection</button>
         </div>
       </div>
@@ -333,29 +327,26 @@ async function settingsInit() {
     if (!el) return;
     const odIcon = `<svg class="provider-icon" viewBox="0 0 32 22" xmlns="http://www.w3.org/2000/svg"><ellipse cx="22" cy="14" rx="10" ry="6" fill="#0078D4" opacity="0.65"/><ellipse cx="13" cy="16" rx="6" ry="4" fill="#0078D4" opacity="0.85"/><rect x="6" y="14" width="22" height="6" rx="3" fill="#0078D4"/></svg>`;
     el.innerHTML = `
-      <div class="card-head">${odIcon}<div class="card-head-text"><div class="card-head-title">OneDrive</div><div class="card-head-sub">Microsoft OneDrive</div></div><span class="provider-dot${connected ? ' connected' : ''}"></span></div>
-      <div class="card-body">
-        <div class="field">
-          <div class="field-label">Client ID</div>
-          <input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
-        </div>
-        <details class="howto">
-          <summary>How to register a free Azure App</summary>
-          <ol>
-            <li><a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade" target="_blank" rel="noopener">portal.azure.com → App registrations → New registration</a></li>
-            <li>Account types: <strong>Any org directory and personal Microsoft accounts</strong>. No redirect URI.</li>
-            <li>Copy the <strong>Application (client) ID</strong> into the field above.</li>
-            <li><strong>Authentication → Allow public client flows → Yes → Save.</strong></li>
-            <li><strong>API permissions → Microsoft Graph → Delegated:</strong> <code>Files.ReadWrite</code>, <code>offline_access</code>, <code>User.Read</code></li>
-          </ol>
-        </details>
-        ${connected ? '' : '<div id="stgOdFlowBox"></div>'}
-      </div>
-      <div class="card-foot">
+      <div class="stg-section-head">${odIcon}<span class="stg-section-title">OneDrive</span><span class="provider-dot${connected ? ' connected' : ''}"></span>
         ${connected
           ? `<div class="provider-account">${IC.check}<span>${escHtml(displayName || 'Connected')}</span></div><button class="btn btn-secondary btn-sm" id="stgOdDisconnectBtn">Disconnect</button>`
-          : `<span class="provider-not-connected">Not connected</span><button class="btn btn-primary btn-sm" id="stgOdConnectBtn">Connect</button>`}
-      </div>`;
+          : `<button class="btn btn-primary btn-sm" id="stgOdConnectBtn">Connect</button>`}
+      </div>
+      <div class="field">
+        <div class="field-label">Client ID</div>
+        <input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+      </div>
+      <details class="howto">
+        <summary>How to register a free Azure App</summary>
+        <ol>
+          <li><a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade" target="_blank" rel="noopener">portal.azure.com → App registrations → New registration</a></li>
+          <li>Account types: <strong>Any org directory and personal Microsoft accounts</strong>. No redirect URI.</li>
+          <li>Copy the <strong>Application (client) ID</strong> into the field above.</li>
+          <li><strong>Authentication → Allow public client flows → Yes → Save.</strong></li>
+          <li><strong>API permissions → Microsoft Graph → Delegated:</strong> <code>Files.ReadWrite</code>, <code>offline_access</code>, <code>User.Read</code></li>
+        </ol>
+      </details>
+      ${connected ? '' : '<div id="stgOdFlowBox"></div>'}`;
 
     document.getElementById('stgOdClientId')?.addEventListener('input', (e) => { odClientId = e.target.value; markDirty(); });
     document.getElementById('stgOdDisconnectBtn')?.addEventListener('click', async () => {
@@ -407,25 +398,22 @@ async function settingsInit() {
     const redirectUri = window.location.origin + '/api/dropbox/callback';
     const dbIcon = `<svg class="provider-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 2L12 6.5L6 11L0 6.5Z" fill="#0061FF"/><path d="M18 2L24 6.5L18 11L12 6.5Z" fill="#0061FF"/><path d="M0 13.5L6 9L12 13.5L6 18Z" fill="#0061FF"/><path d="M24 13.5L18 9L12 13.5L18 18Z" fill="#0061FF"/><path d="M6 19.5L12 15L18 19.5L12 24Z" fill="#0061FF"/></svg>`;
     el.innerHTML = `
-      <div class="card-head">${dbIcon}<div class="card-head-text"><div class="card-head-title">Dropbox</div><div class="card-head-sub">Dropbox App folder</div></div><span class="provider-dot${connected ? ' connected' : ''}"></span></div>
-      <div class="card-body">
-        <div class="field">
-          <div class="field-label">App key <a class="field-link" href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener">developers.dropbox.com ↗</a></div>
-          <input type="text" id="stgDbAppKey" class="settings-input" value="${escHtml(dbAppKey)}" placeholder="xxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
-        </div>
-        <div class="field">
-          <div class="field-label">App secret</div>
-          <input type="password" id="stgDbAppSecret" class="settings-input" placeholder="${dbHasSecret ? '(saved — enter to change)' : '••••••••••••••'}" autocomplete="new-password">
-        </div>
-        <div class="field">
-          <div class="field-label">Redirect URI <span class="field-hint" style="font-weight:400">add to your app's OAuth 2 settings</span></div>
-          <div class="code-row"><code>${escHtml(redirectUri)}</code><button class="btn btn-secondary btn-sm" id="stgDbCopyUri" type="button" style="flex-shrink:0">Copy</button></div>
-        </div>
-      </div>
-      <div class="card-foot">
+      <div class="stg-section-head">${dbIcon}<span class="stg-section-title">Dropbox</span><span class="provider-dot${connected ? ' connected' : ''}"></span>
         ${connected
           ? `<div class="provider-account">${IC.check}<span>${escHtml(displayName || 'Connected')}</span></div><button class="btn btn-secondary btn-sm" id="stgDbDisconnectBtn">Disconnect</button>`
-          : `<span class="provider-not-connected">Not connected</span><button class="btn btn-primary btn-sm" id="stgDbConnectBtn">Connect</button>`}
+          : `<button class="btn btn-primary btn-sm" id="stgDbConnectBtn">Connect</button>`}
+      </div>
+      <div class="field">
+        <div class="field-label">App key <a class="field-link" href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener">developers.dropbox.com ↗</a></div>
+        <input type="text" id="stgDbAppKey" class="settings-input" value="${escHtml(dbAppKey)}" placeholder="xxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <div class="field-label">App secret</div>
+        <input type="password" id="stgDbAppSecret" class="settings-input" placeholder="${dbHasSecret ? '(saved — enter to change)' : '••••••••••••••'}" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <div class="field-label">Redirect URI <span class="field-hint" style="font-weight:400">add to your app's OAuth 2 settings</span></div>
+        <div class="code-row"><code>${escHtml(redirectUri)}</code><button class="btn btn-secondary btn-sm" id="stgDbCopyUri" type="button" style="flex-shrink:0">Copy</button></div>
       </div>`;
 
     document.getElementById('stgDbAppKey')?.addEventListener('input', (e) => { dbAppKey = e.target.value; markDirty(); });

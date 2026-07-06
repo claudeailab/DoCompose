@@ -13,9 +13,12 @@ function dashboardInit() {
   container.innerHTML = `
     <div class="view-header">
       <div class="pane-head">
-        <div class="pane-head-text">
-          <div class="pane-title">Dashboard</div>
-          <div class="pane-desc">Your Docker Compose services at a glance</div>
+        <div class="pane-title">Dashboard</div>
+        <div class="dash-stats-inline" id="dashStats" style="display:none">
+          <span class="stat-chip stat-chip-filter" data-filter="all"><span class="stat-num" id="statTotal">0</span> Total</span>
+          <span class="stat-chip stat-chip-run stat-chip-filter" data-filter="running"><span class="stat-num" id="statRunning">0</span> Running</span>
+          <span class="stat-chip stat-chip-stop stat-chip-filter" data-filter="stopped"><span class="stat-num" id="statStopped">0</span> Stopped</span>
+          <span class="stat-chip stat-chip-upd stat-chip-filter" id="statUpdateChip" data-filter="updates"><span class="stat-num" id="statUpdates">—</span> Updates</span>
         </div>
         <div class="pane-head-actions">
           <button class="btn btn-secondary btn-sm" id="dashCheckAllBtn">
@@ -33,13 +36,6 @@ function dashboardInit() {
             Refresh
           </button>
         </div>
-      </div>
-
-      <div class="dash-stats-inline" id="dashStats" style="display:none">
-        <span class="stat-chip stat-chip-filter" data-filter="all"><span class="stat-num" id="statTotal">0</span> Total</span>
-        <span class="stat-chip stat-chip-run stat-chip-filter" data-filter="running"><span class="stat-num" id="statRunning">0</span> Running</span>
-        <span class="stat-chip stat-chip-stop stat-chip-filter" data-filter="stopped"><span class="stat-num" id="statStopped">0</span> Stopped</span>
-        <span class="stat-chip stat-chip-upd stat-chip-filter" id="statUpdateChip" data-filter="updates"><span class="stat-num" id="statUpdates">—</span> Updates</span>
       </div>
     </div>
 
