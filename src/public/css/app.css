@@ -852,8 +852,8 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 .stg-tab:hover { color: var(--text-primary); }
 .stg-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-.stg-content { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
-.stg-pane { display: none; flex: 1; overflow-y: auto; padding: 1.75rem 1.75rem 2.5rem; max-width: 1120px; }
+.stg-content { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.stg-pane { display: none; padding: 1.75rem 1.75rem 0; max-width: 1120px; }
 .stg-pane.active { display: block; animation: paneIn 0.28s var(--ease); }
 @keyframes paneIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -879,8 +879,9 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 
 .stg-footer {
   display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1.75rem;
-  border-top: 1px solid var(--border); background: var(--surface-1); flex-shrink: 0;
+  border-top: 1px solid var(--border); background: var(--surface-1);
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  position: sticky; bottom: 0; margin-top: auto;
 }
 .stg-save-status { font-size: 0.85rem; color: var(--text-muted); }
 .stg-save-status.ok { color: var(--success); }
@@ -985,7 +986,7 @@ details[open].howto summary::before { transform: rotate(90deg); }
   .svc-tabs::-webkit-scrollbar { display: none; }
   .toolbar, .svc-config-toolbar, .logs-toolbar, .terminal-toolbar { padding: 0.55rem 0.85rem; }
   .yaml-textarea { padding: 0.85rem 1rem; }
-  .stg-pane { padding: 1.15rem 1rem 2.5rem; }
+  .stg-pane { padding: 1.15rem 1rem 0; }
   .stg-footer { padding: 0.85rem 1rem; }
   .job-body { grid-template-columns: 1fr; }
 }
