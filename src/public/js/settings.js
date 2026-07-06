@@ -353,27 +353,55 @@ async function settingsInit() {
         <button class="btn-icon" id="stgOdRemoveBtn" title="Remove OneDrive">${IC.trash}</button>
       </div>
       <div class="field">
-        <div class="field-label">Client ID</div>
+        <div class="field-label">Client ID <button class="help-btn" id="stgOdHelpBtn" type="button" title="How to get a Client ID">?</button></div>
         <input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
       </div>
       <div class="field">
         <div class="field-label">Backup folder name</div>
         <input type="text" id="stgOdBackupFolder" class="settings-input" value="${escHtml(odBackupFolder)}" placeholder="DoCompose Backups">
       </div>
-      <details class="howto">
-        <summary>How to register a free Azure App</summary>
-        <ol>
-          <li><a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade" target="_blank" rel="noopener">portal.azure.com → App registrations → New registration</a></li>
-          <li>Account types: <strong>Any org directory and personal Microsoft accounts</strong>. No redirect URI.</li>
-          <li>Copy the <strong>Application (client) ID</strong> into the field above.</li>
-          <li><strong>Authentication → Allow public client flows → Yes → Save.</strong></li>
-          <li><strong>API permissions → Microsoft Graph → Delegated:</strong> <code>Files.ReadWrite</code>, <code>offline_access</code>, <code>User.Read</code></li>
-        </ol>
-      </details>
       ${connected ? '' : '<div id="stgOdFlowBox"></div>'}`;
 
     document.getElementById('stgOdClientId')?.addEventListener('input', (e) => { odClientId = e.target.value; markDirty(); });
     document.getElementById('stgOdBackupFolder')?.addEventListener('input', (e) => { odBackupFolder = e.target.value; markDirty(); });
+    document.getElementById('stgOdHelpBtn')?.addEventListener('click', () => {
+      const ov = document.createElement('div');
+      ov.className = 'modal-overlay';
+      ov.innerHTML = `
+        <div class="modal help-modal">
+          <div class="modal-header">
+            <span class="modal-title">How to register an Azure App for OneDrive</span>
+            <button class="btn-icon od-help-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div class="help-modal-body">
+            <ol>
+              <li>Visit <a href="https://portal.azure.com/" target="_blank" rel="noopener">portal.azure.com</a></li>
+              <li>Select <strong>All Services</strong>, search for <strong>App registrations</strong> and select it.</li>
+              <li>Click <strong>New Registration</strong>:
+                <ul>
+                  <li>Name: <code>DoCompose</code></li>
+                  <li>Supported account types: <strong>Single tenant</strong></li>
+                  <li>Click <strong>Register</strong></li>
+                </ul>
+              </li>
+              <li>Copy the <strong>Application (client) ID</strong> and paste it into the Client ID field.</li>
+              <li>Go to <strong>Manage → Authentication</strong>, enable <strong>Allow public client flows</strong>, then <strong>Save</strong>.</li>
+              <li>Go to <strong>Overview → View API Permissions → Add a permission → Microsoft Graph → Delegated permissions</strong> and add:
+                <ul>
+                  <li><code>Files.ReadWrite</code></li>
+                  <li><code>offline_access</code></li>
+                  <li><code>User.Read</code></li>
+                </ul>
+              </li>
+              <li>Click <strong>Grant admin consent</strong> for your directory.</li>
+            </ol>
+          </div>
+        </div>`;
+      document.body.appendChild(ov);
+      const close = () => ov.remove();
+      ov.querySelector('.od-help-close').addEventListener('click', close);
+      ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+    });
     document.getElementById('stgOdRemoveBtn')?.addEventListener('click', async () => {
       if (connected) { try { await api('POST', '/api/onedrive/auth/disconnect'); } catch {} }
       odClientId = ''; odEnabled = false; renderProviderBar(); markDirty();
