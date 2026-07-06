@@ -122,11 +122,9 @@ async function settingsInit() {
               <div class="stg-empty">No backup providers configured. Use the buttons above to add OneDrive or Dropbox.</div>
             </div>
             <div class="stg-section">
-              <div class="stg-section-head">
-                <div class="stg-section-title">Backup Jobs</div>
-                <button class="btn btn-primary btn-sm" id="stgAddBackupJobBtn">${IC.plus}Add Job</button>
-              </div>
+              <div class="stg-section-title">Backup Jobs</div>
               <div id="stgBackupJobsList" class="stg-stack"></div>
+              <button class="btn btn-primary btn-sm" id="stgAddBackupJobBtn" style="display:none"></button>
             </div>
           </div>
         </div>
@@ -329,9 +327,11 @@ async function settingsInit() {
     let html = '';
     if (!odEnabled) html += `<button class="btn btn-secondary btn-sm" id="stgAddOdBtn">${odIcon}Add OneDrive</button>`;
     if (!dbEnabled) html += `<button class="btn btn-secondary btn-sm" id="stgAddDbBtn">${dbIcon}Add Dropbox</button>`;
+    html += `<button class="btn btn-primary btn-sm" id="stgAddBackupJobBtn2">${IC.plus}Add Job</button>`;
     bar.innerHTML = html;
     document.getElementById('stgAddOdBtn')?.addEventListener('click', () => { odEnabled = true; renderProviderBar(); refreshOdStatus(); markDirty(); });
     document.getElementById('stgAddDbBtn')?.addEventListener('click', () => { dbEnabled = true; renderProviderBar(); refreshDbStatus(); markDirty(); });
+    document.getElementById('stgAddBackupJobBtn2')?.addEventListener('click', () => document.getElementById('stgAddBackupJobBtn')?.click());
   }
 
   // ── OneDrive ──────────────────────────────────────────────────
