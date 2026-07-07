@@ -280,70 +280,125 @@ function attachCardListeners(root) {
   (root || document).querySelectorAll('[data-action]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      closeAllCardMenus();
       serviceAction(btn.dataset.service, btn.dataset.action, btn);
+    });
+  });
+  (root || document).querySelectorAll('[data-menu-toggle]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleCardMenu(btn.dataset.menuToggle);
     });
   });
 }
 
-/* ---- Update cell ---- */
-function buildUpdateCell(name) {
+function toggleCardMenu(name) {
+  const menu = document.getElementById(`cardMenu-${name}`);
+  if (!menu) return;
+  const isOpen = menu.classList.contains('open');
+  closeAllCardMenus();
+  if (!isOpen) {
+    menu.classList.add('open');
+    // Flip up if dropdown would extend past the viewport bottom
+    const rect = menu.getBoundingClientRect();
+    menu.classList.toggle('flip-up', rect.bottom > window.innerHeight - 8);
+  }
+}
+
+function closeAllCardMenus() {
+  document.querySelectorAll('.card-menu.open').forEach((m) => m.classList.remove('open'));
+}
+window.closeAllCardMenus = closeAllCardMenus;
+
+// Close menus when clicking anywhere outside
+document.addEventListener('click', closeAllCardMenus);
+
+/* ---- Card menu content ---- */
+function buildUpdateMenuItem(name, svc) {
   const excluded = (DC.settings && DC.settings.excludedFromUpdates) || [];
-  if (excluded.includes(name)) {
-    return `<span class="card-btn" style="opacity:0.35;cursor:default;pointer-events:none" title="Excluded from updates">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-      Excluded
-    </span>`;
-  }
-  const svc = (DC.services || []).find((s) => s.name === name);
-  if (svc && svc.isCustom) {
-    return `<span class="card-btn" style="opacity:0.4;cursor:default;pointer-events:none" title="Local build — no registry to check">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-      Local build
-    </span>`;
-  }
+  if (excluded.includes(name) || (svc && svc.isCustom)) return '';
   const st = DC.updates[name];
+  const n = escHtml(name);
   if (!st || st === 'idle') {
-    return `<button class="card-btn" data-action="check-update" data-service="${escHtml(name)}" title="Check for image update">
+    return `<button class="card-menu-item" data-action="check-update" data-service="${n}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-      Check
+      Check for update
     </button>`;
   }
   if (st === 'checking') {
-    return `<button class="card-btn card-btn-checking" disabled>
+    return `<button class="card-menu-item card-menu-checking" disabled>
       <div class="spinner" style="width:13px;height:13px"></div>
       Checking…
     </button>`;
   }
   if (st === 'available') {
-    return `<button class="card-btn card-btn-update" data-action="update" data-service="${escHtml(name)}" title="Pull new image and recreate container">
+    return `<button class="card-menu-item card-menu-update" data-action="update" data-service="${n}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-      Update
+      Update available
     </button>`;
   }
   if (st === 'updating') {
-    return `<button class="card-btn" disabled>
+    return `<button class="card-menu-item" disabled>
       <div class="spinner" style="width:13px;height:13px"></div>
       Updating…
     </button>`;
   }
   if (st === 'unreachable') {
-    return `<span class="card-btn" style="opacity:0.5;cursor:default;pointer-events:none" title="Registry unreachable — check credentials in Settings">
+    return `<button class="card-menu-item" disabled title="Registry unreachable">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      Can't check
-    </span>`;
+      Can't check registry
+    </button>`;
   }
   return '';
 }
 
-function refreshUpdateCell(name) {
-  const el = document.getElementById(`cardUpdate-${name}`);
-  if (!el) return;
-  el.innerHTML = buildUpdateCell(name);
-  attachCardListeners(el);
+function buildCardMenu(svc) {
+  const n = escHtml(svc.name);
+  const updateItem = buildUpdateMenuItem(svc.name, svc);
+  return `
+    <button class="card-menu-item" data-action="restart" data-service="${n}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Restart
+    </button>
+    <button class="card-menu-item" data-action="recreate" data-service="${n}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+      Recreate
+    </button>
+    <div class="card-menu-sep"></div>
+    <button class="card-menu-item" data-action="logs" data-service="${n}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Logs
+    </button>
+    <button class="card-menu-item" data-action="terminal" data-service="${n}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      Terminal
+    </button>
+    <button class="card-menu-item" data-action="config" data-service="${n}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Configuration
+    </button>
+    <button class="card-menu-item" data-action="vars" data-service="${n}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+      Variables
+    </button>
+    ${updateItem ? `<div class="card-menu-sep"></div>${updateItem}` : ''}
+    <div class="card-menu-sep"></div>
+    <button class="card-menu-item card-menu-danger" onclick="closeAllCardMenus();removeService(${JSON.stringify(svc.name)})">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      Remove
+    </button>
+  `;
+}
 
+function refreshUpdateCell(name) {
+  // Rebuild the card menu for this service (update item state may have changed)
+  const menu = document.getElementById(`cardMenu-${name}`);
+  if (menu) {
+    const svc = (DC.services || []).find((s) => s.name === name);
+    if (svc) { menu.innerHTML = buildCardMenu(svc); attachCardListeners(menu); }
+  }
   const card = document.querySelector(`.service-card[data-service="${CSS.escape(name)}"]`);
   if (card) card.classList.toggle('has-update', DC.updates[name] === 'available');
-
   renderStats();
 }
 
@@ -351,85 +406,43 @@ function refreshUpdateCell(name) {
 function buildServiceCard(s) {
   const state = (s.state || 'absent').toLowerCase();
   const isRunning = state === 'running';
-  const allPorts = Array.isArray(s.ports) ? s.ports : [];
-  const visiblePorts = allPorts.slice(0, 4);
-  const extraPorts = allPorts.length - visiblePorts.length;
   const n = escHtml(s.name);
-
   const hasUpdate = DC.updates[s.name] === 'available';
+
+  // Compact meta line: image + first few ports
+  const allPorts = Array.isArray(s.ports) ? s.ports : [];
+  const portStr = allPorts.slice(0, 3).map((p) => String(p).split(':').slice(-2).join(':')).join(', ');
+  const extraPorts = allPorts.length > 3 ? ` +${allPorts.length - 3}` : '';
+  const metaParts = [];
+  if (s.isCustom) metaParts.push('local build');
+  else if (s.image) metaParts.push(s.image);
+  if (portStr) metaParts.push(portStr + extraPorts);
+  const meta = metaParts.join(' · ');
 
   return `
     <div class="service-card ${stateClass(state)}${hasUpdate ? ' has-update' : ''}" data-service="${n}" onclick='showServiceDetail(${JSON.stringify(s.name)})'>
-      <div class="card-header">
-        <span class="card-status-dot status-dot ${statusClass(state)}"></span>
-        <div class="card-header-info">
-          <div class="card-title">${n}</div>
-          ${s.containerName && s.containerName !== s.name ? `<div class="card-subtitle">${escHtml(s.containerName)}</div>` : ''}
-        </div>
-        <span class="card-status-text">${escHtml(state)}</span>
-        ${isRunning && s.health ? `<span class="card-health card-health-${s.health}">${s.health === 'healthy' ? '✓ healthy' : s.health === 'unhealthy' ? '✗ unhealthy' : '⟳ starting'}</span>` : ''}
+      <span class="status-dot ${statusClass(state)}"></span>
+      <div class="card-info">
+        <div class="card-title">${n}</div>
+        ${meta ? `<div class="card-meta">${escHtml(meta)}</div>` : ''}
       </div>
-
-      <div class="card-image">
-        ${s.isCustom ? `<span class="card-badge-custom" title="Built from local Dockerfile">local</span>` : ''}
-        ${s.image ? `<span title="${escHtml(s.image)}">${escHtml(s.image)}</span>` : (s.isCustom ? '' : '')}
-      </div>
-
-      ${allPorts.length ? `
-        <div class="card-ports">
-          ${visiblePorts.map((p) => `<span class="port-badge">${escHtml(String(p))}</span>`).join('')}
-          ${extraPorts > 0 ? `<span class="port-badge-more">+${extraPorts}</span>` : ''}
-        </div>` : ''}
-
-      <div class="card-actions" onclick="event.stopPropagation()">
-        <div class="card-btn-grid">
-
-          <button class="card-btn ${isRunning ? 'card-btn-stop' : 'card-btn-start'}"
-                  data-action="${isRunning ? 'stop' : 'start'}" data-service="${n}">
-            ${isRunning
-              ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12"/></svg>Stop`
-              : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>Start`}
-          </button>
-
-          <button class="card-btn" data-action="restart" data-service="${n}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            Restart
-          </button>
-
-          <button class="card-btn" data-action="logs" data-service="${n}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            Logs
-          </button>
-
-          <button class="card-btn" data-action="terminal" data-service="${n}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-            Terminal
-          </button>
-
-          <button class="card-btn" data-action="config" data-service="${n}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Config
-          </button>
-
-          <button class="card-btn" data-action="vars" data-service="${n}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
-            Variables
-          </button>
-
-          <button class="card-btn" data-action="recreate" data-service="${n}" title="Recreate container (applies config changes)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-            Recreate
-          </button>
-
-          <div id="cardUpdate-${n}">
-            ${buildUpdateCell(s.name)}
-          </div>
-
-          <button class="card-btn card-btn-danger" onclick="event.stopPropagation();removeService(${JSON.stringify(s.name)})" title="Remove service from compose and Docker">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-            Remove
-          </button>
-
+      <span class="card-state-badge">${escHtml(state)}</span>
+      ${isRunning && s.health ? `<span class="card-health card-health-${s.health}" title="${s.health}">${s.health === 'healthy' ? '✓' : s.health === 'unhealthy' ? '✗' : '⟳'}</span>` : ''}
+      <button class="card-ss-btn ${isRunning ? 'card-btn-stop' : 'card-btn-start'}"
+              data-action="${isRunning ? 'stop' : 'start'}" data-service="${n}"
+              title="${isRunning ? 'Stop' : 'Start'}">
+        ${isRunning
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12"/></svg>`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>`}
+      </button>
+      <div class="card-menu-wrap">
+        <button class="card-menu-btn" data-menu-toggle="${n}" title="More actions">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+          </svg>
+        </button>
+        <div class="card-menu" id="cardMenu-${n}">
+          ${buildCardMenu(s)}
         </div>
       </div>
     </div>
