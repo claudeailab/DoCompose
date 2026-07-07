@@ -95,7 +95,14 @@ router.post('/', (req, res) => {
 
 // POST /api/settings/test-registry — test registry authentication via docker login
 router.post('/test-registry', (req, res) => {
-  const { server, username, password } = req.body || {};
+  let { server, username, password, useStoredPassword } = req.body || {};
+  if (useStoredPassword) {
+    const s = readSettings();
+    const match = (s.registries || []).find(
+      (r) => (r.server || '') === (server || '') && (r.username || '') === (username || '')
+    );
+    if (match && match.password) password = match.password;
+  }
   if (!username || !password) {
     return res.status(400).json({ ok: false, error: 'Username and password are required' });
   }

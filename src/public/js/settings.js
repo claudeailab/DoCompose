@@ -252,7 +252,12 @@ async function settingsInit() {
       const passVal = list.querySelector(`.reg-password[data-idx="${idx}"]`)?.value;
       if (statusEl) { statusEl.textContent = 'Testing…'; statusEl.style.color = 'var(--text-muted)'; }
       try {
-        const result = await api('POST', '/api/settings/test-registry', { server: reg.server || '', username: reg.username || '', password: passVal || '' });
+        const result = await api('POST', '/api/settings/test-registry', {
+          server: reg.server || '',
+          username: reg.username || '',
+          password: passVal || '',
+          useStoredPassword: !passVal && !!reg.hasPassword
+        });
         if (statusEl) {
           statusEl.textContent = result.ok ? ('✓ ' + (result.message || 'Connected')) : ('✗ ' + result.error);
           statusEl.style.color = result.ok ? 'var(--success)' : 'var(--danger)';
