@@ -249,24 +249,38 @@ const SERVICE_LEVEL_KEYS = new Set([
   'volumes_from', 'configs', 'secrets',
 ]);
 
-// Post-parse semantic fix: if a service-level key ended up nested inside
-// depends_on (a common paste mistake), hoist it back to the service.
-// Returns { fixed: boolean } alongside the mutated object.
+// Post-parse semantic fix: walk every child object directly under each service
+// and hoist any service-level key that landed there by mistake (e.g. healthcheck
+// pasted one indent too deep under depends_on, volumes, environment, etc.).
 function fixMisplacedServiceKeys(parsed) {
   let fixed = false;
   if (!parsed || !parsed.services) return fixed;
   for (const svc of Object.values(parsed.services)) {
     if (!svc || typeof svc !== 'object') continue;
-    const dependsOn = svc.depends_on;
-    if (!dependsOn || typeof dependsOn !== 'object' || Array.isArray(dependsOn)) continue;
-    for (const key of Object.keys(dependsOn)) {
-      if (SERVICE_LEVEL_KEYS.has(key) && key !== 'depends_on') {
-        svc[key] = dependsOn[key];
-        delete dependsOn[key];
-        fixed = true;
+    for (const parentKey of Object.keys(svc)) {
+      if (parentKey === 'depends_on' || !SERVICE_LEVEL_KEYS.has(parentKey)) continue;
+      const child = svc[parentKey];
+      if (!child || typeof child !== 'object' || Array.isArray(child)) continue;
+      for (const key of Object.keys(child)) {
+        if (SERVICE_LEVEL_KEYS.has(key) && key !== parentKey) {
+          svc[key] = child[key];
+          delete child[key];
+          fixed = true;
+        }
       }
     }
-    if (fixed && Object.keys(dependsOn).length === 0) delete svc.depends_on;
+    // Also check depends_on — its valid children are service-name keys, not service-level keys
+    const dependsOn = svc.depends_on;
+    if (dependsOn && typeof dependsOn === 'object' && !Array.isArray(dependsOn)) {
+      for (const key of Object.keys(dependsOn)) {
+        if (SERVICE_LEVEL_KEYS.has(key)) {
+          svc[key] = dependsOn[key];
+          delete dependsOn[key];
+          fixed = true;
+        }
+      }
+      if (Object.keys(dependsOn).length === 0) delete svc.depends_on;
+    }
   }
   return fixed;
 }
