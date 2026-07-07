@@ -12,7 +12,7 @@ function openAddServiceModal() {
   const overlay = document.getElementById('addSvcOverlay');
   if (!overlay) return;
   // Reset form
-  ['addSvcName', 'addSvcImage', 'addSvcContainer', 'addSvcPorts', 'addSvcVolumes', 'addSvcEnv'].forEach((id) => {
+  ['addSvcName', 'addSvcImage', 'addSvcContainer', 'addSvcHostname', 'addSvcPorts', 'addSvcVolumes', 'addSvcEnv'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -20,8 +20,25 @@ function openAddServiceModal() {
   if (restart) restart.value = 'unless-stopped';
   const startCb = document.getElementById('addSvcStart');
   if (startCb) startCb.checked = true;
+
+  // Auto-fill container name + hostname when service name is typed
+  const nameInput = document.getElementById('addSvcName');
+  const containerInput = document.getElementById('addSvcContainer');
+  const hostnameInput = document.getElementById('addSvcHostname');
+  if (nameInput && containerInput && hostnameInput) {
+    nameInput.oninput = () => {
+      const val = nameInput.value.trim();
+      if (!containerInput.dataset.userEdited) containerInput.value = val;
+      if (!hostnameInput.dataset.userEdited) hostnameInput.value = val;
+    };
+    containerInput.oninput = () => { containerInput.dataset.userEdited = containerInput.value ? '1' : ''; };
+    hostnameInput.oninput = () => { hostnameInput.dataset.userEdited = hostnameInput.value ? '1' : ''; };
+    delete containerInput.dataset.userEdited;
+    delete hostnameInput.dataset.userEdited;
+  }
+
   overlay.classList.add('is-open');
-  setTimeout(() => { const n = document.getElementById('addSvcName'); if (n) n.focus(); }, 50);
+  setTimeout(() => { if (nameInput) nameInput.focus(); }, 50);
 }
 
 function closeAddServiceModal() {
@@ -37,6 +54,7 @@ async function submitAddService() {
 
   const parseLines = (id) => (document.getElementById(id)?.value || '').split('\n').map((l) => l.trim()).filter(Boolean);
   const containerName = (document.getElementById('addSvcContainer')?.value || '').trim();
+  const hostname = (document.getElementById('addSvcHostname')?.value || '').trim();
   const restart = document.getElementById('addSvcRestart')?.value || '';
   const ports = parseLines('addSvcPorts');
   const volumes = parseLines('addSvcVolumes');
@@ -46,7 +64,7 @@ async function submitAddService() {
   const saveBtn = document.getElementById('addSvcSave');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Adding…'; }
   try {
-    const result = await api('POST', '/api/services', { name, image, containerName, restart, ports, volumes, environment, start });
+    const result = await api('POST', '/api/services', { name, image, containerName, hostname, restart, ports, volumes, environment, start });
     closeAddServiceModal();
     if (result.startError) {
       showToast(`Service added but failed to start: ${result.startError}`, 'warning');
@@ -133,8 +151,12 @@ function dashboardInit() {
             <input class="input" id="addSvcImage" placeholder="e.g. nginx:latest" autocomplete="off" spellcheck="false">
           </div>
           <div class="field">
-            <label class="field-label">Container name <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
-            <input class="input" id="addSvcContainer" placeholder="Defaults to service name" autocomplete="off" spellcheck="false">
+            <label class="field-label">Container name</label>
+            <input class="input" id="addSvcContainer" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label class="field-label">Hostname</label>
+            <input class="input" id="addSvcHostname" autocomplete="off" spellcheck="false">
           </div>
           <div class="field">
             <label class="field-label">Restart policy</label>
@@ -284,16 +306,10 @@ function attachCardListeners(root) {
       serviceAction(btn.dataset.service, btn.dataset.action, btn);
     });
   });
-  (root || document).querySelectorAll('[data-menu-toggle]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleCardMenu(btn.dataset.menuToggle);
-    });
-  });
 }
 
 function toggleCardMenu(name) {
-  const menu = document.getElementById(`cardMenu-${name}`);
+  const menu = document.getElementById(`cardMenu-${escHtml(name)}`);
   if (!menu) return;
   const isOpen = menu.classList.contains('open');
   closeAllCardMenus();
@@ -304,6 +320,7 @@ function toggleCardMenu(name) {
     menu.classList.toggle('flip-up', rect.bottom > window.innerHeight - 8);
   }
 }
+window.toggleCardMenu = toggleCardMenu;
 
 function closeAllCardMenus() {
   document.querySelectorAll('.card-menu.open').forEach((m) => m.classList.remove('open'));
@@ -435,8 +452,8 @@ function buildServiceCard(s) {
           ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12"/></svg>`
           : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>`}
       </button>
-      <div class="card-menu-wrap">
-        <button class="card-menu-btn" data-menu-toggle="${n}" title="More actions">
+      <div class="card-menu-wrap" onclick="event.stopPropagation()">
+        <button class="card-menu-btn" onclick="toggleCardMenu(${JSON.stringify(s.name)})" title="More actions">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/>
           </svg>

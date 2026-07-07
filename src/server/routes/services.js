@@ -294,7 +294,7 @@ router.post('/', async (req, res) => {
   try {
     const { readCompose, writeCompose } = require('../compose');
     const project = req.query.project || '';
-    const { name, image, containerName, restart, ports, volumes, environment, start } = req.body || {};
+    const { name, image, containerName, hostname, restart, ports, volumes, environment, start } = req.body || {};
 
     if (!name || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(name)) {
       return res.status(400).json({ error: 'Invalid service name' });
@@ -317,6 +317,7 @@ router.post('/', async (req, res) => {
 
     const svcConfig = { image };
     if (containerName) svcConfig.container_name = containerName;
+    if (hostname) svcConfig.hostname = hostname;
     if (restart) svcConfig.restart = restart;
     if (Array.isArray(ports) && ports.length) svcConfig.ports = ports;
     if (Array.isArray(volumes) && volumes.length) svcConfig.volumes = volumes;
