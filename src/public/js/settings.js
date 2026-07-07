@@ -131,7 +131,7 @@ async function settingsInit() {
             </div>
           </div>
         </div>
-        <div id="bjModalOverlay" class="modal-overlay" hidden></div>
+        <div id="bjModalOverlay" class="modal-overlay"></div>
 
         <div class="stg-footer">
           <button class="btn btn-primary" id="stgSaveBtn" disabled>${IC.save}Save Changes</button>
@@ -689,7 +689,7 @@ async function settingsInit() {
           </div>
         </div>
       </div>`;
-    overlay.hidden = false;
+    overlay.classList.add('is-open');
     document.getElementById('bjModalClose').addEventListener('click', closeJobModal);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeJobModal(); }, { once: true });
 
@@ -730,7 +730,7 @@ async function settingsInit() {
 
   function closeJobModal() {
     const overlay = document.getElementById('bjModalOverlay');
-    if (overlay) overlay.hidden = true;
+    if (overlay) overlay.classList.remove('is-open');
     bjModalIdx = -1;
   }
 
