@@ -50,7 +50,6 @@ async function settingsInit() {
                   <button class="segmented-btn theme-btn" data-theme="dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Dark</button>
                   <button class="segmented-btn theme-btn" data-theme="auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20" stroke-dasharray="2 2"/></svg>Auto</button>
                 </div>
-                <div class="field-hint">Auto follows your operating system preference.</div>
               </div>
             </div>
 
@@ -80,7 +79,6 @@ async function settingsInit() {
                   <option value="43200">Every 12 hours</option>
                   <option value="86400">Every 24 hours</option>
                 </select>
-                <div class="field-hint">How often to automatically check registries for newer images.</div>
               </div>
             </div>
           </div>
@@ -90,6 +88,7 @@ async function settingsInit() {
         <div class="stg-pane" id="stgPaneRegistry">
           <div class="pane-head">
             <div class="pane-title">Registries</div>
+            <div class="pane-subtitle">Credentials for private container registries</div>
             <div class="pane-head-actions"><button class="btn btn-primary btn-sm" id="stgAddRegistryBtn">${IC.plus}Add Registry</button></div>
           </div>
           <div class="stg-section-list" id="stgRegistryList"></div>
@@ -99,6 +98,7 @@ async function settingsInit() {
         <div class="stg-pane" id="stgPaneExcluded">
           <div class="pane-head">
             <div class="pane-title">Exclusions</div>
+            <div class="pane-subtitle">Services skipped during update checks and auto-pulls</div>
             <div class="pane-head-actions"><span class="stg-count-badge" id="stgExcludeCount"></span></div>
           </div>
           <div class="stg-section-list">
@@ -113,6 +113,7 @@ async function settingsInit() {
         <div class="stg-pane" id="stgPaneBackups">
           <div class="pane-head">
             <div class="pane-title">Backups</div>
+            <div class="pane-subtitle">Schedule automatic backups of your Compose data to the cloud</div>
             <div class="pane-head-actions" id="stgAddProviderBar"></div>
           </div>
           <div class="stg-section-list">
