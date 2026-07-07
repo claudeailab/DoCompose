@@ -377,10 +377,10 @@ code, kbd, .mono { font-family: var(--font-mono); }
   display: flex; align-items: center; justify-content: space-between;
 }
 
-.service-list { display: flex; flex-direction: column; gap: 1px; }
+.service-list { display: flex; flex-direction: column; gap: 0; }
 .service-item {
   display: flex; align-items: center; gap: 0.55rem;
-  padding: 0.3rem 0.7rem; border-radius: var(--r-sm);
+  padding: 0.22rem 0.7rem; border-radius: var(--r-sm);
   cursor: pointer; transition: background var(--t-fast), color var(--t-fast);
   font-size: 0.88rem; font-weight: 500; color: var(--text-secondary);
   border: 1px solid transparent;
