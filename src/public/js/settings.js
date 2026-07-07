@@ -336,6 +336,7 @@ async function settingsInit() {
 
   // ── OneDrive ──────────────────────────────────────────────────
   let odClientId = (settings.onedrive && settings.onedrive.clientId) || '';
+  let odTenant = (settings.onedrive && settings.onedrive.tenant) || '';
 
   async function refreshOdStatus() {
     try { const od = await api('GET', '/api/onedrive/status'); renderOdSection(od.connected, od.displayName); }
@@ -353,8 +354,13 @@ async function settingsInit() {
         <button class="btn-icon" id="stgOdRemoveBtn" title="Remove OneDrive">${IC.trash}</button>
       </div>
       <div class="field">
-        <div class="field-label">Client ID <button class="help-btn" id="stgOdHelpBtn" type="button" title="How to get a Client ID">?</button></div>
+        <div class="field-label">Application (client) ID <button class="help-btn" id="stgOdHelpBtn" type="button" title="How to register the Azure App">?</button></div>
         <input type="text" id="stgOdClientId" class="settings-input" value="${escHtml(odClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <div class="field-label">Directory (tenant) ID</div>
+        <input type="text" id="stgOdTenant" class="settings-input" value="${escHtml(odTenant)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+        <div class="field-hint">Found on the app's Overview page in Azure Portal.</div>
       </div>
       <div class="field">
         <div class="field-label">Backup folder name</div>
@@ -363,6 +369,7 @@ async function settingsInit() {
       ${connected ? '' : '<div id="stgOdFlowBox"></div>'}`;
 
     document.getElementById('stgOdClientId')?.addEventListener('input', (e) => { odClientId = e.target.value; markDirty(); });
+    document.getElementById('stgOdTenant')?.addEventListener('input', (e) => { odTenant = e.target.value; markDirty(); });
     document.getElementById('stgOdBackupFolder')?.addEventListener('input', (e) => { odBackupFolder = e.target.value; markDirty(); });
     document.getElementById('stgOdHelpBtn')?.addEventListener('click', () => {
       const ov = document.createElement('div');
@@ -384,7 +391,7 @@ async function settingsInit() {
                   <li>Click <strong>Register</strong></li>
                 </ul>
               </li>
-              <li>Copy the <strong>Application (client) ID</strong> and paste it into the Client ID field.</li>
+              <li>Copy the <strong>Application (client) ID</strong> and the <strong>Directory (tenant) ID</strong> from the Overview page and paste them into the fields above.</li>
               <li>Go to <strong>Manage → Authentication</strong>, enable <strong>Allow public client flows</strong>, then <strong>Save</strong>.</li>
               <li>Go to <strong>Overview → View API Permissions → Add a permission → Microsoft Graph → Delegated permissions</strong> and add:
                 <ul>
@@ -412,10 +419,12 @@ async function settingsInit() {
     document.getElementById('stgOdConnectBtn')?.addEventListener('click', async () => {
       const flowBox = document.getElementById('stgOdFlowBox');
       const cid = document.getElementById('stgOdClientId')?.value.trim();
+      const tid = document.getElementById('stgOdTenant')?.value.trim();
       if (!cid) { flowBox.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;margin-top:0.5rem">Enter your Client ID first.</p>'; return; }
-      odClientId = cid;
+      if (!tid) { flowBox.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;margin-top:0.5rem">Enter your Directory (tenant) ID first.</p>'; return; }
+      odClientId = cid; odTenant = tid;
       try {
-        await api('POST', '/api/settings', { onedrive: { clientId: cid, tenant: 'common' } });
+        await api('POST', '/api/settings', { onedrive: { clientId: cid, tenant: tid } });
         const r = await api('POST', '/api/onedrive/auth/start');
         flowBox.innerHTML = `<div class="flow-box">
           <p>Visit <a href="${escHtml(r.verificationUrl)}" target="_blank" rel="noopener"><strong>${escHtml(r.verificationUrl)}</strong></a> and enter:</p>
@@ -778,7 +787,7 @@ async function settingsInit() {
         timezone: document.getElementById('stgTimezone').value,
         timeFormat: document.getElementById('stgTimeFormat').value,
         backupJobs,
-        onedrive: { clientId: odClientId, backupFolderPath: odBackupFolder },
+        onedrive: { clientId: odClientId, tenant: odTenant, backupFolderPath: odBackupFolder },
         dropbox: Object.assign(dropboxPayload, { backupFolderPath: dbBackupFolder }),
       };
       await api('POST', '/api/settings', payload);
