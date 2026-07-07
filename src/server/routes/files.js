@@ -234,6 +234,43 @@ function fixMisplacedMappingKeys(yamlStr) {
   return result.join('\n');
 }
 
+// Known Docker Compose service-level keys. If any of these appear nested inside
+// depends_on (or another wrong parent), fixMisplacedServiceKeys() hoists them
+// back to the service level.
+const SERVICE_LEVEL_KEYS = new Set([
+  'image', 'build', 'container_name', 'hostname', 'restart', 'user', 'command',
+  'entrypoint', 'environment', 'env_file', 'ports', 'volumes', 'networks',
+  'depends_on', 'healthcheck', 'labels', 'extra_hosts', 'dns', 'dns_search',
+  'cap_add', 'cap_drop', 'devices', 'security_opt', 'sysctls', 'ulimits',
+  'deploy', 'logging', 'expose', 'stdin_open', 'tty', 'working_dir',
+  'platform', 'profiles', 'scale', 'pull_policy', 'runtime', 'shm_size',
+  'stop_grace_period', 'stop_signal', 'init', 'privileged', 'read_only',
+  'network_mode', 'pid', 'ipc', 'isolation', 'links', 'external_links',
+  'volumes_from', 'configs', 'secrets',
+]);
+
+// Post-parse semantic fix: if a service-level key ended up nested inside
+// depends_on (a common paste mistake), hoist it back to the service.
+// Returns { fixed: boolean } alongside the mutated object.
+function fixMisplacedServiceKeys(parsed) {
+  let fixed = false;
+  if (!parsed || !parsed.services) return fixed;
+  for (const svc of Object.values(parsed.services)) {
+    if (!svc || typeof svc !== 'object') continue;
+    const dependsOn = svc.depends_on;
+    if (!dependsOn || typeof dependsOn !== 'object' || Array.isArray(dependsOn)) continue;
+    for (const key of Object.keys(dependsOn)) {
+      if (SERVICE_LEVEL_KEYS.has(key) && key !== 'depends_on') {
+        svc[key] = dependsOn[key];
+        delete dependsOn[key];
+        fixed = true;
+      }
+    }
+    if (fixed && Object.keys(dependsOn).length === 0) delete svc.depends_on;
+  }
+  return fixed;
+}
+
 // POST /api/files/format — parse + re-serialize YAML using the same library as compose read/write.
 // Pre-processes two common Docker Compose YAML pathologies before parsing.
 router.post('/format', (req, res) => {
@@ -258,6 +295,9 @@ router.post('/format', (req, res) => {
         parsed = YAML.parse(fixed, { strict: false });
       }
     }
+
+    // Semantic repair: hoist any service-level keys that landed inside depends_on
+    if (fixMisplacedServiceKeys(parsed)) wasRepaired = true;
 
     const formatted = YAML.stringify(parsed, { indent: 2, lineWidth: 0 });
     res.json({ yaml: formatted, repaired: wasRepaired });
