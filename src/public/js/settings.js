@@ -364,8 +364,7 @@ async function settingsInit() {
       </div>
       <div class="field">
         <div class="field-label">Directory (tenant) ID</div>
-        <input type="text" id="stgOdTenant" class="settings-input" value="${escHtml(odTenant)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" spellcheck="false">
-        <div class="field-hint">Found on the app's Overview page in Azure Portal.</div>
+        <input type="text" id="stgOdTenant" class="settings-input" value="${escHtml(odTenant)}" placeholder="Optional — leave blank for personal/multi-tenant accounts" autocomplete="off" spellcheck="false">
       </div>
       <div class="field">
         <div class="field-label">Backup folder name</div>
@@ -426,7 +425,6 @@ async function settingsInit() {
       const cid = document.getElementById('stgOdClientId')?.value.trim();
       const tid = document.getElementById('stgOdTenant')?.value.trim();
       if (!cid) { flowBox.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;margin-top:0.5rem">Enter your Client ID first.</p>'; return; }
-      if (!tid) { flowBox.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;margin-top:0.5rem">Enter your Directory (tenant) ID first.</p>'; return; }
       odClientId = cid; odTenant = tid;
       try {
         await api('POST', '/api/settings', { onedrive: { clientId: cid, tenant: tid } });
