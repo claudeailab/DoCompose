@@ -624,7 +624,7 @@ async function settingsInit() {
       return;
     }
     const containers = (DC.services || []).map((s) => s.name);
-    list.innerHTML = backupJobs.map((job, idx) => {
+    list.innerHTML = `<div class="bj-list">${backupJobs.map((job, idx) => {
       const isOk = job.lastStatus && job.lastStatus.startsWith('ok');
       const isErr = job.lastStatus && !isOk;
       const statusDetail = job.lastStatus ? job.lastStatus.replace(/^ok\s*/i, '').replace(/^error:\s*/i, '') : '';
@@ -636,7 +636,7 @@ async function settingsInit() {
       const schedLabel = job.schedule || 'no schedule';
       const containerLabel = job.containerName || 'no container';
       return `
-      <div class="card backup-job-card" data-idx="${idx}">
+      <div class="bj-row backup-job-card" data-idx="${idx}">
         <div class="job-summary">
           <label class="toggle" onclick="event.stopPropagation()">
             <input type="checkbox" class="bj-enabled" data-idx="${idx}" ${job.enabled ? 'checked' : ''}>
@@ -675,7 +675,7 @@ async function settingsInit() {
               <button class="btn btn-secondary btn-sm bj-browse" type="button" data-idx="${idx}" style="align-self:flex-start">${IC.folder}Browse</button>
             </div>
           </div>
-          <div class="field"><div class="field-label">Keep snapshots</div>
+          <div class="field"><div class="field-label">Backups to keep</div>
             <input type="number" class="settings-input bj-keep" data-idx="${idx}" value="${job.keepCount || 10}" min="1" max="365" style="max-width:110px">
           </div>
           <div class="job-foot">
@@ -687,7 +687,7 @@ async function settingsInit() {
           </div>
         </div>
       </div>`;
-    }).join('');
+    }).join('')}</div>`;
 
     list.querySelectorAll('.bj-expand-btn').forEach((btn) => btn.addEventListener('click', () => {
       const card = btn.closest('.backup-job-card');
