@@ -154,8 +154,7 @@ async function serviceInit() {
     [document.getElementById('svcActStartStop'), document.getElementById('svcActRestart'),
      document.getElementById('svcActRecreate'), updBtn].forEach((b) => { if (b) b.disabled = true; });
     try {
-      await api('POST', `/api/services/${encodeURIComponent(name)}/pull`);
-      await api('POST', `/api/services/${encodeURIComponent(name)}/recreate`);
+      await api('POST', `/api/services/${encodeURIComponent(name)}/update`);
       DC.updates[name] = null;
       showToast(`${name}: updated and restarted`, 'success');
       if (window.updateCardState) updateCardState(name, 'running');

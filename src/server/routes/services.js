@@ -199,12 +199,7 @@ router.post('/:name/restart', async (req, res) => {
 // POST /api/services/:name/recreate
 router.post('/:name/recreate', async (req, res) => {
   try {
-    const project = req.query.project || '';
-    const name = req.params.name;
-    const containerName = await getContainerName(project, name);
-    try { await runDocker(['stop', containerName]); } catch {}
-    try { await runDocker(['rm', '-f', containerName]); } catch {}
-    const { stdout, stderr } = await runCompose(project, ['up', '-d', '--force-recreate', '--no-deps', name]);
+    const { stdout, stderr } = await runCompose(req.query.project || '', ['up', '-d', '--force-recreate', '--no-deps', req.params.name]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -215,6 +210,19 @@ router.post('/:name/recreate', async (req, res) => {
 router.post('/:name/pull', async (req, res) => {
   try {
     const { stdout, stderr } = await runCompose(req.query.project || '', ['pull', req.params.name]);
+    res.json({ ok: true, stdout, stderr });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/services/:name/update — pull then bring up with new image
+router.post('/:name/update', async (req, res) => {
+  try {
+    const project = req.query.project || '';
+    const name = req.params.name;
+    await runCompose(project, ['pull', name]);
+    const { stdout, stderr } = await runCompose(project, ['up', '-d', '--no-deps', name]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
     res.status(500).json({ error: err.message });

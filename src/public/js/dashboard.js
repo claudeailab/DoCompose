@@ -394,8 +394,7 @@ async function serviceAction(name, action, btn) {
     DC.updates[name] = 'updating';
     refreshUpdateCell(name);
     try {
-      await api('POST', `/api/services/${encodeURIComponent(name)}/pull`);
-      await api('POST', `/api/services/${encodeURIComponent(name)}/recreate`);
+      await api('POST', `/api/services/${encodeURIComponent(name)}/update`);
       DC.updates[name] = null;
       showToast(`${name}: updated and restarted`, 'success');
       updateCardState(name, 'running');
