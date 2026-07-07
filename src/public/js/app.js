@@ -315,7 +315,15 @@ function fmtBytesRate(b) {
 }
 
 const CPU_HISTORY_LEN = 40;
-const cpuHistory = [];
+const CPU_HISTORY_KEY = 'dc-cpu-history';
+// Restore history from sessionStorage so sparkline survives a page refresh
+const cpuHistory = (() => {
+  try {
+    const raw = sessionStorage.getItem(CPU_HISTORY_KEY);
+    if (raw) return JSON.parse(raw).slice(-CPU_HISTORY_LEN);
+  } catch {}
+  return [];
+})();
 
 function updateCpuSparkline() {
   const line = document.getElementById('tsCpuLine');
@@ -348,6 +356,7 @@ async function refreshStats() {
     // CPU
     cpuHistory.push(d.cpu || 0);
     if (cpuHistory.length > CPU_HISTORY_LEN) cpuHistory.shift();
+    try { sessionStorage.setItem(CPU_HISTORY_KEY, JSON.stringify(cpuHistory)); } catch {}
     set('tsCpu', (d.cpu || 0).toFixed(1) + '% / ' + (d.cpuCores || '') + ' CPU');
     updateCpuSparkline();
     // Memory
