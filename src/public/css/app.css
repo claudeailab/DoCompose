@@ -669,7 +669,7 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
   display: flex; flex-direction: row; align-items: center; gap: 0.55rem;
   padding: 0.6rem 0.75rem 0.6rem 1rem;
   background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md);
-  cursor: pointer; position: relative; overflow: hidden;
+  cursor: pointer; position: relative;
   transition: border-color var(--t-fast), background var(--t-fast);
   animation: cardIn 0.22s var(--ease) both;
 }
@@ -749,6 +749,9 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 .card-menu-item svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.8; }
 .card-menu-item:disabled { opacity: 0.45; cursor: not-allowed; }
 .card-menu-sep { height: 1px; background: var(--border); margin: 0.25rem 0.3rem; flex-shrink: 0; }
+.card-menu-start { color: var(--success); }
+.card-menu-start:hover { background: var(--success-dim) !important; }
+.card-menu-stop:hover  { background: var(--danger-dim)  !important; color: var(--danger) !important; }
 .card-menu-danger { color: var(--danger) !important; }
 .card-menu-danger:hover { background: var(--danger-dim) !important; }
 .card-menu-update { color: var(--success) !important; font-weight: 700; }

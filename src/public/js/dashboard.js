@@ -371,8 +371,15 @@ function buildUpdateMenuItem(name, svc) {
 
 function buildCardMenu(svc) {
   const n = escHtml(svc.name);
+  const state = (svc.state || 'absent').toLowerCase();
+  const isRunning = state === 'running';
   const updateItem = buildUpdateMenuItem(svc.name, svc);
   return `
+    <button class="card-menu-item ${isRunning ? 'card-menu-stop' : 'card-menu-start'}" data-action="${isRunning ? 'stop' : 'start'}" data-service="${n}">
+      ${isRunning
+        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"/></svg> Stop`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start`}
+    </button>
     <button class="card-menu-item" data-action="restart" data-service="${n}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       Restart
@@ -426,15 +433,11 @@ function buildServiceCard(s) {
   const n = escHtml(s.name);
   const hasUpdate = DC.updates[s.name] === 'available';
 
-  // Compact meta line: image + first few ports
+  // Port badges (no image shown on card)
   const allPorts = Array.isArray(s.ports) ? s.ports : [];
-  const portStr = allPorts.slice(0, 3).map((p) => String(p).split(':').slice(-2).join(':')).join(', ');
+  const portStr = allPorts.slice(0, 3).map((p) => String(p).split(':').slice(-2).join(':')).join('  ');
   const extraPorts = allPorts.length > 3 ? ` +${allPorts.length - 3}` : '';
-  const metaParts = [];
-  if (s.isCustom) metaParts.push('local build');
-  else if (s.image) metaParts.push(s.image);
-  if (portStr) metaParts.push(portStr + extraPorts);
-  const meta = metaParts.join(' · ');
+  const meta = portStr ? portStr + extraPorts : (s.isCustom ? 'local build' : '');
 
   return `
     <div class="service-card ${stateClass(state)}${hasUpdate ? ' has-update' : ''}" data-service="${n}" onclick='showServiceDetail(${JSON.stringify(s.name)})'>
@@ -443,15 +446,7 @@ function buildServiceCard(s) {
         <div class="card-title">${n}</div>
         ${meta ? `<div class="card-meta">${escHtml(meta)}</div>` : ''}
       </div>
-      <span class="card-state-badge">${escHtml(state)}</span>
       ${isRunning && s.health ? `<span class="card-health card-health-${s.health}" title="${s.health}">${s.health === 'healthy' ? '✓' : s.health === 'unhealthy' ? '✗' : '⟳'}</span>` : ''}
-      <button class="card-ss-btn ${isRunning ? 'card-btn-stop' : 'card-btn-start'}"
-              data-action="${isRunning ? 'stop' : 'start'}" data-service="${n}"
-              title="${isRunning ? 'Stop' : 'Start'}">
-        ${isRunning
-          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="6" width="12" height="12"/></svg>`
-          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>`}
-      </button>
       <div class="card-menu-wrap" onclick="event.stopPropagation()">
         <button class="card-menu-btn" onclick="toggleCardMenu(${JSON.stringify(s.name)})" title="More actions">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
