@@ -21,6 +21,8 @@ const IC = {
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
   save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
   chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
 };
 
 async function settingsInit() {
@@ -129,6 +131,7 @@ async function settingsInit() {
             </div>
           </div>
         </div>
+        <div id="bjModalOverlay" class="modal-overlay" hidden></div>
 
         <div class="stg-footer">
           <button class="btn btn-primary" id="stgSaveBtn" disabled>${IC.save}Save Changes</button>
@@ -597,7 +600,7 @@ async function settingsInit() {
       if (!backupJobs[idx].paths.includes(p)) {
         backupJobs[idx].paths.push(p);
         markDirty();
-        const ta = document.querySelector(`.bj-paths[data-idx="${idx}"]`);
+        const ta = document.getElementById('bjmPaths') || document.querySelector(`.bj-paths[data-idx="${idx}"]`);
         if (ta) ta.value = backupJobs[idx].paths.join('\n');
       }
     }
@@ -616,6 +619,132 @@ async function settingsInit() {
     { label: 'Weekly Sun', value: '0 2 * * 0' },
   ];
 
+  // ── Backup job edit modal ──────────────────────────────────────
+  let bjModalIdx = -1;
+  let bjFileBrowserForModal = false;
+
+  function openJobModal(idx) {
+    bjModalIdx = idx;
+    const job = backupJobs[idx];
+    const containers = (DC.services || []).map((s) => s.name);
+    const isOk = job.lastStatus && job.lastStatus.startsWith('ok');
+    const isErr = job.lastStatus && !isOk;
+    const statusDetail = job.lastStatus ? job.lastStatus.replace(/^ok\s*/i, '').replace(/^error:\s*/i, '') : '';
+    const runTime = job.lastRun ? new Date(job.lastRun).toLocaleString() : '';
+    const statusTxt = !job.lastStatus ? 'Never run' : isOk ? `${runTime} — OK ${statusDetail}` : `Error: ${statusDetail}`;
+    const statusTextCls = isOk ? 'ok' : isErr ? 'err' : '';
+    const overlay = document.getElementById('bjModalOverlay');
+    overlay.innerHTML = `
+      <div class="modal bj-edit-modal" role="dialog" aria-modal="true">
+        <div class="modal-head">
+          <span class="modal-title">Edit Backup Job</span>
+          <button class="btn-icon modal-close" id="bjModalClose" aria-label="Close">${IC.x}</button>
+        </div>
+        <div class="bj-modal-body">
+          <div class="field">
+            <div class="field-label">Name</div>
+            <input type="text" class="settings-input" id="bjmLabel" value="${escHtml(job.label || '')}" placeholder="Untitled job" autocomplete="off">
+          </div>
+          <div class="field-grid" style="grid-template-columns:1fr 1fr;gap:0.75rem">
+            <div class="field">
+              <div class="field-label">Destination</div>
+              <select class="settings-select" id="bjmDestination">
+                ${odEnabled ? `<option value="onedrive" ${(job.destination || 'onedrive') === 'onedrive' ? 'selected' : ''}>OneDrive</option>` : ''}
+                ${dbEnabled ? `<option value="dropbox" ${job.destination === 'dropbox' ? 'selected' : ''}>Dropbox</option>` : ''}
+              </select>
+            </div>
+            <div class="field">
+              <div class="field-label">Container</div>
+              <select class="settings-select" id="bjmContainer">
+                <option value="">— select —</option>
+                ${containers.map((n) => `<option value="${escHtml(n)}" ${job.containerName === n ? 'selected' : ''}>${escHtml(n)}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-label">Schedule</div>
+            <input type="text" class="settings-input" id="bjmSchedule" value="${escHtml(job.schedule || '')}" placeholder="cron expression, e.g. 0 2 * * *" style="font-family:var(--font-mono)">
+            <div class="job-presets" style="margin-top:0.4rem">${SCHEDULE_PRESETS.map((p) => `<button class="job-preset bjm-preset" type="button" data-cron="${escHtml(p.value)}">${escHtml(p.label)}</button>`).join('')}</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Paths to back up</div>
+            <div class="paths-wrap">
+              <textarea class="settings-input textarea" id="bjmPaths" rows="3" placeholder="One path per line, e.g. /compose/config/myapp">${escHtml((job.paths || []).join('\n'))}</textarea>
+              <button class="btn btn-secondary btn-sm" id="bjmBrowse" type="button">${IC.folder}Browse</button>
+            </div>
+          </div>
+          <div class="field-grid" style="grid-template-columns:1fr 1fr;gap:0.75rem">
+            <div class="field">
+              <div class="field-label">Backups to keep</div>
+              <input type="number" class="settings-input" id="bjmKeep" value="${job.keepCount || 10}" min="1" max="365">
+            </div>
+          </div>
+          <div class="bj-modal-foot">
+            <span class="job-status-text ${statusTextCls}" style="font-size:0.78rem">${escHtml(statusTxt)}</span>
+            <div style="display:flex;gap:0.5rem">
+              <button class="btn btn-danger btn-sm" id="bjmDelete">Delete</button>
+              <button class="btn btn-secondary btn-sm" id="bjmRunNow" data-jobid="${escHtml(job.id)}">Run Now</button>
+              <button class="btn btn-primary btn-sm" id="bjmDone">Done</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    overlay.hidden = false;
+    document.getElementById('bjModalClose').addEventListener('click', closeJobModal);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeJobModal(); }, { once: true });
+
+    document.getElementById('bjmLabel').addEventListener('input', (e) => { backupJobs[bjModalIdx].label = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
+    document.getElementById('bjmDestination').addEventListener('change', (e) => { backupJobs[bjModalIdx].destination = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
+    document.getElementById('bjmContainer').addEventListener('change', (e) => { backupJobs[bjModalIdx].containerName = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
+    document.getElementById('bjmSchedule').addEventListener('input', (e) => { backupJobs[bjModalIdx].schedule = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
+    document.getElementById('bjmPaths').addEventListener('input', (e) => { backupJobs[bjModalIdx].paths = e.target.value.split('\n').map((l) => l.trim()).filter(Boolean); markDirty(); });
+    document.getElementById('bjmKeep').addEventListener('change', (e) => { backupJobs[bjModalIdx].keepCount = +e.target.value || 10; markDirty(); });
+    document.querySelectorAll('.bjm-preset').forEach((btn) => btn.addEventListener('click', () => {
+      backupJobs[bjModalIdx].schedule = btn.dataset.cron;
+      document.getElementById('bjmSchedule').value = btn.dataset.cron;
+      syncJobRow(bjModalIdx); markDirty();
+    }));
+    document.getElementById('bjmBrowse').addEventListener('click', () => { bjFileBrowserForModal = true; openFileBrowser(bjModalIdx); });
+    document.getElementById('bjmDone').addEventListener('click', closeJobModal);
+    document.getElementById('bjmDelete').addEventListener('click', () => {
+      backupJobs.splice(bjModalIdx, 1); closeJobModal(); renderBackupJobs(); markDirty();
+    });
+    document.getElementById('bjmRunNow').addEventListener('click', async () => {
+      const btn = document.getElementById('bjmRunNow');
+      const jobId = job.id;
+      btn.disabled = true; btn.textContent = 'Running…';
+      try {
+        const dest = backupJobs[bjModalIdx]?.destination || 'onedrive';
+        const endpoint = dest === 'dropbox' ? `/api/dropbox/backup/${jobId}` : `/api/onedrive/backup/${jobId}`;
+        await api('POST', endpoint);
+        const s = await api('GET', '/api/settings');
+        const updated = (s.backupJobs || []).find((j) => j.id === jobId);
+        if (updated && bjModalIdx !== -1) { backupJobs[bjModalIdx].lastRun = updated.lastRun; backupJobs[bjModalIdx].lastStatus = updated.lastStatus; }
+        closeJobModal(); renderBackupJobs(); openJobModal(bjModalIdx !== -1 ? bjModalIdx : 0);
+      } catch (e) {
+        btn.disabled = false; btn.textContent = 'Run Now';
+        showToast('Backup failed: ' + e.message, 'error');
+      }
+    });
+  }
+
+  function closeJobModal() {
+    const overlay = document.getElementById('bjModalOverlay');
+    if (overlay) overlay.hidden = true;
+    bjModalIdx = -1;
+  }
+
+  function syncJobRow(idx) {
+    const job = backupJobs[idx];
+    const row = document.querySelector(`.backup-job-card[data-idx="${idx}"]`);
+    if (!row) return;
+    const dest = job.destination === 'dropbox' ? 'Dropbox' : 'OneDrive';
+    row.querySelector('.job-dest').textContent = dest;
+    row.querySelector('.bj-meta-container').textContent = job.containerName || 'no container';
+    row.querySelector('.bj-meta-sched').textContent = job.schedule || 'no schedule';
+    row.querySelector('.job-label-input').value = job.label || '';
+  }
+
   function renderBackupJobs() {
     const list = document.getElementById('stgBackupJobsList');
     if (!list) return;
@@ -623,7 +752,6 @@ async function settingsInit() {
       list.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>No backup jobs yet. Click <strong>Add Job</strong> to schedule your first backup.</p></div>`;
       return;
     }
-    const containers = (DC.services || []).map((s) => s.name);
     list.innerHTML = `<div class="bj-list">${backupJobs.map((job, idx) => {
       const isOk = job.lastStatus && job.lastStatus.startsWith('ok');
       const isErr = job.lastStatus && !isOk;
@@ -631,10 +759,7 @@ async function settingsInit() {
       const runTime = job.lastRun ? new Date(job.lastRun).toLocaleString() : '';
       const statusTxt = !job.lastStatus ? 'Never run' : isOk ? `${runTime} — OK ${statusDetail}` : `Error: ${statusDetail}`;
       const dotCls = isOk ? 'ok' : isErr ? 'err' : '';
-      const statusTextCls = isOk ? 'ok' : isErr ? 'err' : '';
       const dest = job.destination === 'dropbox' ? 'Dropbox' : 'OneDrive';
-      const schedLabel = job.schedule || 'no schedule';
-      const containerLabel = job.containerName || 'no container';
       return `
       <div class="bj-row backup-job-card" data-idx="${idx}">
         <div class="job-summary">
@@ -645,123 +770,28 @@ async function settingsInit() {
           <input type="text" class="job-label-input bj-label" data-idx="${idx}" value="${escHtml(job.label || '')}" placeholder="Untitled job" onclick="event.stopPropagation()">
           <div class="job-meta">
             <span class="job-dest">${dest}</span>
-            <span class="bj-meta-container">${escHtml(containerLabel)}</span>
+            <span class="bj-meta-container">${escHtml(job.containerName || 'no container')}</span>
             <span>·</span>
-            <span class="bj-meta-sched">${escHtml(schedLabel)}</span>
+            <span class="bj-meta-sched">${escHtml(job.schedule || 'no schedule')}</span>
             <span class="job-status-dot ${dotCls}" title="${escHtml(statusTxt)}"></span>
           </div>
-          <button class="job-expand bj-expand-btn" data-idx="${idx}" title="Edit">${IC.chevron}</button>
-        </div>
-        <div class="job-body bj-body-inner" hidden>
-          <div class="field"><div class="field-label">Destination</div>
-            <select class="settings-select bj-destination" data-idx="${idx}">
-              ${odEnabled ? `<option value="onedrive" ${(job.destination || (odEnabled ? 'onedrive' : 'dropbox')) === 'onedrive' ? 'selected' : ''}>OneDrive</option>` : ''}
-              ${dbEnabled ? `<option value="dropbox" ${job.destination === 'dropbox' ? 'selected' : ''}>Dropbox</option>` : ''}
-            </select>
-          </div>
-          <div class="field"><div class="field-label">Container</div>
-            <select class="settings-select bj-container" data-idx="${idx}">
-              <option value="">— select —</option>
-              ${containers.map((n) => `<option value="${escHtml(n)}" ${job.containerName === n ? 'selected' : ''}>${escHtml(n)}</option>`).join('')}
-            </select>
-          </div>
-          <div class="field span2"><div class="field-label">Schedule</div>
-            <input type="text" class="settings-input bj-schedule" data-idx="${idx}" value="${escHtml(job.schedule || '')}" placeholder="cron expression, e.g. 0 2 * * *" style="font-family:var(--font-mono)">
-            <div class="job-presets">${SCHEDULE_PRESETS.map((p) => `<button class="job-preset bj-preset-btn" type="button" data-idx="${idx}" data-cron="${escHtml(p.value)}">${escHtml(p.label)}</button>`).join('')}</div>
-          </div>
-          <div class="field span2"><div class="field-label">Paths to back up</div>
-            <div class="paths-wrap">
-              <textarea class="settings-input textarea bj-paths" data-idx="${idx}" rows="3" placeholder="One path per line, e.g. /compose/config/myapp">${escHtml((job.paths || []).join('\n'))}</textarea>
-              <button class="btn btn-secondary btn-sm bj-browse" type="button" data-idx="${idx}" style="align-self:flex-start">${IC.folder}Browse</button>
-            </div>
-          </div>
-          <div class="field"><div class="field-label">Backups to keep</div>
-            <input type="number" class="settings-input bj-keep" data-idx="${idx}" value="${job.keepCount || 10}" min="1" max="365" style="max-width:110px">
-          </div>
-          <div class="job-foot">
-            <span class="job-status-text ${statusTextCls}">${escHtml(statusTxt)}</span>
-            <div style="display:flex;gap:0.5rem;flex-shrink:0">
-              <button class="btn btn-danger btn-sm bj-delete" data-idx="${idx}">Delete</button>
-              <button class="btn btn-secondary btn-sm bj-run-now" data-idx="${idx}" data-jobid="${escHtml(job.id)}">Run Now</button>
-            </div>
-          </div>
+          <button class="job-expand bj-edit-btn" data-idx="${idx}" title="Edit">${IC.edit || IC.chevron}</button>
         </div>
       </div>`;
     }).join('')}</div>`;
 
-    list.querySelectorAll('.bj-expand-btn').forEach((btn) => btn.addEventListener('click', () => {
-      const card = btn.closest('.backup-job-card');
-      const body = card.querySelector('.bj-body-inner');
-      const open = !body.hidden;
-      body.hidden = open;
-      btn.classList.toggle('open', !open);
-    }));
-    // Auto-expand a freshly-added job
-    const cards = list.querySelectorAll('.backup-job-card');
-    const lastJob = backupJobs[backupJobs.length - 1];
-    if (lastJob && !lastJob.label && !lastJob.containerName) {
-      const lastBody = cards[cards.length - 1]?.querySelector('.bj-body-inner');
-      const lastBtn = cards[cards.length - 1]?.querySelector('.bj-expand-btn');
-      if (lastBody) { lastBody.hidden = false; lastBtn?.classList.add('open'); }
-    }
-
     list.querySelectorAll('.bj-enabled').forEach((cb) => cb.addEventListener('change', (e) => { backupJobs[+e.target.dataset.idx].enabled = e.target.checked; markDirty(); }));
     list.querySelectorAll('.bj-label').forEach((el) => el.addEventListener('input', (e) => { backupJobs[+e.target.dataset.idx].label = e.target.value; markDirty(); }));
-    list.querySelectorAll('.bj-destination').forEach((el) => el.addEventListener('change', (e) => {
-      const idx = +e.target.dataset.idx; backupJobs[idx].destination = e.target.value;
-      const badge = e.target.closest('.backup-job-card')?.querySelector('.job-dest');
-      if (badge) badge.textContent = e.target.value === 'dropbox' ? 'Dropbox' : 'OneDrive';
-      markDirty();
-    }));
-    list.querySelectorAll('.bj-container').forEach((el) => el.addEventListener('change', (e) => {
-      const idx = +e.target.dataset.idx; backupJobs[idx].containerName = e.target.value;
-      const meta = e.target.closest('.backup-job-card')?.querySelector('.bj-meta-container');
-      if (meta) meta.textContent = e.target.value || 'no container';
-      markDirty();
-    }));
-    list.querySelectorAll('.bj-paths').forEach((el) => el.addEventListener('input', (e) => {
-      backupJobs[+e.target.dataset.idx].paths = e.target.value.split('\n').map((l) => l.trim()).filter(Boolean);
-      markDirty();
-    }));
-    list.querySelectorAll('.bj-preset-btn').forEach((btn) => btn.addEventListener('click', () => {
-      const idx = +btn.dataset.idx; backupJobs[idx].schedule = btn.dataset.cron;
-      const inp = list.querySelector(`.bj-schedule[data-idx="${idx}"]`); if (inp) inp.value = btn.dataset.cron;
-      const meta = btn.closest('.backup-job-card')?.querySelector('.bj-meta-sched'); if (meta) meta.textContent = btn.dataset.cron;
-      markDirty();
-    }));
-    list.querySelectorAll('.bj-schedule').forEach((el) => el.addEventListener('input', (e) => {
-      const idx = +e.target.dataset.idx; backupJobs[idx].schedule = e.target.value;
-      const meta = e.target.closest('.backup-job-card')?.querySelector('.bj-meta-sched'); if (meta) meta.textContent = e.target.value || 'no schedule';
-      markDirty();
-    }));
-    list.querySelectorAll('.bj-keep').forEach((el) => el.addEventListener('change', (e) => { backupJobs[+e.target.dataset.idx].keepCount = +e.target.value || 10; markDirty(); }));
-    list.querySelectorAll('.bj-delete').forEach((btn) => btn.addEventListener('click', () => { backupJobs.splice(+btn.dataset.idx, 1); renderBackupJobs(); markDirty(); }));
-    list.querySelectorAll('.bj-browse').forEach((btn) => btn.addEventListener('click', () => openFileBrowser(+btn.dataset.idx)));
-    list.querySelectorAll('.bj-run-now').forEach((btn) => btn.addEventListener('click', async () => {
-      const jobId = btn.dataset.jobid;
-      btn.disabled = true; btn.textContent = 'Running…';
-      try {
-        const dest = backupJobs.find((j) => j.id === jobId)?.destination || 'onedrive';
-        const endpoint = dest === 'dropbox' ? `/api/dropbox/backup/${jobId}` : `/api/onedrive/backup/${jobId}`;
-        await api('POST', endpoint);
-        const s = await api('GET', '/api/settings');
-        const idx = backupJobs.findIndex((j) => j.id === jobId);
-        const updated = (s.backupJobs || []).find((j) => j.id === jobId);
-        if (updated && idx !== -1) { backupJobs[idx].lastRun = updated.lastRun; backupJobs[idx].lastStatus = updated.lastStatus; }
-        renderBackupJobs();
-      } catch (e) {
-        btn.disabled = false; btn.textContent = 'Run Now';
-        showToast('Backup failed: ' + e.message, 'error');
-      }
-    }));
+    list.querySelectorAll('.bj-edit-btn').forEach((btn) => btn.addEventListener('click', () => openJobModal(+btn.dataset.idx)));
   }
   renderBackupJobs();
 
   document.getElementById('stgAddBackupJobBtn')?.addEventListener('click', () => {
+    const newIdx = backupJobs.length;
     backupJobs.push({ id: 'job-' + Date.now(), label: '', containerName: '', paths: [], schedule: '0 2 * * *', keepCount: 10, enabled: true });
     renderBackupJobs();
     markDirty();
-    document.getElementById('stgBackupJobsList')?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    openJobModal(newIdx);
   });
 
   // ── Save ──────────────────────────────────────────────────────
