@@ -448,7 +448,7 @@ function buildServiceCard(s) {
       </div>
       ${isRunning && s.health ? `<span class="card-health card-health-${s.health}" title="${s.health}">${s.health === 'healthy' ? '✓' : s.health === 'unhealthy' ? '✗' : '⟳'}</span>` : ''}
       <div class="card-menu-wrap" onclick="event.stopPropagation()">
-        <button class="card-menu-btn" onclick="toggleCardMenu(${JSON.stringify(s.name)})" title="More actions">
+        <button class="card-menu-btn" onclick='toggleCardMenu(${JSON.stringify(s.name)})' title="More actions">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/>
           </svg>

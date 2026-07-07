@@ -372,15 +372,15 @@ code, kbd, .mono { font-family: var(--font-mono); }
 
 .sidebar-services { flex: 1; overflow-y: auto; padding: 0.5rem 0.5rem 1rem; }
 .services-header {
-  font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
-  color: var(--text-faint); padding: 0.5rem 0.75rem 0.4rem;
+  font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--text-secondary); padding: 0.5rem 0.75rem 0.4rem;
   display: flex; align-items: center; justify-content: space-between;
 }
 
-.service-list { display: flex; flex-direction: column; gap: 2px; }
+.service-list { display: flex; flex-direction: column; gap: 1px; }
 .service-item {
   display: flex; align-items: center; gap: 0.55rem;
-  padding: 0.42rem 0.7rem; border-radius: var(--r-sm);
+  padding: 0.3rem 0.7rem; border-radius: var(--r-sm);
   cursor: pointer; transition: background var(--t-fast), color var(--t-fast);
   font-size: 0.88rem; font-weight: 500; color: var(--text-secondary);
   border: 1px solid transparent;
