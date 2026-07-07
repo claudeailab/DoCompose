@@ -16,46 +16,13 @@ router.param('name', (req, res, next, name) => {
   next();
 });
 
-// Detect the compose project name from container labels so DoCompose
-// uses the same project name as the user's host `docker compose` invocation.
-// Falls back to the directory-derived name if no containers are labelled yet.
-async function detectProjectName(filePath) {
-  try {
-    const containers = await listContainers();
-    const absFile = require('path').resolve(filePath);
-    for (const c of containers) {
-      const labels = c.Labels || {};
-      const configFiles = labels['com.docker.compose.project.config_files'] || '';
-      // Match on the compose file name as a heuristic when paths differ (host vs container)
-      if (configFiles && configFiles.split(',').some((f) => require('path').basename(f.trim()) === require('path').basename(absFile))) {
-        const project = labels['com.docker.compose.project'];
-        if (project) return project;
-      }
-    }
-    // Fallback: any container with a project label whose working_dir basename matches
-    const dirName = require('path').basename(require('path').dirname(absFile));
-    for (const c of containers) {
-      const labels = c.Labels || {};
-      const wd = labels['com.docker.compose.project.working_dir'] || '';
-      if (require('path').basename(wd) === dirName && labels['com.docker.compose.project']) {
-        return labels['com.docker.compose.project'];
-      }
-    }
-  } catch {}
-  return null;
-}
 
 async function runCompose(projectDir, args) {
   const { getComposePath } = require('../compose');
   const path = require('path');
-  const filePath = getComposePath(projectDir);
-  const cwd = path.dirname(filePath);
-  const projectName = await detectProjectName(filePath);
-  const projectArgs = projectName ? ['--project-name', projectName] : [];
-  const fullArgs = ['compose', '-f', filePath, ...projectArgs, ...args];
-  console.log(`[compose] cwd=${cwd} cmd=docker ${fullArgs.join(' ')}`);
+  const cwd = path.dirname(getComposePath(projectDir));
   return new Promise((resolve, reject) => {
-    execFile('docker', fullArgs, { timeout: 120000, cwd }, (err, stdout, stderr) => {
+    execFile('docker', ['compose', ...args], { timeout: 120000, cwd }, (err, stdout, stderr) => {
       if (err) return reject(new Error(stderr || err.message));
       resolve({ stdout, stderr });
     });
