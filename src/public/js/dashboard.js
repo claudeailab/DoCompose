@@ -577,6 +577,10 @@ async function serviceAction(name, action, btn) {
 
   try {
     await api('POST', `/api/services/${encodeURIComponent(name)}/${action}`);
+    if (action === 'recreate') {
+      showServiceDetail(name, 'logs');
+      return;
+    }
     showToast(`${name}: ${action} successful`, 'success');
     const newState = action === 'stop' ? 'exited' : 'running';
     const clearHealth = action === 'stop';
