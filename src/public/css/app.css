@@ -737,6 +737,7 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
   border-radius: var(--r-md); box-shadow: var(--shadow-3); min-width: 175px; padding: 0.3rem;
 }
 .card-menu.open { display: flex; flex-direction: column; animation: menuIn 0.12s var(--ease); }
+.service-card:has(.card-menu.open) { z-index: 10; }
 .card-menu.flip-up { top: auto; bottom: calc(100% + 4px); }
 @keyframes menuIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .card-menu-item {

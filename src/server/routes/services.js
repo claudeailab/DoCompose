@@ -244,13 +244,38 @@ router.get('/:name/check-update', async (req, res) => {
       });
     });
 
-    // Remote digest via Docker Engine distribution API — just a registry manifest HEAD, no layer download
+    // Remote digest via Docker Engine distribution API — just a registry manifest HEAD, no layer download.
+    // For private registries the daemon requires an explicit X-Registry-Auth header; build it from
+    // stored DoCompose registry credentials when the image's registry matches one.
     const getRemoteDigest = (img) => new Promise((resolve) => {
       const http = require('http');
+      let xRegistryAuth = '';
+      try {
+        const { readSettings } = require('../routes/settings');
+        const settings = readSettings();
+        const registries = (settings && settings.registries) || [];
+        const imgParts = img.split('/');
+        const registryHost = imgParts.length > 1 && (imgParts[0].includes('.') || imgParts[0].includes(':'))
+          ? imgParts[0] : '';
+        if (registryHost) {
+          const reg = registries.find((r) =>
+            r.server === registryHost ||
+            r.server === `https://${registryHost}` ||
+            r.server === `http://${registryHost}`
+          );
+          if (reg && reg.username && reg.password) {
+            xRegistryAuth = Buffer.from(JSON.stringify({
+              username: reg.username, password: reg.password, serveraddress: registryHost,
+            })).toString('base64');
+          }
+        }
+      } catch {}
+      const headers = xRegistryAuth ? { 'X-Registry-Auth': xRegistryAuth } : {};
       const req = http.request({
         socketPath: '/var/run/docker.sock',
         path: `/distribution/${encodeURIComponent(img)}/json`,
         method: 'GET',
+        headers,
       }, (resp) => {
         let data = '';
         resp.on('data', (d) => { data += d; });
