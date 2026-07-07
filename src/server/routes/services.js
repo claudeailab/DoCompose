@@ -52,8 +52,10 @@ async function runCompose(projectDir, args) {
   const cwd = path.dirname(filePath);
   const projectName = await detectProjectName(filePath);
   const projectArgs = projectName ? ['--project-name', projectName] : [];
+  const fullArgs = ['compose', '-f', filePath, ...projectArgs, ...args];
+  console.log(`[compose] cwd=${cwd} cmd=docker ${fullArgs.join(' ')}`);
   return new Promise((resolve, reject) => {
-    execFile('docker', ['compose', '-f', filePath, ...projectArgs, ...args], { timeout: 120000, cwd }, (err, stdout, stderr) => {
+    execFile('docker', fullArgs, { timeout: 120000, cwd }, (err, stdout, stderr) => {
       if (err) return reject(new Error(stderr || err.message));
       resolve({ stdout, stderr });
     });
