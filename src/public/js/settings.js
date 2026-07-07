@@ -655,8 +655,8 @@ async function settingsInit() {
         <div class="job-body bj-body-inner" hidden>
           <div class="field"><div class="field-label">Destination</div>
             <select class="settings-select bj-destination" data-idx="${idx}">
-              <option value="onedrive" ${(job.destination || 'onedrive') === 'onedrive' ? 'selected' : ''}>OneDrive</option>
-              <option value="dropbox" ${job.destination === 'dropbox' ? 'selected' : ''}>Dropbox</option>
+              ${odEnabled ? `<option value="onedrive" ${(job.destination || (odEnabled ? 'onedrive' : 'dropbox')) === 'onedrive' ? 'selected' : ''}>OneDrive</option>` : ''}
+              ${dbEnabled ? `<option value="dropbox" ${job.destination === 'dropbox' ? 'selected' : ''}>Dropbox</option>` : ''}
             </select>
           </div>
           <div class="field"><div class="field-label">Container</div>

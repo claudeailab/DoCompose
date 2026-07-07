@@ -10,7 +10,8 @@ async function runJob(job) {
   console.log(`[Backup] Running job "${job.label || job.id}" for ${job.containerName}`);
   const settings = readSettings();
   const destination = job.destination || 'onedrive';
-  const folderPath = (settings.backupFolderPath || 'DoCompose Backups').replace(/^\/|\/$/g, '');
+  const providerSettings = settings[destination] || {};
+  const folderPath = (providerSettings.backupFolderPath || 'DoCompose Backups').replace(/^\/|\/$/g, '');
 
   let getValidToken, uploadFile, listFolder, deleteItem, isFolder;
 

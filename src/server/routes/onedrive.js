@@ -73,9 +73,9 @@ async function graphGet(path_, token) {
 // Upload a single file (simple PUT, suitable for any size we'd encounter in config dirs)
 async function uploadFile(token, localPath, remoteItemPath) {
   const content = fs.readFileSync(localPath);
-  const encoded = encodeURIComponent(remoteItemPath).replace(/%2F/g, '/');
+  const encoded = encodeURIComponent(remoteItemPath.replace(/^\//, '')).replace(/%2F/g, '/');
   // Use upload session for reliability
-  const sessionRes = await fetch(`${GRAPH}/me/drive/root:${encoded}:/createUploadSession`, {
+  const sessionRes = await fetch(`${GRAPH}/me/drive/root:/${encoded}:/createUploadSession`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ item: { '@microsoft.graph.conflictBehavior': 'replace' } }),
@@ -132,9 +132,9 @@ module.exports.walkDir = walkDir;
 
 // List children of a OneDrive folder path
 async function listFolder(token, folderPath) {
-  const encoded = encodeURIComponent(folderPath).replace(/%2F/g, '/');
+  const encoded = encodeURIComponent(folderPath.replace(/^\//, '')).replace(/%2F/g, '/');
   try {
-    const data = await graphGet(`/me/drive/root:${encoded}:/children?$orderby=name&$top=200`, token);
+    const data = await graphGet(`/me/drive/root:/${encoded}:/children?$orderby=name&$top=200`, token);
     return data.value || [];
   } catch (err) {
     if (err.message.includes('itemNotFound') || err.message.includes('404')) return [];
