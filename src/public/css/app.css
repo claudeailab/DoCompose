@@ -881,7 +881,6 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 
 .stg-footer {
   display: flex; align-items: center; gap: 1rem; padding: 1.25rem 1.75rem 2rem;
-  border-top: 1px solid var(--border);
 }
 .stg-save-status { font-size: 0.85rem; color: var(--text-muted); }
 .stg-save-status.ok { color: var(--success); }
