@@ -751,6 +751,8 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 @keyframes btn-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 .card-btn-update { color: var(--success); border-color: color-mix(in srgb, var(--success) 50%, transparent); background: var(--success-dim); font-weight: 700; }
 .card-btn-update:hover:not(:disabled) { background: var(--success); color: #04150d; border-color: var(--success); }
+.card-btn-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+.card-btn-danger:hover:not(:disabled) { background: var(--danger-dim); border-color: color-mix(in srgb, var(--danger) 50%, transparent); }
 .card-btn-current { color: var(--success); border-color: transparent; background: none; cursor: default; }
 .card-btn-current:hover { background: none; color: var(--success); border-color: transparent; transform: none; }
 
@@ -778,6 +780,8 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 .svc-tab-action:disabled { opacity: 0.45; cursor: not-allowed; }
 .svc-tab-update { color: var(--warning) !important; border-color: color-mix(in srgb, var(--warning) 40%, transparent) !important; }
 .svc-tab-update:hover { background: var(--warning-dim) !important; }
+.svc-tab-danger { color: var(--danger) !important; border-color: color-mix(in srgb, var(--danger) 40%, transparent) !important; }
+.svc-tab-danger:hover { background: var(--danger-dim) !important; }
 
 .svc-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .svc-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }

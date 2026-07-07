@@ -8,6 +8,73 @@
 // DC.updates is initialized (and restored from localStorage) in app.js
 let dashFilter = null; // null | 'running' | 'stopped' | 'updates'
 
+function openAddServiceModal() {
+  const overlay = document.getElementById('addSvcOverlay');
+  if (!overlay) return;
+  // Reset form
+  ['addSvcName', 'addSvcImage', 'addSvcContainer', 'addSvcPorts', 'addSvcVolumes', 'addSvcEnv'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const restart = document.getElementById('addSvcRestart');
+  if (restart) restart.value = 'unless-stopped';
+  const startCb = document.getElementById('addSvcStart');
+  if (startCb) startCb.checked = true;
+  overlay.classList.add('is-open');
+  setTimeout(() => { const n = document.getElementById('addSvcName'); if (n) n.focus(); }, 50);
+}
+
+function closeAddServiceModal() {
+  const overlay = document.getElementById('addSvcOverlay');
+  if (overlay) overlay.classList.remove('is-open');
+}
+
+async function submitAddService() {
+  const name = (document.getElementById('addSvcName')?.value || '').trim();
+  const image = (document.getElementById('addSvcImage')?.value || '').trim();
+  if (!name) { showToast('Service name is required', 'error'); return; }
+  if (!image) { showToast('Image is required', 'error'); return; }
+
+  const parseLines = (id) => (document.getElementById(id)?.value || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  const containerName = (document.getElementById('addSvcContainer')?.value || '').trim();
+  const restart = document.getElementById('addSvcRestart')?.value || '';
+  const ports = parseLines('addSvcPorts');
+  const volumes = parseLines('addSvcVolumes');
+  const environment = parseLines('addSvcEnv');
+  const start = document.getElementById('addSvcStart')?.checked ?? true;
+
+  const saveBtn = document.getElementById('addSvcSave');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Adding…'; }
+  try {
+    const result = await api('POST', '/api/services', { name, image, containerName, restart, ports, volumes, environment, start });
+    closeAddServiceModal();
+    if (result.startError) {
+      showToast(`Service added but failed to start: ${result.startError}`, 'warning');
+    } else {
+      showToast(`Service "${name}" added${start ? ' and started' : ''}`, 'success');
+    }
+    await loadDashboard();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Add Service'; }
+  }
+}
+
+async function removeService(name) {
+  const ok = await dcConfirm(`Stop and permanently remove service "${name}" from compose and Docker?`, 'Remove Service');
+  if (!ok) return;
+  try {
+    await api('DELETE', `/api/services/${encodeURIComponent(name)}`);
+    showToast(`Service "${name}" removed`, 'success');
+    if (window.svcName === name) showView('dashboard');
+    await loadDashboard();
+  } catch (err) {
+    showToast(`Remove failed: ${err.message}`, 'error');
+  }
+}
+window.removeService = removeService;
+
 function dashboardInit() {
   const container = document.getElementById('view-dashboard');
   container.innerHTML = `
@@ -28,12 +95,16 @@ function dashboardInit() {
             </svg>
             Check for Updates
           </button>
-          <button class="btn btn-primary btn-sm" id="dashRefreshBtn">
+          <button class="btn btn-secondary btn-sm" id="dashRefreshBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="23 4 23 10 17 10"/>
               <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
             </svg>
             Refresh
+          </button>
+          <button class="btn btn-primary btn-sm" id="dashAddBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Service
           </button>
         </div>
       </div>
@@ -42,10 +113,72 @@ function dashboardInit() {
     <div class="dashboard-grid" id="dashGrid">
       <div class="loading"><div class="spinner"></div> Loading services…</div>
     </div>
+
+    <!-- Add Service Modal -->
+    <div class="modal-overlay" id="addSvcOverlay">
+      <div class="modal" style="width:480px;max-width:96vw">
+        <div class="modal-header">
+          <div class="modal-title">Add Service</div>
+          <button class="btn btn-ghost btn-icon" id="addSvcClose" title="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body" style="padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:0.9rem;overflow-y:auto;max-height:calc(90vh - 130px)">
+          <div class="field">
+            <label class="field-label">Service name <span style="color:var(--error)">*</span></label>
+            <input class="input" id="addSvcName" placeholder="e.g. nginx" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label class="field-label">Image <span style="color:var(--error)">*</span></label>
+            <input class="input" id="addSvcImage" placeholder="e.g. nginx:latest" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label class="field-label">Container name <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+            <input class="input" id="addSvcContainer" placeholder="Defaults to service name" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label class="field-label">Restart policy</label>
+            <select class="input" id="addSvcRestart">
+              <option value="">none</option>
+              <option value="unless-stopped" selected>unless-stopped</option>
+              <option value="always">always</option>
+              <option value="on-failure">on-failure</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Ports <span style="color:var(--text-muted);font-weight:400">(one per line, e.g. 8080:80)</span></label>
+            <textarea class="input" id="addSvcPorts" rows="3" placeholder="8080:80&#10;443:443" spellcheck="false"></textarea>
+          </div>
+          <div class="field">
+            <label class="field-label">Volumes <span style="color:var(--text-muted);font-weight:400">(one per line)</span></label>
+            <textarea class="input" id="addSvcVolumes" rows="3" placeholder="./data:/data&#10;/etc/localtime:/etc/localtime:ro" spellcheck="false"></textarea>
+          </div>
+          <div class="field">
+            <label class="field-label">Environment variables <span style="color:var(--text-muted);font-weight:400">(one per line)</span></label>
+            <textarea class="input" id="addSvcEnv" rows="3" placeholder="TZ=UTC&#10;DEBUG=false" spellcheck="false"></textarea>
+          </div>
+          <label class="toggle-row" style="gap:0.75rem;cursor:pointer">
+            <input type="checkbox" id="addSvcStart" checked>
+            <span>Start container after adding</span>
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="addSvcCancel">Cancel</button>
+          <button class="btn btn-primary" id="addSvcSave">Add Service</button>
+        </div>
+      </div>
+    </div>
   `;
 
   document.getElementById('dashRefreshBtn').addEventListener('click', loadDashboard);
   document.getElementById('dashCheckAllBtn').addEventListener('click', checkAllUpdates);
+  document.getElementById('dashAddBtn').addEventListener('click', openAddServiceModal);
+  document.getElementById('addSvcClose').addEventListener('click', closeAddServiceModal);
+  document.getElementById('addSvcCancel').addEventListener('click', closeAddServiceModal);
+  document.getElementById('addSvcSave').addEventListener('click', submitAddService);
+  document.getElementById('addSvcOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('addSvcOverlay')) closeAddServiceModal();
+  });
 
   // Filter chips — clicking a chip filters cards by that state
   document.getElementById('dashStats').addEventListener('click', (e) => {
@@ -291,6 +424,11 @@ function buildServiceCard(s) {
           <div id="cardUpdate-${n}">
             ${buildUpdateCell(s.name)}
           </div>
+
+          <button class="card-btn card-btn-danger" onclick="event.stopPropagation();removeService(${JSON.stringify(s.name)})" title="Remove service from compose and Docker">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Remove
+          </button>
 
         </div>
       </div>

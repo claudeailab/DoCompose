@@ -100,6 +100,10 @@ async function serviceInit() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
             Update
           </button>` : ''}
+          <button class="svc-tab svc-tab-action svc-tab-danger" id="svcActRemove">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Remove
+          </button>
         </div>
       </div>
       <div class="svc-body">
@@ -146,6 +150,11 @@ async function serviceInit() {
   if (rstBtn) rstBtn.addEventListener('click', () => svcRunAction('restart'));
   const recBtn = document.getElementById('svcActRecreate');
   if (recBtn) recBtn.addEventListener('click', () => svcRunAction('recreate'));
+
+  const rmBtn = document.getElementById('svcActRemove');
+  if (rmBtn) rmBtn.addEventListener('click', async () => {
+    if (window.removeService) removeService(name);
+  });
 
   const updBtn = document.getElementById('svcActUpdate');
   if (updBtn) updBtn.addEventListener('click', async () => {

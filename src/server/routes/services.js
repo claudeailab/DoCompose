@@ -288,4 +288,82 @@ router.get('/:name/inspect', async (req, res) => {
   }
 });
 
+// POST /api/services?project=<dir>
+// Body: { name, image, containerName, restart, ports, volumes, environment, start }
+router.post('/', async (req, res) => {
+  try {
+    const { readCompose, writeCompose } = require('../compose');
+    const project = req.query.project || '';
+    const { name, image, containerName, restart, ports, volumes, environment, start } = req.body || {};
+
+    if (!name || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(name)) {
+      return res.status(400).json({ error: 'Invalid service name' });
+    }
+    if (!image) {
+      return res.status(400).json({ error: 'Image is required' });
+    }
+
+    let parsed;
+    try {
+      ({ parsed } = readCompose(project));
+    } catch {
+      parsed = {};
+    }
+    if (!parsed) parsed = {};
+    if (!parsed.services) parsed.services = {};
+    if (parsed.services[name]) {
+      return res.status(409).json({ error: `Service "${name}" already exists` });
+    }
+
+    const svcConfig = { image };
+    if (containerName) svcConfig.container_name = containerName;
+    if (restart) svcConfig.restart = restart;
+    if (Array.isArray(ports) && ports.length) svcConfig.ports = ports;
+    if (Array.isArray(volumes) && volumes.length) svcConfig.volumes = volumes;
+    if (Array.isArray(environment) && environment.length) svcConfig.environment = environment;
+
+    parsed.services[name] = svcConfig;
+    writeCompose(project, parsed);
+
+    if (start) {
+      try {
+        await runCompose(project, ['up', '-d', '--no-deps', name]);
+      } catch (err) {
+        return res.json({ ok: true, started: false, startError: err.message });
+      }
+    }
+
+    res.json({ ok: true, started: !!start });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/services/:name?project=<dir>
+router.delete('/:name', async (req, res) => {
+  try {
+    const { readCompose, writeCompose } = require('../compose');
+    const project = req.query.project || '';
+    const name = req.params.name;
+
+    // Stop and remove the container if it exists
+    try {
+      const containerName = await getContainerName(project, name);
+      await runDocker(['stop', containerName]).catch(() => {});
+      await runDocker(['rm', '-f', containerName]).catch(() => {});
+    } catch {}
+
+    // Remove from compose file
+    const { parsed } = readCompose(project);
+    if (parsed && parsed.services) {
+      delete parsed.services[name];
+      writeCompose(project, parsed);
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
