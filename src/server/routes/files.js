@@ -234,9 +234,7 @@ function fixMisplacedMappingKeys(yamlStr) {
   return result.join('\n');
 }
 
-// Known Docker Compose service-level keys. If any of these appear nested inside
-// depends_on (or another wrong parent), fixMisplacedServiceKeys() hoists them
-// back to the service level.
+// All valid Docker Compose service-level keys.
 const SERVICE_LEVEL_KEYS = new Set([
   'image', 'build', 'container_name', 'hostname', 'restart', 'user', 'command',
   'entrypoint', 'environment', 'env_file', 'ports', 'volumes', 'networks',
@@ -249,39 +247,117 @@ const SERVICE_LEVEL_KEYS = new Set([
   'volumes_from', 'configs', 'secrets',
 ]);
 
-// Post-parse semantic fix: walk every child object directly under each service
-// and hoist any service-level key that landed there by mistake (e.g. healthcheck
-// pasted one indent too deep under depends_on, volumes, environment, etc.).
-function fixMisplacedServiceKeys(parsed) {
+// Valid compose-file top-level keys (not service names, not service properties).
+const COMPOSE_TOP_LEVEL_KEYS = new Set([
+  'version', 'services', 'networks', 'volumes', 'configs', 'secrets', 'name',
+]);
+
+// A value looks like a service definition if it contains at least one service key.
+function looksLikeService(val) {
+  if (!val || typeof val !== 'object' || Array.isArray(val)) return false;
+  return Object.keys(val).some((k) => SERVICE_LEVEL_KEYS.has(k));
+}
+
+// Comprehensive post-parse semantic repair. Handles all the ways a pasted block
+// can land at the wrong indent level:
+//
+//   1. TOO SHALLOW — key lands at the document top level (0 indent) instead of
+//      inside the service (2 indent). Moves it into the nearest service.
+//
+//   2. TOO DEEP — key lands inside a service sub-key (depends_on, volumes,
+//      environment, etc.) instead of at the service level. Hoists it up.
+//
+// Works for both the modern `services:` wrapper and the flat (legacy) format.
+function repairComposeStructure(parsed) {
   let fixed = false;
-  if (!parsed || !parsed.services) return fixed;
-  for (const svc of Object.values(parsed.services)) {
-    if (!svc || typeof svc !== 'object') continue;
-    for (const parentKey of Object.keys(svc)) {
-      if (parentKey === 'depends_on' || !SERVICE_LEVEL_KEYS.has(parentKey)) continue;
-      const child = svc[parentKey];
-      if (!child || typeof child !== 'object' || Array.isArray(child)) continue;
-      for (const key of Object.keys(child)) {
-        if (SERVICE_LEVEL_KEYS.has(key) && key !== parentKey) {
-          svc[key] = child[key];
-          delete child[key];
-          fixed = true;
+  if (!parsed || typeof parsed !== 'object') return fixed;
+
+  const hasServicesWrapper = parsed.services && typeof parsed.services === 'object';
+
+  // Collect service objects and their parent container so we can mutate correctly.
+  // Also keep top-level keys in order so we can find "nearest service above orphan".
+  const topKeys = Object.keys(parsed);
+
+  // ── Fix 1: service-level keys pasted at the wrong top-level depth ──────────
+  // Identify orphaned keys: top-level keys that are service properties but are
+  // NOT valid compose top-level keys and don't look like a service definition.
+  const orphaned = topKeys.filter(
+    (k) =>
+      SERVICE_LEVEL_KEYS.has(k) &&
+      !COMPOSE_TOP_LEVEL_KEYS.has(k) &&
+      !k.startsWith('x-') &&
+      !looksLikeService(parsed[k])
+  );
+
+  if (orphaned.length > 0) {
+    // Find the target service: last service in the file (closest to the pasted block).
+    let targetSvc = null;
+    if (hasServicesWrapper) {
+      const names = Object.keys(parsed.services);
+      if (names.length) targetSvc = parsed.services[names[names.length - 1]];
+    } else {
+      // Flat format: last top-level key whose value looks like a service.
+      for (let i = topKeys.length - 1; i >= 0; i--) {
+        const k = topKeys[i];
+        if (!COMPOSE_TOP_LEVEL_KEYS.has(k) && !k.startsWith('x-') && looksLikeService(parsed[k])) {
+          targetSvc = parsed[k];
+          break;
         }
       }
     }
-    // Also check depends_on — its valid children are service-name keys, not service-level keys
-    const dependsOn = svc.depends_on;
-    if (dependsOn && typeof dependsOn === 'object' && !Array.isArray(dependsOn)) {
-      for (const key of Object.keys(dependsOn)) {
-        if (SERVICE_LEVEL_KEYS.has(key)) {
-          svc[key] = dependsOn[key];
-          delete dependsOn[key];
-          fixed = true;
-        }
+
+    if (targetSvc && typeof targetSvc === 'object') {
+      for (const key of orphaned) {
+        if (!(key in targetSvc)) targetSvc[key] = parsed[key];
+        delete parsed[key];
+        fixed = true;
       }
-      if (Object.keys(dependsOn).length === 0) delete svc.depends_on;
     }
   }
+
+  // ── Fix 2: service-level keys pasted one level too deep ────────────────────
+  // Collect all service objects (after fix 1 may have already cleaned top level).
+  const allServices = hasServicesWrapper
+    ? Object.values(parsed.services || {})
+    : Object.keys(parsed)
+        .filter((k) => !COMPOSE_TOP_LEVEL_KEYS.has(k) && !k.startsWith('x-'))
+        .map((k) => parsed[k]);
+
+  for (const svc of allServices) {
+    if (!svc || typeof svc !== 'object' || Array.isArray(svc)) continue;
+
+    for (const parentKey of Object.keys(svc)) {
+      const child = svc[parentKey];
+      if (!child || typeof child !== 'object' || Array.isArray(child)) continue;
+
+      // depends_on: valid children are service-name → {condition, restart} mappings.
+      // Any SERVICE_LEVEL_KEY found there is definitely misplaced.
+      if (parentKey === 'depends_on') {
+        for (const key of Object.keys(child)) {
+          if (SERVICE_LEVEL_KEYS.has(key)) {
+            if (!(key in svc)) svc[key] = child[key];
+            delete child[key];
+            fixed = true;
+          }
+        }
+        if (Object.keys(child).length === 0) delete svc.depends_on;
+        continue;
+      }
+
+      // For other service keys whose child is a mapping: if that child contains
+      // SERVICE_LEVEL_KEYS those are misplaced siblings that were pasted too deep.
+      if (SERVICE_LEVEL_KEYS.has(parentKey)) {
+        for (const key of Object.keys(child)) {
+          if (SERVICE_LEVEL_KEYS.has(key) && key !== parentKey) {
+            if (!(key in svc)) svc[key] = child[key];
+            delete child[key];
+            fixed = true;
+          }
+        }
+      }
+    }
+  }
+
   return fixed;
 }
 
@@ -310,8 +386,8 @@ router.post('/format', (req, res) => {
       }
     }
 
-    // Semantic repair: hoist any service-level keys that landed inside depends_on
-    if (fixMisplacedServiceKeys(parsed)) wasRepaired = true;
+    // Semantic repair: fix keys pasted at the wrong indent level (too shallow or too deep)
+    if (repairComposeStructure(parsed)) wasRepaired = true;
 
     const formatted = YAML.stringify(parsed, { indent: 2, lineWidth: 0 });
     res.json({ yaml: formatted, repaired: wasRepaired });
