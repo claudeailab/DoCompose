@@ -11,8 +11,7 @@ let dashFilter = null; // null | 'running' | 'stopped' | 'updates'
 function openAddServiceModal() {
   const overlay = document.getElementById('addSvcOverlay');
   if (!overlay) return;
-  // Reset form
-  ['addSvcName', 'addSvcImage', 'addSvcContainer', 'addSvcHostname', 'addSvcPorts', 'addSvcVolumes', 'addSvcEnv'].forEach((id) => {
+  ['addSvcName', 'addSvcImage', 'addSvcPorts', 'addSvcVolumes', 'addSvcEnv'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -20,24 +19,8 @@ function openAddServiceModal() {
   if (restart) restart.value = 'unless-stopped';
   const startCb = document.getElementById('addSvcStart');
   if (startCb) startCb.checked = true;
-
-  // Auto-fill container name + hostname when service name is typed
-  const nameInput = document.getElementById('addSvcName');
-  const containerInput = document.getElementById('addSvcContainer');
-  const hostnameInput = document.getElementById('addSvcHostname');
-  if (nameInput && containerInput && hostnameInput) {
-    nameInput.oninput = () => {
-      const val = nameInput.value.trim();
-      if (!containerInput.dataset.userEdited) containerInput.value = val;
-      if (!hostnameInput.dataset.userEdited) hostnameInput.value = val;
-    };
-    containerInput.oninput = () => { containerInput.dataset.userEdited = containerInput.value ? '1' : ''; };
-    hostnameInput.oninput = () => { hostnameInput.dataset.userEdited = hostnameInput.value ? '1' : ''; };
-    delete containerInput.dataset.userEdited;
-    delete hostnameInput.dataset.userEdited;
-  }
-
   overlay.classList.add('is-open');
+  const nameInput = document.getElementById('addSvcName');
   setTimeout(() => { if (nameInput) nameInput.focus(); }, 50);
 }
 
@@ -53,8 +36,8 @@ async function submitAddService() {
   if (!image) { showToast('Image is required', 'error'); return; }
 
   const parseLines = (id) => (document.getElementById(id)?.value || '').split('\n').map((l) => l.trim()).filter(Boolean);
-  const containerName = (document.getElementById('addSvcContainer')?.value || '').trim();
-  const hostname = (document.getElementById('addSvcHostname')?.value || '').trim();
+  const containerName = name;
+  const hostname = name;
   const restart = document.getElementById('addSvcRestart')?.value || '';
   const ports = parseLines('addSvcPorts');
   const volumes = parseLines('addSvcVolumes');
@@ -92,6 +75,26 @@ async function removeService(name) {
   }
 }
 window.removeService = removeService;
+
+function showSelfUpdateOverlay() {
+  let el = document.getElementById('selfUpdateOverlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'selfUpdateOverlay';
+    el.innerHTML = `<div class="self-update-box"><div class="self-update-spinner"></div><div class="self-update-title">Updating DoCompose…</div><div class="self-update-sub">The app will reload automatically when ready.</div></div>`;
+    document.body.appendChild(el);
+  }
+  el.style.display = 'flex';
+}
+
+function pollUntilBack() {
+  const interval = setInterval(async () => {
+    try {
+      const res = await fetch('/api/health');
+      if (res.ok) { clearInterval(interval); location.reload(); }
+    } catch {}
+  }, 2000);
+}
 
 function dashboardInit() {
   const container = document.getElementById('view-dashboard');
@@ -149,14 +152,6 @@ function dashboardInit() {
           <div class="field">
             <label class="field-label">Image <span style="color:var(--error)">*</span></label>
             <input class="input" id="addSvcImage" placeholder="e.g. nginx:latest" autocomplete="off" spellcheck="false">
-          </div>
-          <div class="field">
-            <label class="field-label">Container name</label>
-            <input class="input" id="addSvcContainer" autocomplete="off" spellcheck="false">
-          </div>
-          <div class="field">
-            <label class="field-label">Hostname</label>
-            <input class="input" id="addSvcHostname" autocomplete="off" spellcheck="false">
           </div>
           <div class="field">
             <label class="field-label">Restart policy</label>
@@ -552,6 +547,23 @@ async function serviceAction(name, action, btn) {
   }
 
   if (action === 'update') {
+    const svc = (DC.services || []).find((s) => s.name === name);
+    const isSelf = name === 'docompose' || (svc && svc.image && svc.image.includes('claudeailab/docompose'));
+
+    if (isSelf) {
+      const ok = await dcConfirm(
+        'This will update DoCompose itself. The app will restart and reconnect automatically.',
+        'Update DoCompose'
+      );
+      if (!ok) return;
+      DC.updates[name] = 'updating';
+      refreshUpdateCell(name);
+      showSelfUpdateOverlay();
+      try { await api('POST', `/api/services/${encodeURIComponent(name)}/update`); } catch {}
+      pollUntilBack();
+      return;
+    }
+
     const ok = await dcConfirm(`Pull the latest image for "${name}" and recreate the container?`, 'Pull & Update');
     if (!ok) return;
     DC.updates[name] = 'updating';
