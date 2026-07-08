@@ -152,6 +152,23 @@ async function recreateContainerViaApi(containerName, pullFirst) {
     await runDocker(['pull', info.Config.Image]);
   }
 
+  // After pulling, get the new image ID so we can update the
+  // com.docker.compose.image label. Docker Compose checks this label on
+  // `docker compose up -d` and recreates the container if it doesn't match
+  // the current image — keeping it in sync avoids spurious recreation.
+  let newImageId = info.Image; // default: same image (for recreate without pull)
+  if (pullFirst) {
+    try {
+      const imgInfo = await docker.getImage(info.Config.Image).inspect();
+      newImageId = imgInfo.Id;
+    } catch {}
+  }
+
+  const labels = { ...info.Config.Labels };
+  if (newImageId && labels['com.docker.compose.image']) {
+    labels['com.docker.compose.image'] = newImageId;
+  }
+
   const networks = info.NetworkSettings.Networks || {};
   const networkNames = Object.keys(networks);
 
@@ -167,7 +184,7 @@ async function recreateContainerViaApi(containerName, pullFirst) {
     WorkingDir: info.Config.WorkingDir,
     ExposedPorts: info.Config.ExposedPorts,
     Volumes: info.Config.Volumes,
-    Labels: info.Config.Labels,
+    Labels: labels,
     HostConfig: {
       ...info.HostConfig,
       NetworkMode: networkNames[0] || info.HostConfig.NetworkMode,
