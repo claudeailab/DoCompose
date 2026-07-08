@@ -397,27 +397,34 @@ main().catch((e) => { console.error('[self-update]', e.message); process.exit(1)
       return;
     }
 
-    // Step 3: stop
+    // Step 3: resolve new image ID so compose labels stay in sync
+    let newImageId = info.Image;
+    try { const imgInfo = await docker.getImage(image).inspect(); newImageId = imgInfo.Id; } catch {}
+
+    // Step 4: stop
     log(`→ Stopping ${containerName}…`);
     try { await docker.getContainer(containerName).stop({ t: 15 }); } catch {}
     log('  ✓ Stopped');
 
-    // Step 4: remove
+    // Step 5: remove
     log(`→ Removing old container…`);
     await docker.getContainer(containerName).remove({ force: true });
     log('  ✓ Removed');
 
-    // Step 5: create + start
+    // Step 6: create + start — update compose labels to reflect new image so
+    // `docker compose up -d` on the host doesn't see a stale image and recreate.
     log(`→ Creating new container…`);
     const networks = info.NetworkSettings.Networks || {};
     const networkNames = Object.keys(networks);
+    const labels = { ...info.Config.Labels };
+    if (newImageId && labels['com.docker.compose.image']) labels['com.docker.compose.image'] = newImageId;
     const createConfig = {
       name: containerName, Image: image,
       Hostname: info.Config.Hostname, Domainname: info.Config.Domainname,
       User: info.Config.User, Env: info.Config.Env, Cmd: info.Config.Cmd,
       Entrypoint: info.Config.Entrypoint, WorkingDir: info.Config.WorkingDir,
       ExposedPorts: info.Config.ExposedPorts, Volumes: info.Config.Volumes,
-      Labels: info.Config.Labels,
+      Labels: labels,
       HostConfig: { ...info.HostConfig, NetworkMode: networkNames[0] || info.HostConfig.NetworkMode },
       NetworkingConfig: networkNames.length > 0 ? { EndpointsConfig: { [networkNames[0]]: networks[networkNames[0]] } } : undefined,
     };
