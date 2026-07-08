@@ -35,7 +35,7 @@ async function imagesInit() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             Refresh
           </button>
-          <button class="btn btn-danger-outline" id="imgPruneBtn" onclick="pruneImages()">
+          <button class="btn btn-danger-outline" id="imgPruneBtn" onclick="pruneImages()" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
             Prune Unused
           </button>
@@ -77,6 +77,9 @@ function renderImages(images) {
 
   const unused = images.filter((i) => !i.inUse);
   const unusedSize = unused.reduce((s, i) => s + i.size, 0);
+
+  const pruneBtn = document.getElementById('imgPruneBtn');
+  if (pruneBtn) pruneBtn.disabled = unused.length === 0;
 
   const summaryBar = unused.length > 0
     ? `<div class="images-summary">
