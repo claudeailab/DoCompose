@@ -103,6 +103,20 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get the compose project name from the running container's labels so we can
+// pass -p to docker compose and match what the user runs on the host.
+async function getComposeProject(serviceName) {
+  try {
+    const containers = await listContainers();
+    const found = containers.find((c) => {
+      const labels = c.Labels || {};
+      return labels['com.docker.compose.service'] === serviceName;
+    });
+    if (found) return (found.Labels || {})['com.docker.compose.project'] || null;
+  } catch {}
+  return null;
+}
+
 async function getContainerName(projectDir, serviceName) {
   try {
     const { parsed } = readCompose(projectDir);
@@ -173,9 +187,11 @@ router.post('/:name/recreate', async (req, res) => {
   try {
     const project = req.query.project || '';
     const name = req.params.name;
+    const composeProject = await getComposeProject(name);
     const containerName = await getContainerName(project, name);
     try { await runDocker(['rm', '-f', containerName]); } catch {}
-    const { stdout, stderr } = await runCompose(project, ['up', '-d', '--force-recreate', '--no-deps', name]);
+    const extraArgs = composeProject ? ['-p', composeProject] : [];
+    const { stdout, stderr } = await runCompose(project, [...extraArgs, 'up', '-d', '--force-recreate', '--no-deps', name]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -288,9 +304,11 @@ main().catch((e) => { console.error('[self-update] Error:', e.message); process.
       return;
     }
 
+    const composeProject = await getComposeProject(name);
     const containerName = await getContainerName(project, name);
     try { await runDocker(['rm', '-f', containerName]); } catch {}
-    const { stdout, stderr } = await runCompose(project, ['up', '-d', '--force-recreate', '--no-deps', name]);
+    const extraArgs = composeProject ? ['-p', composeProject] : [];
+    const { stdout, stderr } = await runCompose(project, [...extraArgs, 'up', '-d', '--force-recreate', '--no-deps', name]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
     res.status(500).json({ error: err.message });
