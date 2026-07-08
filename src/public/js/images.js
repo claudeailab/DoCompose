@@ -76,18 +76,9 @@ function renderImages(images) {
   }
 
   const unused = images.filter((i) => !i.inUse);
-  const unusedSize = unused.reduce((s, i) => s + i.size, 0);
 
   const pruneBtn = document.getElementById('imgPruneBtn');
   if (pruneBtn) pruneBtn.disabled = unused.length === 0;
-
-  const summaryBar = unused.length > 0
-    ? `<div class="images-summary">
-        <span class="images-summary-dot unused"></span>
-        ${unused.length} unused image${unused.length !== 1 ? 's' : ''} — <strong>${fmtSize(unusedSize)}</strong> reclaimable
-        <button class="btn btn-xs btn-danger-outline" style="margin-left:0.75rem" onclick="pruneImages()">Prune all unused</button>
-       </div>`
-    : '';
 
   const rows = images.map((img) => {
     const tag = img.tags.length > 0 ? img.tags[0] : `<span style="color:var(--text-muted)">&lt;none&gt;</span>`;
@@ -119,7 +110,6 @@ function renderImages(images) {
   }).join('');
 
   body.innerHTML = `
-    ${summaryBar}
     <div class="images-table-wrap">
       <table class="images-table">
         <thead>
