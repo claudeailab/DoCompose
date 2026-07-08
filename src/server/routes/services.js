@@ -105,16 +105,61 @@ router.get('/', async (req, res) => {
 
 // Get the compose project name from the running container's labels so we can
 // pass -p to docker compose and match what the user runs on the host.
-async function getComposeProject(serviceName) {
-  try {
-    const containers = await listContainers();
-    const found = containers.find((c) => {
-      const labels = c.Labels || {};
-      return labels['com.docker.compose.service'] === serviceName;
-    });
-    if (found) return (found.Labels || {})['com.docker.compose.project'] || null;
-  } catch {}
-  return null;
+// Recreate a container using the Docker API directly, preserving all original
+// labels (including com.docker.compose.project.working_dir). This avoids the
+// "name already in use" conflict that occurs when docker compose stamps a
+// different working_dir than the one the user originally ran compose from.
+async function recreateContainerViaApi(containerName, pullFirst) {
+  const Docker = require('dockerode');
+  const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+  const container = docker.getContainer(containerName);
+  const info = await container.inspect();
+
+  if (pullFirst) {
+    await runDocker(['pull', info.Config.Image]);
+  }
+
+  const networks = info.NetworkSettings.Networks || {};
+  const networkNames = Object.keys(networks);
+
+  const createConfig = {
+    name: containerName,
+    Image: info.Config.Image,
+    Hostname: info.Config.Hostname,
+    Domainname: info.Config.Domainname,
+    User: info.Config.User,
+    Env: info.Config.Env,
+    Cmd: info.Config.Cmd,
+    Entrypoint: info.Config.Entrypoint,
+    WorkingDir: info.Config.WorkingDir,
+    ExposedPorts: info.Config.ExposedPorts,
+    Volumes: info.Config.Volumes,
+    Labels: info.Config.Labels,
+    HostConfig: {
+      ...info.HostConfig,
+      NetworkMode: networkNames[0] || info.HostConfig.NetworkMode,
+    },
+    NetworkingConfig: networkNames.length > 0
+      ? { EndpointsConfig: { [networkNames[0]]: networks[networkNames[0]] } }
+      : undefined,
+  };
+
+  try { await container.stop({ t: 15 }); } catch {}
+  await container.remove({ force: true });
+
+  const newContainer = await docker.createContainer(createConfig);
+  await newContainer.start();
+
+  for (const netName of networkNames.slice(1)) {
+    try {
+      await docker.getNetwork(netName).connect({
+        Container: containerName,
+        EndpointConfig: networks[netName],
+      });
+    } catch (e) {
+      console.warn(`[recreate] Could not connect to network ${netName}:`, e.message);
+    }
+  }
 }
 
 async function getContainerName(projectDir, serviceName) {
@@ -180,19 +225,11 @@ router.post('/:name/restart', async (req, res) => {
 });
 
 // POST /api/services/:name/recreate
-// Explicitly remove the container first (clears the name regardless of whether
-// compose recognises it), then use --force-recreate so compose re-creates it
-// with correct tracking labels.
 router.post('/:name/recreate', async (req, res) => {
   try {
-    const project = req.query.project || '';
-    const name = req.params.name;
-    const composeProject = await getComposeProject(name);
-    const containerName = await getContainerName(project, name);
-    try { await runDocker(['rm', '-f', containerName]); } catch {}
-    const extraArgs = composeProject ? ['-p', composeProject] : [];
-    const { stdout, stderr } = await runCompose(project, [...extraArgs, 'up', '-d', '--force-recreate', '--no-deps', name]);
-    res.json({ ok: true, stdout, stderr });
+    const containerName = await getContainerName(req.query.project || '', req.params.name);
+    await recreateContainerViaApi(containerName, false);
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -304,12 +341,9 @@ main().catch((e) => { console.error('[self-update] Error:', e.message); process.
       return;
     }
 
-    const composeProject = await getComposeProject(name);
     const containerName = await getContainerName(project, name);
-    try { await runDocker(['rm', '-f', containerName]); } catch {}
-    const extraArgs = composeProject ? ['-p', composeProject] : [];
-    const { stdout, stderr } = await runCompose(project, [...extraArgs, 'up', '-d', '--force-recreate', '--no-deps', name]);
-    res.json({ ok: true, stdout, stderr });
+    await recreateContainerViaApi(containerName, true);
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
