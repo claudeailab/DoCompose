@@ -37,7 +37,12 @@ async function runJob(job) {
 
   try {
     const token = await getValidToken();
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
+    // Use the configured timezone so folder names match local time, not UTC.
+    const tz = settings.timezone || process.env.TZ || 'UTC';
+    const now = new Date();
+    const localStr = now.toLocaleString('sv-SE', { timeZone: tz, hour12: false })
+      .replace(' ', '_').replace(/:/g, '-');
+    const timestamp = localStr.slice(0, 19);
     const snapshotBase = `${folderPath}/${job.containerName}/${timestamp}`;
 
     let uploaded = 0, failed = 0, firstError = null;
@@ -116,9 +121,10 @@ function scheduleJobs() {
       console.warn(`[Backup] Invalid cron for job "${job.id}": ${job.schedule}`);
       continue;
     }
-    const task = cron.schedule(job.schedule, () => runJob(job).catch(() => {}));
+    const tz = settings.timezone || process.env.TZ || 'UTC';
+    const task = cron.schedule(job.schedule, () => runJob(job).catch(() => {}), { timezone: tz });
     activeTasks.set(job.id, task);
-    console.log(`[Backup] Scheduled job "${job.label || job.id}" (${job.schedule})`);
+    console.log(`[Backup] Scheduled job "${job.label || job.id}" (${job.schedule}) in timezone ${tz}`);
   }
 }
 module.exports.scheduleJobs = scheduleJobs;
