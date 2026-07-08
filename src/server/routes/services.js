@@ -197,7 +197,34 @@ router.post('/:name/update', async (req, res) => {
   try {
     const project = req.query.project || '';
     const name = req.params.name;
+
+    // Detect self-update: updating DoCompose itself kills this process mid-update.
+    // Pull first (safe), then spawn the recreate as a fully detached process that
+    // outlives the DoCompose container so Docker Compose can finish bringing it back.
+    let isSelf = false;
+    try {
+      const { parsed } = readCompose(project);
+      const svc = parsed && parsed.services && parsed.services[name];
+      const img = svc && svc.image;
+      isSelf = name === 'docompose' || (img && img.includes('claudeailab/docompose'));
+    } catch {}
+
     await runCompose(project, ['pull', name]);
+
+    if (isSelf) {
+      // Respond before the container dies, then let the detached process finish recreating.
+      const { getComposePath } = require('../compose');
+      const path = require('path');
+      const { spawn } = require('child_process');
+      const cwd = path.dirname(getComposePath(project));
+      res.json({ ok: true, self: true });
+      const child = spawn('docker', ['compose', 'up', '-d', '--force-recreate', '--no-deps', name], {
+        cwd, detached: true, stdio: 'ignore',
+      });
+      child.unref();
+      return;
+    }
+
     const containerName = await getContainerName(project, name);
     try { await runDocker(['rm', '-f', containerName]); } catch {}
     const { stdout, stderr } = await runCompose(project, ['up', '-d', '--force-recreate', '--no-deps', name]);
