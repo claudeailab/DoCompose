@@ -600,10 +600,35 @@ async function settingsInit() {
       if (!backupJobs[idx].paths.includes(p)) {
         backupJobs[idx].paths.push(p);
         markDirty();
-        const ta = document.getElementById('bjmPaths') || document.querySelector(`.bj-paths[data-idx="${idx}"]`);
-        if (ta) ta.value = backupJobs[idx].paths.join('\n');
+        renderPathChips(idx);
       }
     }
+
+    function removePathFromJob(idx, p) {
+      if (!backupJobs[idx].paths) return;
+      backupJobs[idx].paths = backupJobs[idx].paths.filter((x) => x !== p);
+      markDirty();
+      renderPathChips(idx);
+    }
+
+    function renderPathChips(idx) {
+      const container = document.getElementById('bjmPathChips');
+      if (!container) return;
+      const paths = backupJobs[idx].paths || [];
+      if (paths.length === 0) {
+        container.innerHTML = `<span class="path-chips-empty">No folders selected — click Browse to add</span>`;
+      } else {
+        container.innerHTML = paths.map((p) => `
+          <span class="path-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;flex-shrink:0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span class="path-chip-label">${escHtml(p)}</span>
+            <button class="path-chip-remove" onclick="removePathFromJobGlobal(${idx},${JSON.stringify(p)})" title="Remove">×</button>
+          </span>`).join('');
+      }
+    }
+
+    // Expose removePathFromJob for inline onclick in chips
+    window.removePathFromJobGlobal = (idx, p) => removePathFromJob(idx, p);
 
     overlay.querySelector('.fb-close').addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
@@ -757,11 +782,9 @@ async function settingsInit() {
             ${buildSchedGui(job.schedule || '0 2 * * *')}
           </div>
           <div class="field">
-            <div class="field-label">Paths to back up</div>
-            <div class="paths-wrap-row">
-              <textarea class="settings-input textarea" id="bjmPaths" rows="3" placeholder="One path per line, e.g. /compose/config/myapp">${escHtml((job.paths || []).join('\n'))}</textarea>
-              <button class="btn btn-secondary btn-sm" id="bjmBrowse" type="button">${IC.folder}Browse</button>
-            </div>
+            <div class="field-label">Folders to back up</div>
+            <div id="bjmPathChips" class="path-chips-wrap"></div>
+            <button class="btn btn-secondary btn-sm" id="bjmBrowse" type="button" style="margin-top:0.5rem">${IC.folder}Browse folders…</button>
           </div>
           <div class="field-grid" style="grid-template-columns:1fr 1fr;gap:0.75rem">
             <div class="field">
@@ -788,9 +811,9 @@ async function settingsInit() {
     document.getElementById('bjmContainer').addEventListener('change', (e) => { backupJobs[bjModalIdx].containerName = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
     ['bjmFreq','bjmHour','bjmMin','bjmDow'].forEach((id) => { const el = document.getElementById(id); if (el) el.addEventListener('change', syncSchedGui); });
     const cronRaw = document.getElementById('bjmCronRaw'); if (cronRaw) cronRaw.addEventListener('input', syncSchedGui);
-    document.getElementById('bjmPaths').addEventListener('input', (e) => { backupJobs[bjModalIdx].paths = e.target.value.split('\n').map((l) => l.trim()).filter(Boolean); markDirty(); });
     document.getElementById('bjmKeep').addEventListener('change', (e) => { backupJobs[bjModalIdx].keepCount = +e.target.value || 10; markDirty(); });
     document.getElementById('bjmBrowse').addEventListener('click', () => { bjFileBrowserForModal = true; openFileBrowser(bjModalIdx); });
+    renderPathChips(bjModalIdx);
     document.getElementById('bjmDone').addEventListener('click', closeJobModal);
     document.getElementById('bjmDelete').addEventListener('click', () => {
       backupJobs.splice(bjModalIdx, 1); closeJobModal(); renderBackupJobs(); markDirty();

@@ -989,6 +989,58 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 .paths-wrap-row .settings-input.textarea { flex: 1; min-width: 0; }
 .paths-wrap-row .btn { flex-shrink: 0; align-self: flex-start; }
 
+/* path chips (backup job folder selection) */
+.path-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.55rem;
+  background: var(--surface-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  align-items: flex-start;
+  align-content: flex-start;
+}
+.path-chips-empty {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  align-self: center;
+}
+.path-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--accent-dim);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent);
+  border-radius: var(--r-pill);
+  padding: 0.2rem 0.45rem 0.2rem 0.35rem;
+  font-size: 0.78rem;
+  max-width: 100%;
+}
+.path-chip svg { flex-shrink: 0; width: 12px; height: 12px; }
+.path-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
+}
+.path-chip-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--accent);
+  opacity: 0.6;
+  padding: 0 0.1rem;
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.path-chip-remove:hover { opacity: 1; }
+
 /* file browser modal */
 .fb-modal { width: min(500px, 95vw); height: min(560px, 85vh); display: flex; flex-direction: column; }
 .fb-path { padding: 0.5rem 1.25rem; background: var(--surface-inset); border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
