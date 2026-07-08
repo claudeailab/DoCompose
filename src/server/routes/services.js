@@ -7,6 +7,38 @@ const { readCompose } = require('../compose');
 
 const router = express.Router();
 
+// Extract the registry hostname from an image reference.
+// "ghcr.io/foo/bar:tag" → "ghcr.io"
+// "myuser/myimage:tag"  → "" (Docker Hub)
+// "nginx"               → "" (Docker Hub)
+function registryFromImage(image) {
+  if (!image) return '';
+  const name = image.split(':')[0];
+  const first = name.split('/')[0];
+  // A registry hostname contains a dot or colon, or is "localhost"
+  if (first.includes('.') || first.includes(':') || first === 'localhost') return first;
+  return '';
+}
+
+// Log in to the registry for the given image using stored credentials, if any.
+async function loginForImage(image) {
+  const { readSettings } = require('./settings');
+  const registry = registryFromImage(image);
+  const settings = readSettings();
+  const cred = (settings.registries || []).find((r) => (r.server || '') === registry);
+  if (!cred || !cred.username || !cred.password) return;
+
+  await new Promise((resolve) => {
+    const args = ['login', '--username', cred.username, '--password-stdin'];
+    if (cred.server) args.push(cred.server);
+    const proc = execFile('docker', args, { timeout: 30000 }, (err) => {
+      if (err) console.warn('[pull] docker login failed for', registry, err.message);
+      resolve();
+    });
+    if (proc.stdin) { proc.stdin.write(cred.password); proc.stdin.end(); }
+  });
+}
+
 // Reject unsafe service names before they reach docker argv (a leading '-'
 // would be parsed as a flag; only compose-legal characters are allowed).
 router.param('name', (req, res, next, name) => {
@@ -116,6 +148,7 @@ async function recreateContainerViaApi(containerName, pullFirst) {
   const info = await container.inspect();
 
   if (pullFirst) {
+    await loginForImage(info.Config.Image);
     await runDocker(['pull', info.Config.Image]);
   }
 
@@ -238,6 +271,14 @@ router.post('/:name/recreate', async (req, res) => {
 // POST /api/services/:name/pull
 router.post('/:name/pull', async (req, res) => {
   try {
+    const containerName = await getContainerName(req.query.project || '', req.params.name);
+    // Best-effort: read image from running container so we can pre-login
+    try {
+      const Docker = require('dockerode');
+      const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+      const info = await docker.getContainer(containerName).inspect();
+      await loginForImage(info.Config.Image);
+    } catch {}
     const { stdout, stderr } = await runCompose(req.query.project || '', ['pull', req.params.name]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
