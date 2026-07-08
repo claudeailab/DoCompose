@@ -88,12 +88,17 @@ function showSelfUpdateOverlay() {
 }
 
 function pollUntilBack() {
-  const interval = setInterval(async () => {
-    try {
-      const res = await fetch('/api/health');
-      if (res.ok) { clearInterval(interval); location.reload(); }
-    } catch {}
-  }, 2000);
+  // Wait for the old container to actually die before polling.
+  // Without this delay, health check returns 200 immediately (server still alive)
+  // and the page reloads before the new image has been started.
+  setTimeout(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) { clearInterval(interval); location.reload(); }
+      } catch {}
+    }, 2000);
+  }, 7000);
 }
 
 function dashboardInit() {
