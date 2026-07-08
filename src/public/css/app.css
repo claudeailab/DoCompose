@@ -968,6 +968,11 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 .job-expand.open { transform: rotate(180deg); }
 .job-body { border-top: 1px solid var(--border); padding: 1rem 1.1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem 1.1rem; background: var(--surface-inset); }
 .job-body .field.span2, .job-body .span2 { grid-column: 1 / -1; }
+.sched-gui { display: flex; flex-direction: column; gap: 0.6rem; }
+.sched-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.sched-row .settings-select, .sched-row .settings-input { min-width: 0; }
+.sched-row label { font-size: 0.82rem; color: var(--text-secondary); white-space: nowrap; }
+.sched-cron-preview { font-size: 0.78rem; font-family: var(--font-mono); color: var(--text-muted); margin-top: 0.1rem; }
 .job-presets { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.4rem; }
 .job-preset {
   font-size: 0.72rem; padding: 0.24rem 0.6rem; border-radius: var(--r-pill); border: 1px solid var(--border);
@@ -979,6 +984,9 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 .job-status-text.ok { color: var(--success); }
 .job-status-text.err { color: var(--danger); }
 .paths-wrap { display: flex; flex-direction: column; gap: 0.4rem; }
+.paths-wrap-row { display: flex; gap: 0.5rem; align-items: flex-start; }
+.paths-wrap-row .settings-input.textarea { flex: 1; min-width: 0; }
+.paths-wrap-row .btn { flex-shrink: 0; align-self: flex-start; }
 
 /* file browser modal */
 .fb-modal { width: min(500px, 95vw); height: min(560px, 85vh); display: flex; flex-direction: column; }

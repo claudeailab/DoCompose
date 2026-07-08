@@ -619,6 +619,100 @@ async function settingsInit() {
     { label: 'Weekly Sun', value: '0 2 * * 0' },
   ];
 
+  // ── Schedule GUI helpers ───────────────────────────────────────
+  function parseCron(cron) {
+    const p = (cron || '').trim().split(/\s+/);
+    if (p.length !== 5) return null;
+    return { min: p[0], hour: p[1], dom: p[2], mon: p[3], dow: p[4] };
+  }
+
+  function cronToGui(cron) {
+    const p = parseCron(cron);
+    if (!p) return { freq: 'custom', hour: '2', min: '00', dow: '0', cron };
+    if (p.dom === '*' && p.mon === '*' && p.dow === '*') {
+      if (p.hour === '*') return { freq: 'hourly', hour: '0', min: p.min, dow: '0', cron };
+      const [h, m] = [p.hour, p.min];
+      return { freq: 'daily', hour: h, min: m.padStart(2, '0'), dow: '0', cron };
+    }
+    if (p.dom === '*' && p.mon === '*' && p.dow !== '*') {
+      return { freq: 'weekly', hour: p.hour, min: p.min.padStart(2, '0'), dow: p.dow, cron };
+    }
+    return { freq: 'custom', hour: p.hour, min: p.min, dow: p.dow, cron };
+  }
+
+  function guiToCron(freq, hour, min, dow) {
+    if (freq === 'hourly') return `${+min || 0} * * * *`;
+    if (freq === 'daily')  return `${+min || 0} ${+hour || 0} * * *`;
+    if (freq === 'weekly') return `${+min || 0} ${+hour || 0} * * ${dow}`;
+    return null; // custom — don't auto-generate
+  }
+
+  const DOW_LABELS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  function cronLabel(cron) {
+    if (!cron) return 'no schedule';
+    const g = cronToGui(cron);
+    const t = `${String(+g.hour).padStart(2,'0')}:${String(+g.min).padStart(2,'0')}`;
+    if (g.freq === 'hourly') return 'Every hour';
+    if (g.freq === 'daily')  return `Daily at ${t}`;
+    if (g.freq === 'weekly') return `Weekly on ${DOW_LABELS[+g.dow]} at ${t}`;
+    return cron;
+  }
+  const HOURS = Array.from({length:24}, (_,i) => i);
+
+  function buildSchedGui(cron) {
+    const g = cronToGui(cron);
+    const freqOpts = [
+      { v:'hourly', l:'Every hour' }, { v:'daily', l:'Daily' },
+      { v:'weekly', l:'Weekly' }, { v:'custom', l:'Custom (cron)' },
+    ].map((o) => `<option value="${o.v}" ${g.freq===o.v?'selected':''}>${o.l}</option>`).join('');
+
+    const hourOpts = HOURS.map((h) => `<option value="${h}" ${+g.hour===h?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('');
+    const dowOpts = DOW_LABELS.map((l,i) => `<option value="${i}" ${+g.dow===i?'selected':''}>${l}</option>`).join('');
+
+    const timeRow = `<div class="sched-row" id="bjmTimeRow"><label>at</label><select class="settings-select" id="bjmHour" style="width:auto">${hourOpts}</select><label>:</label><input type="number" class="settings-input" id="bjmMin" value="${g.min}" min="0" max="59" style="width:4.5rem"></div>`;
+    const dowRow  = `<div class="sched-row" id="bjmDowRow"><label>on</label><select class="settings-select" id="bjmDow" style="width:auto">${dowOpts}</select></div>`;
+    const customRow = `<input type="text" class="settings-input" id="bjmCronRaw" value="${escHtml(g.freq==='custom'?cron:'')}" placeholder="e.g. 0 2 * * *" style="font-family:var(--font-mono)" id="bjmCronRaw">`;
+
+    const showTime   = g.freq==='daily'||g.freq==='weekly' ? '' : 'display:none';
+    const showDow    = g.freq==='weekly' ? '' : 'display:none';
+    const showCustom = g.freq==='custom' ? '' : 'display:none';
+    const preview    = g.freq!=='custom' ? `<div class="sched-cron-preview" id="bjmCronPreview">cron: ${escHtml(cron)}</div>` : '';
+
+    return `<div class="sched-gui">
+      <div class="sched-row"><select class="settings-select" id="bjmFreq" style="width:auto">${freqOpts}</select></div>
+      <div style="${showTime}">${timeRow}</div>
+      <div style="${showDow}">${dowRow}</div>
+      <div style="${showCustom}">${customRow}</div>
+      ${preview}
+    </div>`;
+  }
+
+  function syncSchedGui() {
+    const freq = document.getElementById('bjmFreq').value;
+    const timeWrap   = document.getElementById('bjmTimeRow') && document.getElementById('bjmTimeRow').parentElement;
+    const dowWrap    = document.getElementById('bjmDowRow') && document.getElementById('bjmDowRow').parentElement;
+    const customEl   = document.getElementById('bjmCronRaw');
+    const previewEl  = document.getElementById('bjmCronPreview');
+    if (timeWrap)  timeWrap.style.display  = (freq==='daily'||freq==='weekly') ? '' : 'none';
+    if (dowWrap)   dowWrap.style.display   = freq==='weekly' ? '' : 'none';
+    if (customEl)  customEl.parentElement.style.display = freq==='custom' ? '' : 'none';
+
+    let cron;
+    if (freq === 'custom') {
+      cron = (customEl && customEl.value.trim()) || backupJobs[bjModalIdx].schedule || '';
+    } else {
+      const h   = document.getElementById('bjmHour')  ? document.getElementById('bjmHour').value  : '2';
+      const m   = document.getElementById('bjmMin')   ? document.getElementById('bjmMin').value   : '0';
+      const dow = document.getElementById('bjmDow')   ? document.getElementById('bjmDow').value   : '0';
+      cron = guiToCron(freq, h, m, dow) || '';
+    }
+    if (previewEl) previewEl.textContent = freq !== 'custom' ? `cron: ${cron}` : '';
+    backupJobs[bjModalIdx].schedule = cron;
+    syncJobRow(bjModalIdx);
+    markDirty();
+  }
+
   // ── Backup job edit modal ──────────────────────────────────────
   let bjModalIdx = -1;
   let bjFileBrowserForModal = false;
@@ -663,12 +757,11 @@ async function settingsInit() {
           </div>
           <div class="field">
             <div class="field-label">Schedule</div>
-            <input type="text" class="settings-input" id="bjmSchedule" value="${escHtml(job.schedule || '')}" placeholder="cron expression, e.g. 0 2 * * *" style="font-family:var(--font-mono)">
-            <div class="job-presets" style="margin-top:0.4rem">${SCHEDULE_PRESETS.map((p) => `<button class="job-preset bjm-preset" type="button" data-cron="${escHtml(p.value)}">${escHtml(p.label)}</button>`).join('')}</div>
+            ${buildSchedGui(job.schedule || '0 2 * * *')}
           </div>
           <div class="field">
             <div class="field-label">Paths to back up</div>
-            <div class="paths-wrap">
+            <div class="paths-wrap-row">
               <textarea class="settings-input textarea" id="bjmPaths" rows="3" placeholder="One path per line, e.g. /compose/config/myapp">${escHtml((job.paths || []).join('\n'))}</textarea>
               <button class="btn btn-secondary btn-sm" id="bjmBrowse" type="button">${IC.folder}Browse</button>
             </div>
@@ -696,14 +789,10 @@ async function settingsInit() {
     document.getElementById('bjmLabel').addEventListener('input', (e) => { backupJobs[bjModalIdx].label = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
     document.getElementById('bjmDestination').addEventListener('change', (e) => { backupJobs[bjModalIdx].destination = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
     document.getElementById('bjmContainer').addEventListener('change', (e) => { backupJobs[bjModalIdx].containerName = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
-    document.getElementById('bjmSchedule').addEventListener('input', (e) => { backupJobs[bjModalIdx].schedule = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
+    ['bjmFreq','bjmHour','bjmMin','bjmDow'].forEach((id) => { const el = document.getElementById(id); if (el) el.addEventListener('change', syncSchedGui); });
+    const cronRaw = document.getElementById('bjmCronRaw'); if (cronRaw) cronRaw.addEventListener('input', syncSchedGui);
     document.getElementById('bjmPaths').addEventListener('input', (e) => { backupJobs[bjModalIdx].paths = e.target.value.split('\n').map((l) => l.trim()).filter(Boolean); markDirty(); });
     document.getElementById('bjmKeep').addEventListener('change', (e) => { backupJobs[bjModalIdx].keepCount = +e.target.value || 10; markDirty(); });
-    document.querySelectorAll('.bjm-preset').forEach((btn) => btn.addEventListener('click', () => {
-      backupJobs[bjModalIdx].schedule = btn.dataset.cron;
-      document.getElementById('bjmSchedule').value = btn.dataset.cron;
-      syncJobRow(bjModalIdx); markDirty();
-    }));
     document.getElementById('bjmBrowse').addEventListener('click', () => { bjFileBrowserForModal = true; openFileBrowser(bjModalIdx); });
     document.getElementById('bjmDone').addEventListener('click', closeJobModal);
     document.getElementById('bjmDelete').addEventListener('click', () => {
@@ -741,7 +830,7 @@ async function settingsInit() {
     const dest = job.destination === 'dropbox' ? 'Dropbox' : 'OneDrive';
     row.querySelector('.job-dest').textContent = dest;
     row.querySelector('.bj-meta-container').textContent = job.containerName || 'no container';
-    row.querySelector('.bj-meta-sched').textContent = job.schedule || 'no schedule';
+    row.querySelector('.bj-meta-sched').textContent = cronLabel(job.schedule);
     row.querySelector('.job-label-input').value = job.label || '';
   }
 
@@ -772,7 +861,7 @@ async function settingsInit() {
             <span class="job-dest">${dest}</span>
             <span class="bj-meta-container">${escHtml(job.containerName || 'no container')}</span>
             <span>·</span>
-            <span class="bj-meta-sched">${escHtml(job.schedule || 'no schedule')}</span>
+            <span class="bj-meta-sched">${escHtml(cronLabel(job.schedule))}</span>
             <span class="job-status-dot ${dotCls}" title="${escHtml(statusTxt)}"></span>
           </div>
           <button class="job-expand bj-edit-btn" data-idx="${idx}" title="Edit">${IC.edit || IC.chevron}</button>
