@@ -124,6 +124,21 @@
   <!-- Toast notifications -->
   <div class="toast-container" id="toastContainer"></div>
 
+  <!-- Update progress modal -->
+  <div id="updateProgressModal">
+    <div class="upm-box">
+      <div class="upm-head">
+        <div class="upm-spinner" id="upmSpinner"></div>
+        <div class="upm-title" id="upmTitle">Updating…</div>
+      </div>
+      <div class="upm-body" id="upmBody"></div>
+      <div class="upm-foot" id="upmFoot">
+        <div class="upm-status" id="upmStatus"></div>
+        <button class="btn btn-secondary" onclick="closeUpdateProgressModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/app.js?v=0.7.1"></script>
   <script src="/js/dashboard.js?v=0.7.1"></script>
   <script src="/js/service.js?v=0.7.1"></script>

@@ -206,24 +206,17 @@ async function serviceInit() {
 
   const updBtn = document.getElementById('svcActUpdate');
   if (updBtn) updBtn.addEventListener('click', async () => {
-    const ok = await dcConfirm(`Pull the latest image for "${name}" and recreate the container?`, 'Pull & Update');
+    const svc = (DC.services || []).find((s) => s.name === name);
+    const isSelf = name === 'docompose' || (svc && svc.image && svc.image.includes('claudeailab/docompose'));
+    const confirmMsg = isSelf
+      ? 'This will update DoCompose itself. The app will restart and reconnect automatically.'
+      : `Pull the latest image for "${name}" and recreate the container?`;
+    const ok = await dcConfirm(confirmMsg, isSelf ? 'Update DoCompose' : 'Pull & Update');
     if (!ok) return;
-    [document.getElementById('svcActStartStop'), document.getElementById('svcActRestart'),
-     document.getElementById('svcActRecreate'), updBtn].forEach((b) => { if (b) b.disabled = true; });
     DC.updates[name] = 'updating';
     if (window.refreshUpdateCell) refreshUpdateCell(name);
     showServiceDetail(name, svcCurrentTab);
-    try {
-      await api('POST', `/api/services/${encodeURIComponent(name)}/update`);
-      DC.updates[name] = null;
-      showToast(`${name}: updated and restarted`, 'success');
-      if (window.updateCardState) updateCardState(name, 'running');
-      showServiceDetail(name, svcCurrentTab);
-    } catch (err) {
-      DC.updates[name] = null;
-      showToast(`${name}: ${err.message}`, 'error');
-      showServiceDetail(name, svcCurrentTab);
-    }
+    if (window.openUpdateProgressModal) openUpdateProgressModal(name, DC.currentProject || '');
   });
 }
 window.serviceInit = serviceInit;

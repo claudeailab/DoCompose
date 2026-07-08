@@ -101,6 +101,92 @@ function pollUntilBack() {
   }, 7000);
 }
 
+/* ---- Update progress modal ---- */
+let upmEs = null;
+
+function openUpdateProgressModal(name, project) {
+  const modal = document.getElementById('updateProgressModal');
+  const title = document.getElementById('upmTitle');
+  const body  = document.getElementById('upmBody');
+  const foot  = document.getElementById('upmFoot');
+  const spinner = document.getElementById('upmSpinner');
+  const status  = document.getElementById('upmStatus');
+
+  title.textContent = `Updating ${name}…`;
+  body.innerHTML = '';
+  foot.style.display = 'none';
+  spinner.style.display = 'block';
+  status.textContent = '';
+  status.className = 'upm-status';
+  modal.style.display = 'flex';
+
+  if (upmEs) { upmEs.close(); upmEs = null; }
+
+  const qs = project ? `?project=${encodeURIComponent(project)}` : '';
+  upmEs = new EventSource(`/api/services/${encodeURIComponent(name)}/update/stream${qs}`);
+
+  upmEs.onmessage = (e) => {
+    const line = JSON.parse(e.data);
+    const div = document.createElement('div');
+    div.textContent = line;
+    if (line.startsWith('→')) div.className = 'upm-line-head';
+    else if (line.includes('✓')) div.className = 'upm-line-ok';
+    else if (line.includes('✗')) div.className = 'upm-line-err';
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  };
+
+  upmEs.addEventListener('done', () => {
+    upmEs.close(); upmEs = null;
+    spinner.style.display = 'none';
+    title.textContent = `Updated ${name}`;
+    foot.style.display = 'flex';
+    status.textContent = '✓ Complete';
+    status.className = 'upm-status ok';
+    DC.updates[name] = null;
+    if (window.updateCardState) updateCardState(name, 'running');
+    if (window.refreshUpdateCell) refreshUpdateCell(name);
+    if (DC.currentView === 'service' && window.svcName === name) showServiceDetail(name, window.svcCurrentTab);
+  });
+
+  upmEs.addEventListener('self', () => {
+    upmEs.close(); upmEs = null;
+    spinner.style.display = 'none';
+    title.textContent = 'Restarting DoCompose…';
+    foot.style.display = 'none';
+    closeUpdateProgressModal();
+    showSelfUpdateOverlay();
+    pollUntilBack();
+  });
+
+  upmEs.addEventListener('error', (e) => {
+    upmEs.close(); upmEs = null;
+    let msg = '';
+    try { msg = JSON.parse(e.data); } catch {}
+    spinner.style.display = 'none';
+    title.textContent = `Update failed`;
+    foot.style.display = 'flex';
+    status.textContent = '✗ ' + (msg || 'Unknown error');
+    status.className = 'upm-status err';
+  });
+
+  upmEs.onerror = () => {
+    if (upmEs && upmEs.readyState === EventSource.CLOSED) return;
+    if (upmEs) { upmEs.close(); upmEs = null; }
+    spinner.style.display = 'none';
+    foot.style.display = 'flex';
+    status.textContent = '✗ Connection lost';
+    status.className = 'upm-status err';
+  };
+}
+
+function closeUpdateProgressModal() {
+  if (upmEs) { upmEs.close(); upmEs = null; }
+  const modal = document.getElementById('updateProgressModal');
+  if (modal) modal.style.display = 'none';
+}
+window.closeUpdateProgressModal = closeUpdateProgressModal;
+
 function dashboardInit() {
   const container = document.getElementById('view-dashboard');
   container.innerHTML = `
@@ -554,36 +640,14 @@ async function serviceAction(name, action, btn) {
   if (action === 'update') {
     const svc = (DC.services || []).find((s) => s.name === name);
     const isSelf = name === 'docompose' || (svc && svc.image && svc.image.includes('claudeailab/docompose'));
-
-    if (isSelf) {
-      const ok = await dcConfirm(
-        'This will update DoCompose itself. The app will restart and reconnect automatically.',
-        'Update DoCompose'
-      );
-      if (!ok) return;
-      DC.updates[name] = 'updating';
-      refreshUpdateCell(name);
-      showSelfUpdateOverlay();
-      try { await api('POST', `/api/services/${encodeURIComponent(name)}/update`); } catch {}
-      pollUntilBack();
-      return;
-    }
-
-    const ok = await dcConfirm(`Pull the latest image for "${name}" and recreate the container?`, 'Pull & Update');
+    const confirmMsg = isSelf
+      ? 'This will update DoCompose itself. The app will restart and reconnect automatically.'
+      : `Pull the latest image for "${name}" and recreate the container?`;
+    const ok = await dcConfirm(confirmMsg, isSelf ? 'Update DoCompose' : 'Pull & Update');
     if (!ok) return;
     DC.updates[name] = 'updating';
     refreshUpdateCell(name);
-    try {
-      await api('POST', `/api/services/${encodeURIComponent(name)}/update`);
-      DC.updates[name] = null;
-      showToast(`${name}: updated and restarted`, 'success');
-      updateCardState(name, 'running');
-      saveUpdateCache();
-    } catch (err) {
-      DC.updates[name] = 'available';
-      refreshUpdateCell(name);
-      showToast(`${name}: ${err.message}`, 'error');
-    }
+    openUpdateProgressModal(name, DC.currentProject || '');
     return;
   }
 
