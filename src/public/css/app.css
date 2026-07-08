@@ -398,6 +398,7 @@ code, kbd, .mono { font-family: var(--font-mono); }
 .view { display: none; flex: 1; min-height: 0; }
 .view.active { display: flex; flex-direction: column; }
 #view-dashboard { overflow-y: auto; }
+#view-images    { overflow-y: auto; }
 
 /* ============================================================
    4. COMPONENTS
@@ -1182,13 +1183,13 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
   font-size: 0.9rem;
 }
 .images-summary {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.6rem 1rem;
+  padding: 0.45rem 0.85rem;
   background: var(--surface-2, var(--surface));
   border: 1px solid var(--border);
-  border-radius: var(--r-md, 0.5rem);
+  border-radius: var(--r-pill, 999px);
   margin-bottom: 1rem;
   font-size: 0.82rem;
   color: var(--text-secondary);
