@@ -212,16 +212,67 @@ router.post('/:name/update', async (req, res) => {
     await runCompose(project, ['pull', name]);
 
     if (isSelf) {
-      // Respond before the container dies, then let the detached process finish recreating.
+      // Spawning docker compose from inside our container doesn't work: when
+      // --force-recreate stops our container, all processes inside (including
+      // the spawned child) die before the recreate step runs.
+      //
+      // Fix: launch a HELPER CONTAINER that is external to our lifecycle.
+      // The helper mounts the docker socket and runs docker-compose from outside.
+      // We inspect our own mounts to discover the host-side path of COMPOSE_DIR.
       const { getComposePath } = require('../compose');
-      const path = require('path');
-      const { spawn } = require('child_process');
-      const cwd = path.dirname(getComposePath(project));
+      const pathMod = require('path');
+      const composeFile = getComposePath(project);
+      const composeDir = pathMod.dirname(composeFile);
+      const COMPOSE_DIR = process.env.COMPOSE_DIR || '/compose';
+
+      let launched = false;
+      try {
+        const Docker = require('dockerode');
+        const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+
+        // Find the host-side source of the /compose volume mount
+        const selfInfo = await docker.getContainer('docompose').inspect();
+        const composeMount = selfInfo.Mounts.find((m) => m.Destination === COMPOSE_DIR);
+        const helperImage = selfInfo.Config.Image;
+
+        if (composeMount) {
+          // Translate the container-internal compose dir to host path
+          const hostComposeRoot = composeMount.Source;
+          const relativeToCompose = pathMod.relative(COMPOSE_DIR, composeDir);
+          const hostComposeDir = relativeToCompose
+            ? pathMod.join(hostComposeRoot, relativeToCompose)
+            : hostComposeRoot;
+
+          // Create a one-shot helper container using our own image (has docker-compose)
+          // It runs outside our container's PID namespace so survives our shutdown.
+          const helper = await docker.createContainer({
+            Image: helperImage,
+            Cmd: ['sh', '-c',
+              `sleep 4 && docker-compose -f "${hostComposeDir}/docker-compose.yml" up -d --force-recreate --no-deps ${name} 2>&1`
+            ],
+            HostConfig: {
+              AutoRemove: true,
+              Binds: ['/var/run/docker.sock:/var/run/docker.sock'],
+            },
+          });
+          await helper.start();
+          launched = true;
+          console.log(`[self-update] Helper container started; will recreate ${name} in 4s`);
+        }
+      } catch (err) {
+        console.warn('[self-update] Could not launch helper container:', err.message);
+      }
+
+      if (!launched) {
+        // Last-resort fallback: best-effort detached spawn (may not complete)
+        const { spawn } = require('child_process');
+        const child = spawn('docker-compose', ['-f', `${composeDir}/docker-compose.yml`,
+          'up', '-d', '--force-recreate', '--no-deps', name], { detached: true, stdio: 'ignore' });
+        child.unref();
+        console.warn('[self-update] Fallback: spawned docker-compose (may die mid-recreate)');
+      }
+
       res.json({ ok: true, self: true });
-      const child = spawn('docker', ['compose', 'up', '-d', '--force-recreate', '--no-deps', name], {
-        cwd, detached: true, stdio: 'ignore',
-      });
-      child.unref();
       return;
     }
 
