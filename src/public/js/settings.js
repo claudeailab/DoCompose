@@ -670,44 +670,42 @@ async function settingsInit() {
     const hourOpts = HOURS.map((h) => `<option value="${h}" ${+g.hour===h?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('');
     const dowOpts = DOW_LABELS.map((l,i) => `<option value="${i}" ${+g.dow===i?'selected':''}>${l}</option>`).join('');
 
-    const timeRow = `<div class="sched-row" id="bjmTimeRow"><label>at</label><select class="settings-select" id="bjmHour" style="width:auto">${hourOpts}</select><label>:</label><input type="number" class="settings-input" id="bjmMin" value="${g.min}" min="0" max="59" style="width:4.5rem"></div>`;
-    const dowRow  = `<div class="sched-row" id="bjmDowRow"><label>on</label><select class="settings-select" id="bjmDow" style="width:auto">${dowOpts}</select></div>`;
-    const customRow = `<input type="text" class="settings-input" id="bjmCronRaw" value="${escHtml(g.freq==='custom'?cron:'')}" placeholder="e.g. 0 2 * * *" style="font-family:var(--font-mono)" id="bjmCronRaw">`;
+    const showDayTime = g.freq==='daily'||g.freq==='weekly' ? '' : 'display:none';
+    const showDow     = g.freq==='weekly' ? '' : 'display:none';
+    const showCustom  = g.freq==='custom' ? '' : 'display:none';
 
-    const showTime   = g.freq==='daily'||g.freq==='weekly' ? '' : 'display:none';
-    const showDow    = g.freq==='weekly' ? '' : 'display:none';
-    const showCustom = g.freq==='custom' ? '' : 'display:none';
-    const preview    = g.freq!=='custom' ? `<div class="sched-cron-preview" id="bjmCronPreview">cron: ${escHtml(cron)}</div>` : '';
+    // Day + time in one row; dow wrapper hidden unless weekly
+    const dayTimeRow = `<div class="sched-row" id="bjmDayTimeRow" style="${showDayTime}">
+      <span id="bjmDowWrap" style="${showDow}"><label>on</label><select class="settings-select" id="bjmDow" style="width:auto">${dowOpts}</select></span>
+      <label>at</label><select class="settings-select" id="bjmHour" style="width:auto">${hourOpts}</select><label>:</label><input type="number" class="settings-input" id="bjmMin" value="${g.min}" min="0" max="59" style="width:4.5rem">
+    </div>`;
+    const customRow = `<div style="${showCustom}"><input type="text" class="settings-input" id="bjmCronRaw" value="${escHtml(g.freq==='custom'?cron:'')}" placeholder="e.g. 0 2 * * *" style="font-family:var(--font-mono)"></div>`;
 
     return `<div class="sched-gui">
       <div class="sched-row"><select class="settings-select" id="bjmFreq" style="width:auto">${freqOpts}</select></div>
-      <div style="${showTime}">${timeRow}</div>
-      <div style="${showDow}">${dowRow}</div>
-      <div style="${showCustom}">${customRow}</div>
-      ${preview}
+      ${dayTimeRow}
+      ${customRow}
     </div>`;
   }
 
   function syncSchedGui() {
-    const freq = document.getElementById('bjmFreq').value;
-    const timeWrap   = document.getElementById('bjmTimeRow') && document.getElementById('bjmTimeRow').parentElement;
-    const dowWrap    = document.getElementById('bjmDowRow') && document.getElementById('bjmDowRow').parentElement;
+    const freq       = document.getElementById('bjmFreq').value;
+    const dayTimeRow = document.getElementById('bjmDayTimeRow');
+    const dowWrap    = document.getElementById('bjmDowWrap');
     const customEl   = document.getElementById('bjmCronRaw');
-    const previewEl  = document.getElementById('bjmCronPreview');
-    if (timeWrap)  timeWrap.style.display  = (freq==='daily'||freq==='weekly') ? '' : 'none';
-    if (dowWrap)   dowWrap.style.display   = freq==='weekly' ? '' : 'none';
-    if (customEl)  customEl.parentElement.style.display = freq==='custom' ? '' : 'none';
+    if (dayTimeRow) dayTimeRow.style.display = (freq==='daily'||freq==='weekly') ? '' : 'none';
+    if (dowWrap)    dowWrap.style.display    = freq==='weekly' ? '' : 'none';
+    if (customEl)   customEl.parentElement.style.display = freq==='custom' ? '' : 'none';
 
     let cron;
     if (freq === 'custom') {
       cron = (customEl && customEl.value.trim()) || backupJobs[bjModalIdx].schedule || '';
     } else {
-      const h   = document.getElementById('bjmHour')  ? document.getElementById('bjmHour').value  : '2';
-      const m   = document.getElementById('bjmMin')   ? document.getElementById('bjmMin').value   : '0';
-      const dow = document.getElementById('bjmDow')   ? document.getElementById('bjmDow').value   : '0';
+      const h   = (document.getElementById('bjmHour') || {}).value || '2';
+      const m   = (document.getElementById('bjmMin')  || {}).value || '0';
+      const dow = (document.getElementById('bjmDow')  || {}).value || '0';
       cron = guiToCron(freq, h, m, dow) || '';
     }
-    if (previewEl) previewEl.textContent = freq !== 'custom' ? `cron: ${cron}` : '';
     backupJobs[bjModalIdx].schedule = cron;
     syncJobRow(bjModalIdx);
     markDirty();
