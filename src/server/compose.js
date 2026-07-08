@@ -126,7 +126,11 @@ function addServiceSpacing(yaml) {
   let inServices = false;
   for (const line of lines) {
     if (/^services:\s*$/.test(line)) { inServices = true; out.push(line); continue; }
-    if (inServices && /^[^ ]/.test(line)) inServices = false;
+    if (inServices && /^[^ ]/.test(line)) {
+      // Leaving the services block — ensure a blank line before this top-level key
+      inServices = false;
+      if (out.length && out[out.length - 1] !== '') out.push('');
+    }
     if (inServices && /^  \S/.test(line) && out.length && out[out.length - 1] !== '') {
       out.push('');
     }
