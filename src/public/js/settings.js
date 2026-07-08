@@ -670,20 +670,19 @@ async function settingsInit() {
     const hourOpts = HOURS.map((h) => `<option value="${h}" ${+g.hour===h?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('');
     const dowOpts = DOW_LABELS.map((l,i) => `<option value="${i}" ${+g.dow===i?'selected':''}>${l}</option>`).join('');
 
-    const showDayTime = g.freq==='daily'||g.freq==='weekly' ? '' : 'display:none';
-    const showDow     = g.freq==='weekly' ? '' : 'display:none';
+    const showDayTime = g.freq==='daily'||g.freq==='weekly' ? 'display:inline-flex;align-items:center;gap:0.4rem' : 'display:none';
+    const showDow     = g.freq==='weekly' ? 'display:inline-flex;align-items:center;gap:0.4rem' : 'display:none';
     const showCustom  = g.freq==='custom' ? '' : 'display:none';
 
-    // Day + time in one row; dow wrapper hidden unless weekly
-    const dayTimeRow = `<div class="sched-row" id="bjmDayTimeRow" style="${showDayTime}">
-      <span id="bjmDowWrap" style="${showDow}"><label>on</label><select class="settings-select" id="bjmDow" style="width:auto">${dowOpts}</select></span>
-      <label>at</label><select class="settings-select" id="bjmHour" style="width:auto">${hourOpts}</select><label>:</label><input type="number" class="settings-input" id="bjmMin" value="${g.min}" min="0" max="59" style="width:4.5rem">
-    </div>`;
     const customRow = `<div style="${showCustom}"><input type="text" class="settings-input" id="bjmCronRaw" value="${escHtml(g.freq==='custom'?cron:'')}" placeholder="e.g. 0 2 * * *" style="font-family:var(--font-mono)"></div>`;
 
+    // All controls on ONE row: [freq] [on day] [at hour : min]
     return `<div class="sched-gui">
-      <div class="sched-row"><select class="settings-select" id="bjmFreq" style="width:auto">${freqOpts}</select></div>
-      ${dayTimeRow}
+      <div class="sched-row">
+        <select class="settings-select" id="bjmFreq" style="width:auto">${freqOpts}</select>
+        <span id="bjmDowWrap" style="${showDow}"><label>on</label><select class="settings-select" id="bjmDow" style="width:auto">${dowOpts}</select></span>
+        <span id="bjmDayTimeRow" style="${showDayTime}"><label>at</label><select class="settings-select" id="bjmHour" style="width:auto">${hourOpts}</select><label>:</label><input type="number" class="settings-input" id="bjmMin" value="${g.min}" min="0" max="59" style="width:4.5rem"></span>
+      </div>
       ${customRow}
     </div>`;
   }
@@ -693,8 +692,8 @@ async function settingsInit() {
     const dayTimeRow = document.getElementById('bjmDayTimeRow');
     const dowWrap    = document.getElementById('bjmDowWrap');
     const customEl   = document.getElementById('bjmCronRaw');
-    if (dayTimeRow) dayTimeRow.style.display = (freq==='daily'||freq==='weekly') ? '' : 'none';
-    if (dowWrap)    dowWrap.style.display    = freq==='weekly' ? '' : 'none';
+    if (dayTimeRow) dayTimeRow.style.display = (freq==='daily'||freq==='weekly') ? 'inline-flex' : 'none';
+    if (dowWrap)    dowWrap.style.display    = freq==='weekly' ? 'inline-flex' : 'none';
     if (customEl)   customEl.parentElement.style.display = freq==='custom' ? '' : 'none';
 
     let cron;
