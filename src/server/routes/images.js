@@ -1,17 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { execFile } = require('child_process');
 const router = express.Router();
-
-function runDocker(args) {
-  return new Promise((resolve, reject) => {
-    execFile('docker', args, { timeout: 60000 }, (err, stdout, stderr) => {
-      if (err) return reject(new Error(stderr || err.message));
-      resolve(stdout.trim());
-    });
-  });
-}
 
 // GET /api/images — list all images with used/unused status
 router.get('/', async (req, res) => {
@@ -69,22 +59,47 @@ router.get('/', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    // Basic safety: reject if it looks like a flag
     if (!/^[a-f0-9]{12,64}$/.test(id) && !/^[a-zA-Z0-9]/.test(id)) {
       return res.status(400).json({ error: 'Invalid image id' });
     }
-    await runDocker(['rmi', id]);
+    const Docker = require('dockerode');
+    const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+    await docker.getImage(id).remove({ force: false });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// DELETE /api/images — prune all unused images
+// DELETE /api/images — prune all unused images (via dockerode, no CLI needed)
 router.delete('/', async (req, res) => {
   try {
-    const out = await runDocker(['image', 'prune', '-f']);
-    res.json({ ok: true, output: out });
+    const Docker = require('dockerode');
+    const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+
+    // Find all images not referenced by any container
+    const [images, containers] = await Promise.all([
+      docker.listImages({ all: false }),
+      docker.listContainers({ all: true }),
+    ]);
+    const usedIds = new Set(containers.map((c) => (c.ImageID || '').replace(/^sha256:/, '')));
+    const usedRefs = new Set(containers.map((c) => c.Image).filter(Boolean));
+
+    const unused = images.filter((img) => {
+      const id = (img.Id || '').replace(/^sha256:/, '');
+      const tags = img.RepoTags || [];
+      return !usedIds.has(id) && !tags.some((t) => usedRefs.has(t));
+    });
+
+    let removed = 0;
+    for (const img of unused) {
+      try {
+        await docker.getImage(img.Id).remove({ force: false });
+        removed++;
+      } catch {}
+    }
+
+    res.json({ ok: true, output: `Removed ${removed} image(s)` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
