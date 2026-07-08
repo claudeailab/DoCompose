@@ -26,9 +26,9 @@ async function imagesInit() {
   c.innerHTML = `
     <div class="view-header">
       <div class="pane-head">
-        <div class="pane-head-text">
+        <div class="pane-head-text" style="display:flex;align-items:baseline;gap:0.6rem;flex-wrap:wrap">
           <h1 class="pane-title">Images</h1>
-          <p class="pane-sub">All Docker images on this host</p>
+          <span class="pane-subtitle">All Docker images on this host</span>
         </div>
         <div class="pane-head-actions">
           <button class="btn btn-secondary" id="imgRefreshBtn" onclick="imagesInit()">
@@ -84,10 +84,7 @@ function renderImages(images) {
         ${unused.length} unused image${unused.length !== 1 ? 's' : ''} — <strong>${fmtSize(unusedSize)}</strong> reclaimable
         <button class="btn btn-xs btn-danger-outline" style="margin-left:0.75rem" onclick="pruneImages()">Prune all unused</button>
        </div>`
-    : `<div class="images-summary ok">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--green)"><polyline points="20 6 9 17 4 12"/></svg>
-        All images are in use
-       </div>`;
+    : '';
 
   const rows = images.map((img) => {
     const tag = img.tags.length > 0 ? img.tags[0] : `<span style="color:var(--text-muted)">&lt;none&gt;</span>`;
