@@ -212,62 +212,76 @@ router.post('/:name/update', async (req, res) => {
     await runCompose(project, ['pull', name]);
 
     if (isSelf) {
-      // Spawning docker compose from inside our container doesn't work: when
-      // --force-recreate stops our container, all processes inside (including
-      // the spawned child) die before the recreate step runs.
-      //
-      // Fix: launch a HELPER CONTAINER that is external to our lifecycle.
-      // The helper mounts the docker socket and runs docker-compose from outside.
-      // We inspect our own mounts to discover the host-side path of COMPOSE_DIR.
-      const { getComposePath } = require('../compose');
-      const pathMod = require('path');
-      const composeFile = getComposePath(project);
-      const composeDir = pathMod.dirname(composeFile);
-      const COMPOSE_DIR = process.env.COMPOSE_DIR || '/compose';
+      // Any process spawned inside our container dies when the container stops.
+      // Solution: launch a helper container (external PID namespace) that uses
+      // the Docker socket HTTP API directly — no compose file, no docker-compose
+      // binary needed. The helper inspects the current container, stops it,
+      // removes it, recreates it with the new image, and starts it.
+      const selfUpdateScript = `
+const http = require('http');
+function dockerRequest(method, path, body) {
+  return new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : null;
+    const req = http.request({
+      socketPath: '/var/run/docker.sock',
+      path, method,
+      headers: data ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } : {},
+    }, (res) => {
+      let d = '';
+      res.on('data', (c) => { d += c; });
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve(d); } });
+    });
+    req.on('error', reject);
+    if (data) req.write(data);
+    req.end();
+  });
+}
+async function main() {
+  await new Promise((r) => setTimeout(r, 5000));
+  const info = await dockerRequest('GET', '/containers/${name}/json');
+  if (!info || !info.Config) { console.error('inspect failed'); process.exit(1); }
+  await dockerRequest('POST', '/containers/${name}/stop?t=15');
+  await dockerRequest('DELETE', '/containers/${name}?force=true');
+  const createBody = {
+    Image: info.Config.Image,
+    Hostname: info.Config.Hostname,
+    User: info.Config.User,
+    Env: info.Config.Env,
+    ExposedPorts: info.Config.ExposedPorts,
+    HostConfig: {
+      Binds: info.HostConfig.Binds,
+      PortBindings: info.HostConfig.PortBindings,
+      RestartPolicy: info.HostConfig.RestartPolicy,
+      NetworkMode: info.HostConfig.NetworkMode,
+    },
+  };
+  await dockerRequest('POST', '/containers/create?name=${name}', createBody);
+  await dockerRequest('POST', '/containers/${name}/start');
+  console.log('[self-update] Done');
+}
+main().catch((e) => { console.error('[self-update] Error:', e.message); process.exit(1); });
+`;
 
-      let launched = false;
       try {
         const Docker = require('dockerode');
         const docker = new Docker({ socketPath: '/var/run/docker.sock' });
-
-        // Find the host-side source of the /compose volume mount
-        const selfInfo = await docker.getContainer('docompose').inspect();
-        const composeMount = selfInfo.Mounts.find((m) => m.Destination === COMPOSE_DIR);
+        const selfInfo = await docker.getContainer(name).inspect();
         const helperImage = selfInfo.Config.Image;
 
-        if (composeMount) {
-          const hostComposeRoot = composeMount.Source;
-          // Mount the host compose root at the same path as in our container so
-          // the compose file path is identical inside the helper.
-          // composeFile = e.g. /compose/docker-compose.yml (container path)
-          const helper = await docker.createContainer({
-            Image: helperImage,
-            Cmd: ['sh', '-c',
-              `sleep 4 && docker-compose -f "${composeFile}" up -d --force-recreate --no-deps ${name} 2>&1`
-            ],
-            HostConfig: {
-              AutoRemove: true,
-              Binds: [
-                '/var/run/docker.sock:/var/run/docker.sock',
-                `${hostComposeRoot}:${COMPOSE_DIR}`,  // compose files accessible at same path
-              ],
-            },
-          });
-          await helper.start();
-          launched = true;
-          console.log(`[self-update] Helper started (image=${helperImage}); will recreate ${name} using ${composeFile}`);
-        }
+        const helper = await docker.createContainer({
+          Image: helperImage,
+          User: '0',
+          Cmd: ['node', '-e', selfUpdateScript],
+          HostConfig: {
+            AutoRemove: true,
+            Binds: ['/var/run/docker.sock:/var/run/docker.sock'],
+          },
+        });
+        await helper.start();
+        console.log(`[self-update] Helper container launched (image=${helperImage})`);
       } catch (err) {
-        console.warn('[self-update] Could not launch helper container:', err.message);
-      }
-
-      if (!launched) {
-        // Last-resort fallback: best-effort detached spawn (may not complete)
-        const { spawn } = require('child_process');
-        const child = spawn('docker-compose', ['-f', `${composeDir}/docker-compose.yml`,
-          'up', '-d', '--force-recreate', '--no-deps', name], { detached: true, stdio: 'ignore' });
-        child.unref();
-        console.warn('[self-update] Fallback: spawned docker-compose (may die mid-recreate)');
+        console.error('[self-update] Failed to launch helper container:', err.message);
+        return res.status(500).json({ error: 'Self-update helper failed to launch: ' + err.message });
       }
 
       res.json({ ok: true, self: true });
