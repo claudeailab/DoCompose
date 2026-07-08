@@ -86,6 +86,7 @@ function showView(viewName) {
   switch (viewName) {
     case 'dashboard': if (window.dashboardInit) dashboardInit(); break;
     case 'service':   if (window.serviceInit) serviceInit(); break;
+    case 'images':    if (window.imagesInit) imagesInit(); break;
     case 'settings':  if (window.settingsInit) settingsInit(); break;
   }
 
