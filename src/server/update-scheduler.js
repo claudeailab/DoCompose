@@ -10,6 +10,7 @@ function toCron(entry) {
   const h = parseInt(entry.hour || 0, 10);
   const m = parseInt(entry.minute || 0, 10);
   switch (entry.frequency) {
+    case 'once':     return `${m} ${h} * * *`; // fires daily at time; auto-disabled after first run
     case 'hourly':   return `${m} * * * *`;
     case 'every6h':  return `${m} */6 * * *`;
     case 'every12h': return `${m} */12 * * *`;
@@ -36,6 +37,12 @@ async function runUpdateJob(entry) {
     if (idx !== -1) {
       jobs[idx].lastStatus = status;
       jobs[idx].lastRun = new Date().toISOString();
+      // Once-off: disable after first run
+      if (jobs[idx].frequency === 'once') {
+        jobs[idx].enabled = false;
+        const task = activeTasks.get(id);
+        if (task) { try { task.stop(); } catch {} activeTasks.delete(id); }
+      }
       s.updateSchedules = jobs;
       writeSettings(s);
     }

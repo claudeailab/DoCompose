@@ -91,13 +91,16 @@ async function settingsInit() {
                   <option value="21600">Every 6 hours</option>
                   <option value="43200">Every 12 hours</option>
                   <option value="86400">Every 24 hours</option>
+                  <option value="259200">Every 3 days</option>
+                  <option value="604800">Every week</option>
+                  <option value="2592000">Every month</option>
                 </select>
               </div>
             </div>
             <div class="stg-section">
               <div class="stg-section-title">Scheduled Updates</div>
               <div id="stgUpdateSchedulesList" class="stg-stack"></div>
-              <button class="btn btn-primary btn-sm" id="stgAddUpdateScheduleBtn" style="margin-top:0.75rem">${IC.plus}Add Schedule</button>
+              <button class="btn btn-primary btn-sm" id="stgAddUpdateScheduleBtn" style="margin-top:0.75rem;width:fit-content">${IC.plus}Add Schedule</button>
             </div>
           </div>
         </div>
@@ -215,6 +218,7 @@ async function settingsInit() {
   const allServices = DC.services || [];
 
   const FREQ_LABELS = {
+    once: 'Once',
     hourly: 'Every hour',
     every6h: 'Every 6 hours',
     every12h: 'Every 12 hours',
@@ -228,6 +232,7 @@ async function settingsInit() {
     const m = String(entry.minute || 0).padStart(2, '0');
     const timeStr = `${h}:${m}`;
     switch (entry.frequency) {
+      case 'once':     return `Once at ${timeStr}`;
       case 'hourly':   return `Every hour`;
       case 'every6h':  return `Every 6 hours`;
       case 'every12h': return `Every 12 hours`;
@@ -299,7 +304,7 @@ async function settingsInit() {
       `<option value="${escHtml(s.name)}" ${s.name === entry.serviceName ? 'selected' : ''}>${escHtml(s.name)}</option>`
     ).join('');
 
-    const needsTime = ['daily', 'weekly'].includes(entry.frequency);
+    const needsTime = ['once', 'daily', 'weekly'].includes(entry.frequency);
     const needsDay = entry.frequency === 'weekly';
 
     const overlay = document.createElement('div');
@@ -322,6 +327,7 @@ async function settingsInit() {
           <div class="field">
             <div class="field-label">Frequency</div>
             <select id="updSchFrequency" class="settings-select">
+              <option value="once" ${entry.frequency === 'once' ? 'selected' : ''}>Once</option>
               <option value="hourly" ${entry.frequency === 'hourly' ? 'selected' : ''}>Every hour</option>
               <option value="every6h" ${entry.frequency === 'every6h' ? 'selected' : ''}>Every 6 hours</option>
               <option value="every12h" ${entry.frequency === 'every12h' ? 'selected' : ''}>Every 12 hours</option>
@@ -361,7 +367,7 @@ async function settingsInit() {
     const dayRow = document.getElementById('updSchDayRow');
     freqSel.addEventListener('change', () => {
       const f = freqSel.value;
-      timeRow.style.display = ['daily','weekly'].includes(f) ? '' : 'none';
+      timeRow.style.display = ['once','daily','weekly'].includes(f) ? '' : 'none';
       dayRow.style.display = f === 'weekly' ? '' : 'none';
     });
 
