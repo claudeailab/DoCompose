@@ -575,9 +575,8 @@ async function settingsInit() {
         <div class="fb-path"><span id="fbCurrentPath">/</span></div>
         <div class="fb-list" id="fbList"><div class="loading"><div class="spinner"></div> Loading…</div></div>
         <div class="modal-footer">
-          <span class="fb-selected" id="fbSelected" style="flex:1;font-size:0.83rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">No folder selected</span>
-          <button class="btn btn-secondary btn-sm" id="fbAddThisBtn" disabled>Add Folder</button>
-          <button class="btn btn-primary btn-sm" id="fbDoneBtn">Done</button>
+          <button class="btn btn-secondary btn-sm" id="fbCancelBtn">Cancel</button>
+          <button class="btn btn-primary btn-sm" id="fbAddThisBtn">Add Folder</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
@@ -601,18 +600,19 @@ async function settingsInit() {
         if (!html) html = '<div class="loading">Empty directory</div>';
         listEl.innerHTML = html;
 
-        listEl.querySelectorAll('.fb-dir, .fb-up').forEach((el) => el.addEventListener('dblclick', () => navigate(el.dataset.path)));
-        listEl.querySelectorAll('.fb-entry').forEach((el) => {
+        // Single-click on a folder navigates into it; click on a file selects it
+        listEl.querySelectorAll('.fb-dir, .fb-up').forEach((el) => {
+          el.addEventListener('click', () => {
+            selectedPath = null;
+            navigate(el.dataset.path);
+          });
+        });
+        listEl.querySelectorAll('.fb-file').forEach((el) => {
           el.addEventListener('click', () => {
             listEl.querySelectorAll('.fb-entry').forEach((e) => e.classList.remove('selected'));
             el.classList.add('selected');
             selectedPath = el.dataset.path;
-            const selEl = document.getElementById('fbSelected'); if (selEl) selEl.textContent = selectedPath;
-            const addBtn = document.getElementById('fbAddThisBtn'); if (addBtn) addBtn.disabled = false;
           });
-        });
-        listEl.querySelectorAll('.fb-dir, .fb-up').forEach((el) => {
-          el.addEventListener('click', () => { /* single-click selects (handled above); dbl navigates */ });
         });
       } catch (e) {
         listEl.innerHTML = `<div class="loading" style="color:var(--danger)">${escHtml(e.message)}</div>`;
@@ -631,8 +631,11 @@ async function settingsInit() {
 
     overlay.querySelector('.fb-close').addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-    document.getElementById('fbAddThisBtn').addEventListener('click', () => addPathToJob(jobIdx, selectedPath || currentPath));
-    document.getElementById('fbDoneBtn').addEventListener('click', () => { if (selectedPath) addPathToJob(jobIdx, selectedPath); overlay.remove(); });
+    document.getElementById('fbCancelBtn').addEventListener('click', () => overlay.remove());
+    document.getElementById('fbAddThisBtn').addEventListener('click', () => {
+      addPathToJob(jobIdx, selectedPath || currentPath);
+      overlay.remove();
+    });
 
     navigate('/compose').catch(() => navigate('/'));
   }
