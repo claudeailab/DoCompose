@@ -951,6 +951,15 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 .bj-modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.1rem; overflow-y: auto; max-height: calc(90vh - 140px); }
 .bj-modal-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border); margin-top: 0.25rem; }
 
+/* update schedule cards */
+.stg-card { border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); }
+.stg-card + .stg-card { margin-top: 0.5rem; }
+.stg-card-head { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.9rem; min-height: 44px; }
+.stg-card-name { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stg-card-hint { font-size: 0.78rem; color: var(--text-muted); flex-shrink: 0; }
+.stg-card-actions { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+.stg-card-footer { font-size: 0.74rem; color: var(--text-muted); padding: 0.35rem 0.9rem 0.5rem; border-top: 1px solid var(--border); background: var(--surface-1); }
+
 /* backup job list — compact rows */
 .bj-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); }
 .bj-row { border-bottom: 1px solid var(--border); }

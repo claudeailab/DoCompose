@@ -87,6 +87,7 @@ router.post('/', (req, res) => {
 
     writeSettings(merged);
     try { require('../backup-scheduler').reschedule(); } catch {}
+    try { require('../update-scheduler').reschedule(); } catch {}
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

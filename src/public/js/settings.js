@@ -34,6 +34,7 @@ async function settingsInit() {
       <nav class="stg-sidebar">
         <button class="stg-tab active" data-tab="general">${IC.paint}General</button>
         <button class="stg-tab" data-tab="registry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Registries</button>
+        <button class="stg-tab" data-tab="updates">${IC.refresh}Updates</button>
         <button class="stg-tab" data-tab="excluded">${IC.block}Exclusions</button>
         <button class="stg-tab" data-tab="backups">${IC.jobs}Backups</button>
       </nav>
@@ -70,8 +71,18 @@ async function settingsInit() {
               </div>
             </div>
 
+          </div>
+        </div>
+
+        <!-- UPDATES -->
+        <div class="stg-pane" id="stgPaneUpdates">
+          <div class="pane-head">
+            <div class="pane-title">Updates</div>
+            <div class="pane-subtitle">Configure automatic update checks and scheduled container updates</div>
+          </div>
+          <div class="stg-section-list">
             <div class="stg-section">
-              <div class="stg-section-title">Updates</div>
+              <div class="stg-section-title">Update Checks</div>
               <div class="field">
                 <div class="field-label">Check interval</div>
                 <select id="stgUpdateInterval" class="settings-select">
@@ -82,6 +93,11 @@ async function settingsInit() {
                   <option value="86400">Every 24 hours</option>
                 </select>
               </div>
+            </div>
+            <div class="stg-section">
+              <div class="stg-section-title">Scheduled Updates</div>
+              <div id="stgUpdateSchedulesList" class="stg-stack"></div>
+              <button class="btn btn-primary btn-sm" id="stgAddUpdateScheduleBtn" style="margin-top:0.75rem">${IC.plus}Add Schedule</button>
             </div>
           </div>
         </div>
@@ -165,10 +181,6 @@ async function settingsInit() {
   function markDirty() { saveBtn.disabled = false; }
 
   // ── General tab ──────────────────────────────────────────────
-  const intEl = document.getElementById('stgUpdateInterval');
-  if (intEl && settings.updateIntervalSeconds !== undefined) intEl.value = String(settings.updateIntervalSeconds);
-  intEl.addEventListener('change', markDirty);
-
   const currentTheme = settings.theme || localStorage.getItem('dc-theme') || 'dark';
   document.querySelectorAll('.theme-btn').forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.theme === currentTheme);
@@ -193,6 +205,187 @@ async function settingsInit() {
   const tfEl = document.getElementById('stgTimeFormat');
   tfEl.value = settings.timeFormat || '24';
   tfEl.addEventListener('change', markDirty);
+
+  // ── Updates tab ──────────────────────────────────────────────
+  const intEl = document.getElementById('stgUpdateInterval');
+  if (intEl && settings.updateIntervalSeconds !== undefined) intEl.value = String(settings.updateIntervalSeconds);
+  if (intEl) intEl.addEventListener('change', markDirty);
+
+  let updateSchedules = (settings.updateSchedules || []).map((j) => Object.assign({}, j));
+  const allServices = DC.services || [];
+
+  const FREQ_LABELS = {
+    hourly: 'Every hour',
+    every6h: 'Every 6 hours',
+    every12h: 'Every 12 hours',
+    daily: 'Daily',
+    weekly: 'Weekly',
+  };
+  const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  function scheduleDescription(entry) {
+    const h = String(entry.hour || 0).padStart(2, '0');
+    const m = String(entry.minute || 0).padStart(2, '0');
+    const timeStr = `${h}:${m}`;
+    switch (entry.frequency) {
+      case 'hourly':   return `Every hour`;
+      case 'every6h':  return `Every 6 hours`;
+      case 'every12h': return `Every 12 hours`;
+      case 'daily':    return `Daily at ${timeStr}`;
+      case 'weekly':   return `Weekly on ${WEEKDAY_NAMES[entry.weekday || 0]} at ${timeStr}`;
+      default: return '—';
+    }
+  }
+
+  function renderUpdateSchedules() {
+    const list = document.getElementById('stgUpdateSchedulesList');
+    if (!list) return;
+    if (!updateSchedules.length) {
+      list.innerHTML = '<div class="stg-empty" style="padding:1rem 0;font-size:0.88rem">No scheduled updates. Click Add Schedule to set one up.</div>';
+      return;
+    }
+    list.innerHTML = updateSchedules.map((entry, idx) => `
+      <div class="stg-card upd-sched-card" data-idx="${idx}">
+        <div class="stg-card-head">
+          <label class="toggle" title="${entry.enabled ? 'Enabled' : 'Disabled'}">
+            <input type="checkbox" class="upd-enabled-cb" data-idx="${idx}" ${entry.enabled ? 'checked' : ''}>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+          <span class="stg-card-name">${escHtml(entry.serviceName || 'No container selected')}</span>
+          <span class="stg-card-hint">${escHtml(scheduleDescription(entry))}</span>
+          <div class="stg-card-actions">
+            <button class="btn btn-secondary btn-sm upd-edit-btn" data-idx="${idx}">${IC.edit}Edit</button>
+            <button class="btn btn-ghost btn-sm upd-delete-btn" data-idx="${idx}">${IC.trash}</button>
+          </div>
+        </div>
+        ${entry.lastRun ? `<div class="stg-card-footer">Last run: ${new Date(entry.lastRun).toLocaleString()} · ${escHtml(entry.lastStatus || '')}</div>` : ''}
+      </div>
+    `).join('');
+
+    list.querySelectorAll('.upd-enabled-cb').forEach((cb) => {
+      cb.addEventListener('change', () => {
+        updateSchedules[+cb.dataset.idx].enabled = cb.checked;
+        markDirty();
+      });
+    });
+    list.querySelectorAll('.upd-edit-btn').forEach((btn) => {
+      btn.addEventListener('click', () => openUpdateScheduleModal(+btn.dataset.idx));
+    });
+    list.querySelectorAll('.upd-delete-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        updateSchedules.splice(+btn.dataset.idx, 1);
+        renderUpdateSchedules();
+        markDirty();
+      });
+    });
+  }
+  renderUpdateSchedules();
+
+  document.getElementById('stgAddUpdateScheduleBtn')?.addEventListener('click', () => {
+    const newIdx = updateSchedules.length;
+    updateSchedules.push({ id: 'us-' + Date.now(), serviceName: '', frequency: 'daily', hour: 3, minute: 0, weekday: 0, enabled: true });
+    renderUpdateSchedules();
+    markDirty();
+    openUpdateScheduleModal(newIdx);
+  });
+
+  // Modal for editing a schedule entry
+  function openUpdateScheduleModal(idx) {
+    const entry = updateSchedules[idx];
+    const existing = document.getElementById('updSchModalOverlay');
+    if (existing) existing.remove();
+
+    const serviceOptions = allServices.map((s) =>
+      `<option value="${escHtml(s.name)}" ${s.name === entry.serviceName ? 'selected' : ''}>${escHtml(s.name)}</option>`
+    ).join('');
+
+    const needsTime = ['daily', 'weekly'].includes(entry.frequency);
+    const needsDay = entry.frequency === 'weekly';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'updSchModalOverlay';
+    overlay.className = 'modal-overlay is-open';
+    overlay.innerHTML = `
+      <div class="modal" style="width:420px;max-width:95vw">
+        <div class="modal-header">
+          <span class="modal-title">Scheduled Update</span>
+          <button class="modal-close" id="updSchModalClose">${IC.x}</button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:1.1rem">
+          <div class="field">
+            <div class="field-label">Container</div>
+            <select id="updSchContainer" class="settings-select">
+              <option value="">— select a container —</option>
+              ${serviceOptions}
+            </select>
+          </div>
+          <div class="field">
+            <div class="field-label">Frequency</div>
+            <select id="updSchFrequency" class="settings-select">
+              <option value="hourly" ${entry.frequency === 'hourly' ? 'selected' : ''}>Every hour</option>
+              <option value="every6h" ${entry.frequency === 'every6h' ? 'selected' : ''}>Every 6 hours</option>
+              <option value="every12h" ${entry.frequency === 'every12h' ? 'selected' : ''}>Every 12 hours</option>
+              <option value="daily" ${entry.frequency === 'daily' ? 'selected' : ''}>Daily</option>
+              <option value="weekly" ${entry.frequency === 'weekly' ? 'selected' : ''}>Weekly</option>
+            </select>
+          </div>
+          <div id="updSchTimeRow" class="field" style="display:${needsTime ? '' : 'none'}">
+            <div class="field-label">Time</div>
+            <div style="display:flex;gap:0.5rem;align-items:center">
+              <select id="updSchHour" class="settings-select" style="width:90px">
+                ${Array.from({length:24},(_,i)=>`<option value="${i}" ${i===entry.hour?'selected':''}>${String(i).padStart(2,'0')}</option>`).join('')}
+              </select>
+              <span style="color:var(--text-muted);font-weight:600">:</span>
+              <select id="updSchMinute" class="settings-select" style="width:90px">
+                ${[0,5,10,15,20,25,30,35,40,45,50,55].map((m)=>`<option value="${m}" ${m===entry.minute?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div id="updSchDayRow" class="field" style="display:${needsDay ? '' : 'none'}">
+            <div class="field-label">Day of week</div>
+            <select id="updSchWeekday" class="settings-select">
+              ${WEEKDAY_NAMES.map((d,i)=>`<option value="${i}" ${i===(entry.weekday||0)?'selected':''}>${d}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="updSchModalCancel">Cancel</button>
+          <button class="btn btn-primary" id="updSchModalSave">Save</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const freqSel = document.getElementById('updSchFrequency');
+    const timeRow = document.getElementById('updSchTimeRow');
+    const dayRow = document.getElementById('updSchDayRow');
+    freqSel.addEventListener('change', () => {
+      const f = freqSel.value;
+      timeRow.style.display = ['daily','weekly'].includes(f) ? '' : 'none';
+      dayRow.style.display = f === 'weekly' ? '' : 'none';
+    });
+
+    const close = () => overlay.remove();
+    document.getElementById('updSchModalClose').addEventListener('click', close);
+    document.getElementById('updSchModalCancel').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    document.getElementById('updSchModalSave').addEventListener('click', () => {
+      const svcName = document.getElementById('updSchContainer').value;
+      if (!svcName) { showToast('Please select a container', 'error'); return; }
+      updateSchedules[idx] = {
+        ...updateSchedules[idx],
+        serviceName: svcName,
+        frequency: document.getElementById('updSchFrequency').value,
+        hour: parseInt(document.getElementById('updSchHour')?.value || 0, 10),
+        minute: parseInt(document.getElementById('updSchMinute')?.value || 0, 10),
+        weekday: parseInt(document.getElementById('updSchWeekday')?.value || 0, 10),
+      };
+      renderUpdateSchedules();
+      markDirty();
+      close();
+    });
+  }
 
   // ── Registries tab ───────────────────────────────────────────
   let registries = Array.isArray(settings.registries)
@@ -932,6 +1125,7 @@ async function settingsInit() {
         timezone: document.getElementById('stgTimezone').value,
         timeFormat: document.getElementById('stgTimeFormat').value,
         backupJobs,
+        updateSchedules,
         onedrive: { clientId: odClientId, tenant: odTenant, backupFolderPath: odBackupFolder },
         dropbox: Object.assign(dropboxPayload, { backupFolderPath: dbBackupFolder }),
       };

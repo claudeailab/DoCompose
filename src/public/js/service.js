@@ -81,7 +81,6 @@ async function serviceInit() {
           <button class="svc-tab" data-tab="terminal">Terminal</button>
           <button class="svc-tab" data-tab="config">Configuration</button>
           <button class="svc-tab" data-tab="vars">Variables</button>
-          <button class="svc-tab" data-tab="schedule">Schedule</button>
           <div class="svc-tabs-sep"></div>
           <button class="svc-tab svc-tab-action" id="svcActStartStop" data-running="${isRunning ? '1' : '0'}">
             ${isRunning
@@ -138,7 +137,6 @@ async function serviceInit() {
         <div class="svc-pane" id="svcPaneTerminal" style="display:none"></div>
         <div class="svc-pane" id="svcPaneConfig" style="display:none"></div>
         <div class="svc-pane" id="svcPaneVars" style="display:none"></div>
-        <div class="svc-pane" id="svcPaneSchedule" style="display:none"></div>
       </div>
     </div>
   `;
@@ -282,7 +280,7 @@ function svcSwitchTab(tab, name, containerName) {
   const activeBtn = document.querySelector(`.svc-tab[data-tab="${tab}"]`);
   if (activeBtn) activeBtn.classList.add('active');
 
-  const paneId = { logs: 'svcPaneLogs', terminal: 'svcPaneTerminal', config: 'svcPaneConfig', vars: 'svcPaneVars', schedule: 'svcPaneSchedule' }[tab];
+  const paneId = { logs: 'svcPaneLogs', terminal: 'svcPaneTerminal', config: 'svcPaneConfig', vars: 'svcPaneVars' }[tab];
   const pane = document.getElementById(paneId);
   if (pane) pane.style.display = '';
 
@@ -298,7 +296,6 @@ function svcSwitchTab(tab, name, containerName) {
     else if (tab === 'terminal') svcRenderTerminal(containerName);
     else if (tab === 'config')   svcRenderConfig(name);
     else if (tab === 'vars')     svcRenderVars(name);
-    else if (tab === 'schedule') svcRenderSchedule(name);
   }
 }
 
@@ -718,123 +715,6 @@ async function svcSaveVars(name) {
     if (btn) btn.disabled = true;
   } catch (err) {
     svcSetStatus('svcVarsStatus', `Error: ${err.message}`, 'invalid');
-    showToast(`Save failed: ${err.message}`, 'error');
-  }
-}
-
-/* ---- Schedule tab ---- */
-function svcRenderSchedule(name) {
-  const pane = document.getElementById('svcPaneSchedule');
-  if (!pane) return;
-
-  // Preset helpers
-  const PRESETS = [
-    { label: 'Every hour',   value: '0 * * * *' },
-    { label: 'Every 6 h',   value: '0 */6 * * *' },
-    { label: 'Daily at 3 am', value: '0 3 * * *' },
-    { label: 'Weekly (Sun 3 am)', value: '0 3 * * 0' },
-  ];
-
-  pane.innerHTML = `
-    <div class="svc-config-toolbar">
-      <button class="btn btn-primary btn-sm" id="svcSchSaveBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-          <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-        </svg>
-        Save
-      </button>
-      <button class="btn btn-secondary btn-sm" id="svcSchClearBtn">Clear</button>
-      <span class="svc-status" id="svcSchStatus" style="margin-left:auto"></span>
-    </div>
-    <div style="padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:1.25rem;max-width:600px">
-      <div>
-        <label style="display:block;font-size:0.82rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.5rem">Cron schedule</label>
-        <input id="svcSchInput" class="toolbar-input" type="text" placeholder="e.g. 0 3 * * * (daily at 3 am)" spellcheck="false" style="width:100%;font-family:var(--font-mono);font-size:0.92rem">
-        <div style="margin-top:0.45rem;font-size:0.78rem;color:var(--text-muted)">
-          Format: <code style="background:var(--surface-inset);padding:0.1em 0.35em;border-radius:3px">minute hour day month weekday</code>
-          — <a href="https://crontab.guru" target="_blank" rel="noopener" style="color:var(--accent)">crontab.guru</a>
-        </div>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:0.5rem" id="svcSchPresets">
-        ${PRESETS.map((p) => `<button class="btn btn-secondary btn-sm sch-preset" data-value="${escHtml(p.value)}">${escHtml(p.label)}</button>`).join('')}
-      </div>
-      <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.9rem">
-        <input type="checkbox" id="svcSchEnabled" style="width:1rem;height:1rem;cursor:pointer">
-        <span>Enable scheduled updates</span>
-      </label>
-      <div id="svcSchInfo" style="font-size:0.85rem;color:var(--text-muted);line-height:1.6"></div>
-    </div>
-  `;
-
-  const input = document.getElementById('svcSchInput');
-  const enabledCb = document.getElementById('svcSchEnabled');
-  const infoEl = document.getElementById('svcSchInfo');
-
-  const updateInfo = () => {
-    const val = input.value.trim();
-    if (!val) { infoEl.textContent = ''; return; }
-    // Simple next-run hint using the cron parts
-    infoEl.textContent = 'Schedule will be validated when saved.';
-  };
-
-  input.addEventListener('input', updateInfo);
-
-  pane.querySelectorAll('.sch-preset').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      input.value = btn.dataset.value;
-      updateInfo();
-    });
-  });
-
-  document.getElementById('svcSchSaveBtn').addEventListener('click', () => svcSaveSchedule(name));
-  document.getElementById('svcSchClearBtn').addEventListener('click', async () => {
-    if (!await dcConfirm(`Remove the update schedule for "${name}"?`, 'Clear schedule')) return;
-    input.value = '';
-    enabledCb.checked = false;
-    svcSaveSchedule(name);
-  });
-
-  svcLoadSchedule(name);
-}
-
-async function svcLoadSchedule(name) {
-  svcSetStatus('svcSchStatus', 'Loading…');
-  try {
-    const project = DC.currentProject || '';
-    const data = await api('GET', `/api/services/${encodeURIComponent(name)}/update-schedule?project=${encodeURIComponent(project)}`);
-    const input = document.getElementById('svcSchInput');
-    const enabledCb = document.getElementById('svcSchEnabled');
-    const infoEl = document.getElementById('svcSchInfo');
-    if (input) input.value = data.schedule || '';
-    if (enabledCb) enabledCb.checked = !!data.enabled;
-    if (infoEl) {
-      const parts = [];
-      if (data.lastRun) parts.push(`Last run: ${new Date(data.lastRun).toLocaleString()}`);
-      if (data.lastStatus) parts.push(`Status: ${data.lastStatus}`);
-      infoEl.textContent = parts.join(' · ');
-    }
-    svcSetStatus('svcSchStatus', data.schedule ? 'Loaded' : '', data.schedule ? 'valid' : '');
-  } catch (err) {
-    svcSetStatus('svcSchStatus', `Error: ${err.message}`, 'invalid');
-  }
-}
-
-async function svcSaveSchedule(name) {
-  const input = document.getElementById('svcSchInput');
-  const enabledCb = document.getElementById('svcSchEnabled');
-  if (!input) return;
-  svcSetStatus('svcSchStatus', 'Saving…');
-  try {
-    const project = DC.currentProject || '';
-    await api('POST', `/api/services/${encodeURIComponent(name)}/update-schedule?project=${encodeURIComponent(project)}`, {
-      schedule: input.value.trim(),
-      enabled: enabledCb ? enabledCb.checked : false,
-    });
-    svcSetStatus('svcSchStatus', 'Saved', 'valid');
-    showToast(`${name}: update schedule saved`, 'success');
-  } catch (err) {
-    svcSetStatus('svcSchStatus', `Error: ${err.message}`, 'invalid');
     showToast(`Save failed: ${err.message}`, 'error');
   }
 }

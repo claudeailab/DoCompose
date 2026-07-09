@@ -738,45 +738,6 @@ router.delete('/:name', async (req, res) => {
   }
 });
 
-// GET /api/services/:name/update-schedule
-router.get('/:name/update-schedule', (req, res) => {
-  const { readSettings } = require('../routes/settings');
-  const project = req.query.project || '';
-  const key = `${project}::${req.params.name}`;
-  const s = readSettings();
-  const entry = (s.updateSchedules || {})[key] || {};
-  res.json({ schedule: entry.schedule || '', enabled: !!entry.enabled, lastRun: entry.lastRun || null, lastStatus: entry.lastStatus || null });
-});
-
-// POST /api/services/:name/update-schedule
-router.post('/:name/update-schedule', (req, res) => {
-  try {
-    const { readSettings, writeSettings } = require('../routes/settings');
-    const project = req.query.project || '';
-    const key = `${project}::${req.params.name}`;
-    const { schedule, enabled } = req.body || {};
-
-    const cron = require('node-cron');
-    if (schedule && !cron.validate(schedule)) {
-      return res.status(400).json({ error: 'Invalid cron expression' });
-    }
-
-    const s = readSettings();
-    const schedules = s.updateSchedules || {};
-    if (!schedule) {
-      delete schedules[key];
-    } else {
-      schedules[key] = { ...schedules[key], schedule, enabled: !!enabled };
-    }
-    s.updateSchedules = schedules;
-    writeSettings(s);
-    try { require('../update-scheduler').reschedule(); } catch {}
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 module.exports = router;
 module.exports.recreateContainerViaApi = recreateContainerViaApi;
 module.exports.getContainerName = getContainerName;
