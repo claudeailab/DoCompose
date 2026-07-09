@@ -566,7 +566,7 @@ async function settingsInit() {
     let selectedPath = null;
 
     const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay fb-overlay';
+    overlay.className = 'modal-overlay fb-overlay is-open';
     overlay.innerHTML = `
       <div class="modal fb-modal">
         <div class="modal-header"><span class="modal-title">Browse folders</span>
@@ -783,7 +783,7 @@ async function settingsInit() {
           <div class="field">
             <div class="field-label">Folders to back up</div>
             <div id="bjmPathChips" class="path-chips-wrap"></div>
-            <button class="btn btn-secondary btn-sm" id="bjmBrowse" type="button" style="margin-top:0.5rem;align-self:flex-start;width:fit-content">${IC.folder}Browse folders…</button>
+            <button class="btn btn-secondary btn-sm" id="bjmBrowse" type="button" style="margin-top:0.5rem;align-self:flex-start;width:fit-content">${IC.folder}Browse</button>
           </div>
           <div class="field-grid" style="grid-template-columns:1fr 1fr;gap:0.75rem">
             <div class="field">
