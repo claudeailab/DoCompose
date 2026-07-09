@@ -49,13 +49,8 @@ async function runJob(job) {
     for (const localBase of (job.paths || [])) {
       const { walkDir } = require('./routes/onedrive');
       const files = walkDir(localBase, localBase);
-      const isFile = files.length === 1 && files[0].local === localBase;
-      const baseName = path.basename(localBase.replace(/\/$/, ''));
-
       for (const { local, relative } of files) {
-        const remotePath = isFile
-          ? `${snapshotBase}/${relative}`
-          : `${snapshotBase}/${baseName}/${relative}`;
+        const remotePath = `${snapshotBase}/${relative}`;
         try {
           await uploadFile(token, local, remotePath);
           uploaded++;
