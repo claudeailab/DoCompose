@@ -16,6 +16,7 @@ const { router: onedriveRouter } = require('./routes/onedrive');
 const { router: dropboxRouter } = require('./routes/dropbox');
 const imagesRouter = require('./routes/images');
 const backupScheduler = require('./backup-scheduler');
+const updateScheduler = require('./update-scheduler');
 const { handleTerminal } = require('./terminal');
 
 const app = express();
@@ -61,6 +62,7 @@ server.listen(PORT, () => {
   console.log(`DoCompose listening on port ${PORT}`);
   console.log(`COMPOSE_DIR: ${process.env.COMPOSE_DIR || '/compose'}`);
   backupScheduler.init();
+  updateScheduler.init();
 });
 
 server.on('error', (err) => {
