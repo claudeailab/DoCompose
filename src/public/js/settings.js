@@ -535,6 +535,31 @@ async function settingsInit() {
   }
   if (dbEnabled) refreshDbStatus();
 
+  // ── Path chips (shared between openJobModal and openFileBrowser) ─
+  function renderPathChips(idx) {
+    const container = document.getElementById('bjmPathChips');
+    if (!container) return;
+    const paths = backupJobs[idx].paths || [];
+    if (paths.length === 0) {
+      container.innerHTML = `<span class="path-chips-empty">No folders selected — click Browse to add</span>`;
+    } else {
+      container.innerHTML = paths.map((p) => `
+        <span class="path-chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;flex-shrink:0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span class="path-chip-label">${escHtml(p)}</span>
+          <button class="path-chip-remove" onclick="removePathFromJobGlobal(${idx},${JSON.stringify(p)})" title="Remove">×</button>
+        </span>`).join('');
+    }
+  }
+
+  function removePathFromJobInner(idx, p) {
+    if (!backupJobs[idx].paths) return;
+    backupJobs[idx].paths = backupJobs[idx].paths.filter((x) => x !== p);
+    markDirty();
+    renderPathChips(idx);
+  }
+  window.removePathFromJobGlobal = (idx, p) => removePathFromJobInner(idx, p);
+
   // ── File browser modal ────────────────────────────────────────
   function openFileBrowser(jobIdx) {
     let currentPath = '/';
@@ -603,32 +628,6 @@ async function settingsInit() {
         renderPathChips(idx);
       }
     }
-
-    function removePathFromJob(idx, p) {
-      if (!backupJobs[idx].paths) return;
-      backupJobs[idx].paths = backupJobs[idx].paths.filter((x) => x !== p);
-      markDirty();
-      renderPathChips(idx);
-    }
-
-    function renderPathChips(idx) {
-      const container = document.getElementById('bjmPathChips');
-      if (!container) return;
-      const paths = backupJobs[idx].paths || [];
-      if (paths.length === 0) {
-        container.innerHTML = `<span class="path-chips-empty">No folders selected — click Browse to add</span>`;
-      } else {
-        container.innerHTML = paths.map((p) => `
-          <span class="path-chip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;flex-shrink:0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-            <span class="path-chip-label">${escHtml(p)}</span>
-            <button class="path-chip-remove" onclick="removePathFromJobGlobal(${idx},${JSON.stringify(p)})" title="Remove">×</button>
-          </span>`).join('');
-      }
-    }
-
-    // Expose removePathFromJob for inline onclick in chips
-    window.removePathFromJobGlobal = (idx, p) => removePathFromJob(idx, p);
 
     overlay.querySelector('.fb-close').addEventListener('click', () => overlay.remove());
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
@@ -784,7 +783,7 @@ async function settingsInit() {
           <div class="field">
             <div class="field-label">Folders to back up</div>
             <div id="bjmPathChips" class="path-chips-wrap"></div>
-            <button class="btn btn-secondary btn-sm" id="bjmBrowse" type="button" style="margin-top:0.5rem">${IC.folder}Browse folders…</button>
+            <button class="btn btn-secondary btn-sm" id="bjmBrowse" type="button" style="margin-top:0.5rem;align-self:flex-start;width:fit-content">${IC.folder}Browse folders…</button>
           </div>
           <div class="field-grid" style="grid-template-columns:1fr 1fr;gap:0.75rem">
             <div class="field">
