@@ -11,7 +11,7 @@ async function runJob(job) {
   const settings = readSettings();
   const destination = job.destination || 'onedrive';
   const providerSettings = settings[destination] || {};
-  const folderPath = (providerSettings.backupFolderPath || 'DoCompose Backups').replace(/^\/|\/$/g, '');
+  const folderPath = (providerSettings.backupFolderPath || 'DoCompose').replace(/^\/|\/$/g, '');
 
   let getValidToken, uploadFile, listFolder, deleteItem, isFolder;
 

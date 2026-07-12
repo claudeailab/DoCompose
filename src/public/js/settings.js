@@ -517,8 +517,8 @@ async function settingsInit() {
   let backupJobs = (settings.backupJobs || []).map((j) => Object.assign({}, j));
   let odEnabled = !!(settings.onedrive && settings.onedrive.clientId);
   let dbEnabled = !!(settings.dropbox && settings.dropbox.appKey);
-  let odBackupFolder = (settings.onedrive && settings.onedrive.backupFolderPath) || 'DoCompose Backups';
-  let dbBackupFolder = (settings.dropbox && settings.dropbox.backupFolderPath) || 'DoCompose Backups';
+  let odBackupFolder = (settings.onedrive && settings.onedrive.backupFolderPath) || 'DoCompose';
+  let dbBackupFolder = (settings.dropbox && settings.dropbox.backupFolderPath) || 'DoCompose';
 
   const odIcon = `<svg class="provider-icon" viewBox="0 0 32 22" xmlns="http://www.w3.org/2000/svg"><ellipse cx="22" cy="14" rx="10" ry="6" fill="#0078D4" opacity="0.65"/><ellipse cx="13" cy="16" rx="6" ry="4" fill="#0078D4" opacity="0.85"/><rect x="6" y="14" width="22" height="6" rx="3" fill="#0078D4"/></svg>`;
   const dbIcon = `<svg class="provider-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 2L12 6.5L6 11L0 6.5Z" fill="#0061FF"/><path d="M18 2L24 6.5L18 11L12 6.5Z" fill="#0061FF"/><path d="M0 13.5L6 9L12 13.5L6 18Z" fill="#0061FF"/><path d="M24 13.5L18 9L12 13.5L18 18Z" fill="#0061FF"/><path d="M6 19.5L12 15L18 19.5L12 24Z" fill="#0061FF"/></svg>`;
