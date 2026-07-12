@@ -580,7 +580,7 @@ async function settingsInit() {
     document.getElementById('stgOdBackupFolder')?.addEventListener('input', (e) => { odBackupFolder = e.target.value; markDirty(); });
     document.getElementById('stgOdHelpBtn')?.addEventListener('click', () => {
       const ov = document.createElement('div');
-      ov.className = 'modal-overlay';
+      ov.className = 'modal-overlay is-open';
       ov.innerHTML = `
         <div class="modal help-modal">
           <div class="modal-header">
