@@ -958,10 +958,6 @@ async function settingsInit() {
           <button class="btn-icon modal-close" id="bjModalClose" aria-label="Close">${IC.x}</button>
         </div>
         <div class="bj-modal-body">
-          <div class="field">
-            <div class="field-label">Name</div>
-            <input type="text" class="settings-input" id="bjmLabel" value="${escHtml(job.label || '')}" placeholder="Untitled job" autocomplete="off">
-          </div>
           <div class="field-grid" style="grid-template-columns:1fr 1fr;gap:0.75rem">
             <div class="field">
               <div class="field-label">Destination</div>
@@ -1007,7 +1003,6 @@ async function settingsInit() {
     document.getElementById('bjModalClose').addEventListener('click', closeJobModal);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeJobModal(); }, { once: true });
 
-    document.getElementById('bjmLabel').addEventListener('input', (e) => { backupJobs[bjModalIdx].label = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
     document.getElementById('bjmDestination').addEventListener('change', (e) => { backupJobs[bjModalIdx].destination = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
     document.getElementById('bjmContainer').addEventListener('change', (e) => { backupJobs[bjModalIdx].containerName = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
     ['bjmFreq','bjmHour','bjmMin','bjmDow'].forEach((id) => { const el = document.getElementById(id); if (el) el.addEventListener('change', syncSchedGui); });
@@ -1050,9 +1045,8 @@ async function settingsInit() {
     if (!row) return;
     const dest = job.destination === 'dropbox' ? 'Dropbox' : 'OneDrive';
     row.querySelector('.job-dest').textContent = dest;
-    row.querySelector('.bj-meta-container').textContent = job.containerName || 'no container';
+    row.querySelector('.job-name').textContent = job.containerName || 'No container';
     row.querySelector('.bj-meta-sched').textContent = cronLabel(job.schedule);
-    row.querySelector('.job-label-input').value = job.label || '';
   }
 
   function renderBackupJobs() {
@@ -1077,10 +1071,9 @@ async function settingsInit() {
             <input type="checkbox" class="bj-enabled" data-idx="${idx}" ${job.enabled ? 'checked' : ''}>
             <span class="toggle-track"><span class="toggle-thumb"></span></span>
           </label>
-          <input type="text" class="job-label-input bj-label" data-idx="${idx}" value="${escHtml(job.label || '')}" placeholder="Untitled job" onclick="event.stopPropagation()">
+          <span class="job-name">${escHtml(job.containerName || 'No container')}</span>
           <div class="job-meta">
             <span class="job-dest">${dest}</span>
-            <span class="bj-meta-container">${escHtml(job.containerName || 'no container')}</span>
             <span>·</span>
             <span class="bj-meta-sched">${escHtml(cronLabel(job.schedule))}</span>
             <span class="job-status-dot ${dotCls}" title="${escHtml(statusTxt)}"></span>
@@ -1091,14 +1084,13 @@ async function settingsInit() {
     }).join('')}</div>`;
 
     list.querySelectorAll('.bj-enabled').forEach((cb) => cb.addEventListener('change', (e) => { backupJobs[+e.target.dataset.idx].enabled = e.target.checked; markDirty(); }));
-    list.querySelectorAll('.bj-label').forEach((el) => el.addEventListener('input', (e) => { backupJobs[+e.target.dataset.idx].label = e.target.value; markDirty(); }));
     list.querySelectorAll('.bj-edit-btn').forEach((btn) => btn.addEventListener('click', () => openJobModal(+btn.dataset.idx)));
   }
   renderBackupJobs();
 
   document.getElementById('stgAddBackupJobBtn')?.addEventListener('click', () => {
     const newIdx = backupJobs.length;
-    backupJobs.push({ id: 'job-' + Date.now(), label: '', containerName: '', paths: [], schedule: '0 2 * * *', keepCount: 10, enabled: true });
+    backupJobs.push({ id: 'job-' + Date.now(), containerName: '', paths: [], schedule: '0 2 * * *', keepCount: 10, enabled: true });
     renderBackupJobs();
     markDirty();
     openJobModal(newIdx);

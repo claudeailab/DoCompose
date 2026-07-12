@@ -965,7 +965,8 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 .bj-row { border-bottom: 1px solid var(--border); }
 .bj-row:last-child { border-bottom: none; }
 .job-summary { display: flex; align-items: center; gap: 0.6rem; padding: 0.42rem 0.9rem; min-height: 38px; }
-.job-label-input { flex: 1; background: transparent; border: none; outline: none; font-size: 0.875rem; font-weight: 600; color: var(--text-primary); min-width: 0; font-family: inherit; }
+.job-label-input, .job-name { flex: 1; font-size: 0.875rem; font-weight: 600; color: var(--text-primary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job-label-input { background: transparent; border: none; outline: none; font-family: inherit; }
 .job-label-input:focus { color: var(--accent); }
 .job-meta { display: flex; align-items: center; gap: 0.45rem; flex-shrink: 0; font-size: 0.75rem; color: var(--text-muted); }
 .job-dest { font-size: 0.65rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: var(--r-pill); background: var(--surface-inset); border: 1px solid var(--border); color: var(--text-secondary); white-space: nowrap; }

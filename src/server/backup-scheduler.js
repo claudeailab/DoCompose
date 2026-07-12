@@ -7,7 +7,7 @@ const { readSettings, writeSettings } = require('./routes/settings');
 const activeTasks = new Map();
 
 async function runJob(job) {
-  console.log(`[Backup] Running job "${job.label || job.id}" for ${job.containerName}`);
+  console.log(`[Backup] Running job "${job.containerName || job.id}" for ${job.containerName}`);
   const settings = readSettings();
   const destination = job.destination || 'onedrive';
   const providerSettings = settings[destination] || {};
@@ -63,7 +63,7 @@ async function runJob(job) {
     }
 
     if (uploaded === 0 && failed === 0) {
-      console.warn(`[Backup] Job "${job.label || job.id}": no files found in specified paths`);
+      console.warn(`[Backup] Job "${job.containerName || job.id}": no files found in specified paths`);
     }
 
     // Rotation
@@ -93,9 +93,9 @@ async function runJob(job) {
     else if (failed > 0) statusMsg = `ok (${uploaded} uploaded, ${failed} failed — ${firstError})`;
     else statusMsg = `ok (${uploaded} file${uploaded !== 1 ? 's' : ''})`;
     updateJobStatus(statusMsg);
-    console.log(`[Backup] Job "${job.label || job.id}" completed — ${uploaded} uploaded, ${failed} failed`);
+    console.log(`[Backup] Job "${job.containerName || job.id}" completed — ${uploaded} uploaded, ${failed} failed`);
   } catch (err) {
-    console.error(`[Backup] Job "${job.label || job.id}" failed: ${err.message}`);
+    console.error(`[Backup] Job "${job.containerName || job.id}" failed: ${err.message}`);
     updateJobStatus('error: ' + err.message);
     throw err;
   }
@@ -119,7 +119,7 @@ function scheduleJobs() {
     const tz = settings.timezone || process.env.TZ || 'UTC';
     const task = cron.schedule(job.schedule, () => runJob(job).catch(() => {}), { timezone: tz });
     activeTasks.set(job.id, task);
-    console.log(`[Backup] Scheduled job "${job.label || job.id}" (${job.schedule}) in timezone ${tz}`);
+    console.log(`[Backup] Scheduled job "${job.containerName || job.id}" (${job.schedule}) in timezone ${tz}`);
   }
 }
 module.exports.scheduleJobs = scheduleJobs;
