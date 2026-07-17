@@ -277,9 +277,8 @@ router.post('/:name/restart', async (req, res) => {
 // POST /api/services/:name/recreate
 router.post('/:name/recreate', async (req, res) => {
   try {
-    const containerName = await getContainerName(req.query.project || '', req.params.name);
-    await recreateContainerViaApi(containerName, false);
-    res.json({ ok: true });
+    const { stdout, stderr } = await runCompose(req.query.project || '', ['up', '-d', '--force-recreate', '--no-deps', req.params.name]);
+    res.json({ ok: true, stdout, stderr });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
