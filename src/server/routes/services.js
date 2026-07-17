@@ -53,12 +53,8 @@ async function runCompose(projectDir, args) {
   const { getComposePath } = require('../compose');
   const path = require('path');
   const cwd = path.dirname(getComposePath(projectDir));
-  // Derive project name from the directory so it always matches what the user
-  // sees in their terminal (docker compose uses the folder name as project name).
-  // Compose v2 normalises to lowercase alphanumeric + hyphens.
-  const projectName = path.basename(cwd).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '') || 'compose';
   return new Promise((resolve, reject) => {
-    execFile('docker', ['compose', '--project-name', projectName, ...args], { timeout: 120000, cwd }, (err, stdout, stderr) => {
+    execFile('docker', ['compose', ...args], { timeout: 120000, cwd }, (err, stdout, stderr) => {
       if (err) return reject(new Error(stderr || err.message));
       resolve({ stdout, stderr });
     });
@@ -281,7 +277,7 @@ router.post('/:name/restart', async (req, res) => {
 // POST /api/services/:name/recreate
 router.post('/:name/recreate', async (req, res) => {
   try {
-    const { stdout, stderr } = await runCompose(req.query.project || '', ['up', '-d', '--force-recreate', '--no-deps', req.params.name]);
+    const { stdout, stderr } = await runCompose(req.query.project || '', ['up', '-d', '--force-recreate', req.params.name]);
     res.json({ ok: true, stdout, stderr });
   } catch (err) {
     res.status(500).json({ error: err.message });
