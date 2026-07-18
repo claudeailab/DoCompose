@@ -120,7 +120,14 @@ function walkDir(dir, baseDir) {
       const relPath = rel ? `${rel}/${entry}` : entry;
       let s;
       try { s = fs.lstatSync(full); } catch { continue; }
-      if (s.isSymbolicLink()) continue;
+      if (s.isSymbolicLink()) {
+        // Follow the symlink; seen set (via realpathSync at top of walk) prevents cycles
+        let ts;
+        try { ts = fs.statSync(full); } catch { continue; }
+        if (ts.isDirectory()) walk(full, relPath);
+        else if (ts.isFile()) results.push({ local: full, relative: relPath });
+        continue;
+      }
       if (s.isDirectory()) walk(full, relPath);
       else if (s.isFile()) results.push({ local: full, relative: relPath });
     }
