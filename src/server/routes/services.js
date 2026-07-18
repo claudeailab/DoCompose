@@ -141,7 +141,34 @@ router.get('/', async (req, res) => {
 // labels (including com.docker.compose.project.working_dir). This avoids the
 // "name already in use" conflict that occurs when docker compose stamps a
 // different working_dir than the one the user originally ran compose from.
-async function recreateContainerViaApi(containerName, pullFirst) {
+// Convert a compose healthcheck duration string ("30s", "1m", "500ms") to nanoseconds.
+function parseDuration(s) {
+  if (typeof s === 'number') return s;
+  const m = String(s).match(/^(\d+(?:\.\d+)?)(ns|us|ms|s|m|h)$/);
+  if (!m) return 0;
+  const v = parseFloat(m[1]);
+  const units = { ns: 1, us: 1e3, ms: 1e6, s: 1e9, m: 60e9, h: 3600e9 };
+  return Math.round(v * (units[m[2]] || 1e9));
+}
+
+// Convert a compose-YAML healthcheck block to the Docker API Healthcheck format.
+function composeToDockerHealthcheck(hc) {
+  if (!hc) return undefined;
+  if (hc.disable) return { Test: ['NONE'] };
+  const test = Array.isArray(hc.test) ? hc.test : (hc.test ? ['CMD-SHELL', String(hc.test)] : undefined);
+  return {
+    Test: test,
+    Interval: hc.interval ? parseDuration(hc.interval) : undefined,
+    Timeout: hc.timeout ? parseDuration(hc.timeout) : undefined,
+    Retries: hc.retries != null ? Number(hc.retries) : undefined,
+    StartPeriod: hc.start_period ? parseDuration(hc.start_period) : undefined,
+  };
+}
+
+// composeHealthcheck: parsed healthcheck block from the compose YAML (optional).
+// When provided it is used as the source of truth, so healthcheck config can
+// never be lost across successive API-based recreates.
+async function recreateContainerViaApi(containerName, pullFirst, composeHealthcheck) {
   const Docker = require('dockerode');
   const docker = new Docker({ socketPath: '/var/run/docker.sock' });
   const container = docker.getContainer(containerName);
@@ -184,7 +211,9 @@ async function recreateContainerViaApi(containerName, pullFirst) {
     WorkingDir: info.Config.WorkingDir,
     ExposedPorts: info.Config.ExposedPorts,
     Volumes: info.Config.Volumes,
-    Healthcheck: info.Config.Healthcheck,
+    Healthcheck: composeHealthcheck
+      ? composeToDockerHealthcheck(composeHealthcheck)
+      : (info.Config.Healthcheck || undefined),
     Labels: labels,
     HostConfig: {
       ...info.HostConfig,
@@ -278,8 +307,16 @@ router.post('/:name/restart', async (req, res) => {
 // POST /api/services/:name/recreate
 router.post('/:name/recreate', async (req, res) => {
   try {
-    const containerName = await getContainerName(req.query.project || '', req.params.name);
-    await recreateContainerViaApi(containerName, false);
+    const project = req.query.project || '';
+    const name = req.params.name;
+    const containerName = await getContainerName(project, name);
+    let composeHealthcheck = null;
+    try {
+      const { parsed } = readCompose(project);
+      const svc = parsed && parsed.services && parsed.services[name];
+      if (svc && svc.healthcheck) composeHealthcheck = svc.healthcheck;
+    } catch {}
+    await recreateContainerViaApi(containerName, false, composeHealthcheck);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -544,7 +581,13 @@ main().catch((e) => { console.error('[self-update] Error:', e.message); process.
     }
 
     const containerName = await getContainerName(project, name);
-    await recreateContainerViaApi(containerName, true);
+    let composeHealthcheck = null;
+    try {
+      const { parsed } = readCompose(project);
+      const svc = parsed && parsed.services && parsed.services[name];
+      if (svc && svc.healthcheck) composeHealthcheck = svc.healthcheck;
+    } catch {}
+    await recreateContainerViaApi(containerName, true, composeHealthcheck);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
