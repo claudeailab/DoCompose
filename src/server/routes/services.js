@@ -184,6 +184,7 @@ async function recreateContainerViaApi(containerName, pullFirst) {
     WorkingDir: info.Config.WorkingDir,
     ExposedPorts: info.Config.ExposedPorts,
     Volumes: info.Config.Volumes,
+    Healthcheck: info.Config.Healthcheck,
     Labels: labels,
     HostConfig: {
       ...info.HostConfig,
