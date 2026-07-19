@@ -80,30 +80,71 @@ async function getValidToken() {
 module.exports.getValidToken = getValidToken;
 
 // ── File operations ───────────────────────────────────────────────────────────
-async function uploadFile(token, localPath, remotePath) {
-  const content = fs.readFileSync(localPath);
-  const dropboxPath = remotePath.startsWith('/') ? remotePath : '/' + remotePath;
-  const res = await fetch(`${CONTENT_API}/files/upload`, {
+// Dropbox chunk size: 8 MiB (must be ≤ 150 MiB; smaller = more progress granularity)
+const DB_CHUNK_SIZE = 8 * 1024 * 1024;
+// Simple upload threshold: files at or below this size use the single-request path.
+const DB_SIMPLE_THRESHOLD = 8 * 1024 * 1024;
+
+async function dbApiArg(token, url, arg, body) {
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/octet-stream',
-      'Dropbox-API-Arg': JSON.stringify({
-        path: dropboxPath,
-        mode: { '.tag': 'overwrite' },
-        autorename: false,
-        mute: true,
-        strict_conflict: false,
-      }),
+      'Dropbox-API-Arg': JSON.stringify(arg),
     },
-    body: new Uint8Array(content),
+    body,
   });
   if (!res.ok) {
     const raw = await res.text().catch(() => '');
-    console.error(`[Dropbox] Upload failed for ${dropboxPath}: HTTP ${res.status} — ${raw}`);
-    let msg = `Upload failed: HTTP ${res.status}`;
-    try { const j = JSON.parse(raw); msg = j.error_summary || (typeof j.error === 'string' ? j.error : msg); } catch {}
+    let msg = `Dropbox error HTTP ${res.status}`;
+    try { const j = JSON.parse(raw); msg = j.error_summary || msg; } catch {}
     throw new Error(msg);
+  }
+  return res.json().catch(() => ({}));
+}
+
+async function uploadFile(token, localPath, remotePath) {
+  const dropboxPath = remotePath.startsWith('/') ? remotePath : '/' + remotePath;
+  const fileSize = fs.statSync(localPath).size;
+
+  if (fileSize <= DB_SIMPLE_THRESHOLD) {
+    const content = fs.readFileSync(localPath);
+    await dbApiArg(token, `${CONTENT_API}/files/upload`, {
+      path: dropboxPath, mode: { '.tag': 'overwrite' }, autorename: false, mute: true,
+    }, content);
+    return;
+  }
+
+  // Large file: use upload session
+  const fd = fs.openSync(localPath, 'r');
+  try {
+    // Start session with first chunk
+    const firstBuf = Buffer.allocUnsafe(DB_CHUNK_SIZE);
+    const firstRead = fs.readSync(fd, firstBuf, 0, DB_CHUNK_SIZE, 0);
+    const startRes = await dbApiArg(token, `${CONTENT_API}/files/upload_session/start`,
+      { close: false }, firstBuf.slice(0, firstRead));
+    const sessionId = startRes.session_id;
+
+    let offset = firstRead;
+    while (offset + DB_CHUNK_SIZE < fileSize) {
+      const buf = Buffer.allocUnsafe(DB_CHUNK_SIZE);
+      const n = fs.readSync(fd, buf, 0, DB_CHUNK_SIZE, offset);
+      await dbApiArg(token, `${CONTENT_API}/files/upload_session/append_v2`,
+        { cursor: { session_id: sessionId, offset }, close: false }, buf.slice(0, n));
+      offset += n;
+    }
+
+    // Finish: last chunk + commit
+    const remaining = fileSize - offset;
+    const lastBuf = Buffer.allocUnsafe(remaining);
+    if (remaining > 0) fs.readSync(fd, lastBuf, 0, remaining, offset);
+    await dbApiArg(token, `${CONTENT_API}/files/upload_session/finish`, {
+      cursor: { session_id: sessionId, offset },
+      commit: { path: dropboxPath, mode: { '.tag': 'overwrite' }, autorename: false, mute: true },
+    }, remaining > 0 ? lastBuf : Buffer.alloc(0));
+  } finally {
+    fs.closeSync(fd);
   }
 }
 module.exports.uploadFile = uploadFile;

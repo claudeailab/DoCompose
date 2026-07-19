@@ -70,11 +70,15 @@ async function graphGet(path_, token) {
   return data;
 }
 
-// Upload a single file (simple PUT, suitable for any size we'd encounter in config dirs)
+// OneDrive chunk size must be a multiple of 327680 bytes. Use 10 MiB.
+const CHUNK_SIZE = 10 * 1024 * 1024;
+
+// Upload a single file using an upload session with chunked streaming so large
+// files (DB dumps, media) don't require loading the whole thing into memory.
 async function uploadFile(token, localPath, remoteItemPath) {
-  const content = fs.readFileSync(localPath);
+  const fileSize = fs.statSync(localPath).size;
   const encoded = encodeURIComponent(remoteItemPath.replace(/^\//, '')).replace(/%2F/g, '/');
-  // Use upload session for reliability
+
   const sessionRes = await fetch(`${GRAPH}/me/drive/root:/${encoded}:/createUploadSession`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -83,17 +87,42 @@ async function uploadFile(token, localPath, remoteItemPath) {
   const session = await sessionRes.json();
   if (!sessionRes.ok) throw new Error(session.error?.message || 'Failed to create upload session');
 
-  const uploadRes = await fetch(session.uploadUrl, {
-    method: 'PUT',
-    headers: {
-      'Content-Length': String(content.length),
-      'Content-Range': `bytes 0-${content.length - 1}/${content.length}`,
-    },
-    body: content,
-  });
-  if (!uploadRes.ok) {
-    const err = await uploadRes.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Upload failed: HTTP ${uploadRes.status}`);
+  const fd = fs.openSync(localPath, 'r');
+  try {
+    let offset = 0;
+    while (offset < fileSize) {
+      const chunkSize = Math.min(CHUNK_SIZE, fileSize - offset);
+      const buf = Buffer.allocUnsafe(chunkSize);
+      fs.readSync(fd, buf, 0, chunkSize, offset);
+      const end = offset + chunkSize - 1;
+      const uploadRes = await fetch(session.uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Length': String(chunkSize),
+          'Content-Range': `bytes ${offset}-${end}/${fileSize}`,
+        },
+        body: buf,
+      });
+      if (!uploadRes.ok && uploadRes.status !== 202 && uploadRes.status !== 201 && uploadRes.status !== 200) {
+        const err = await uploadRes.json().catch(() => ({}));
+        throw new Error(err.error?.message || `Upload failed: HTTP ${uploadRes.status}`);
+      }
+      offset += chunkSize;
+    }
+    // Empty file edge case
+    if (fileSize === 0) {
+      const uploadRes = await fetch(session.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Length': '0', 'Content-Range': 'bytes *\/0' },
+        body: Buffer.alloc(0),
+      });
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({}));
+        throw new Error(err.error?.message || `Upload failed: HTTP ${uploadRes.status}`);
+      }
+    }
+  } finally {
+    fs.closeSync(fd);
   }
 }
 module.exports.uploadFile = uploadFile;
@@ -115,7 +144,9 @@ function walkDir(dir, baseDir) {
     try { real = fs.realpathSync(current); } catch { return; }
     if (seen.has(real)) return;
     seen.add(real);
-    for (const entry of fs.readdirSync(current)) {
+    let entries;
+    try { entries = fs.readdirSync(current); } catch { return; }
+    for (const entry of entries) {
       const full = path.join(current, entry);
       const relPath = rel ? `${rel}/${entry}` : entry;
       let s;
