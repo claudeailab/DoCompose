@@ -36,7 +36,6 @@ async function runJob(job) {
   };
 
   try {
-    const token = await getValidToken();
     // Use the configured timezone so folder names match local time, not UTC.
     const tz = settings.timezone || process.env.TZ || 'UTC';
     const now = new Date();
@@ -52,6 +51,10 @@ async function runJob(job) {
       for (const { local, relative } of files) {
         const remotePath = `${snapshotBase}/${relative}`;
         try {
+          // Refresh token before each file — getValidToken() only hits the
+          // network when the token is near expiry, so this is cheap and prevents
+          // "token expired" failures mid-backup on large directories.
+          const token = await getValidToken();
           await uploadFile(token, local, remotePath);
           uploaded++;
         } catch (err) {
@@ -69,8 +72,9 @@ async function runJob(job) {
     // Rotation
     const keepCount = job.keepCount || 10;
     try {
+      const rotToken = await getValidToken();
       const containerFolder = `${folderPath}/${job.containerName}`;
-      const children = await listFolder(token, containerFolder);
+      const children = await listFolder(rotToken, containerFolder);
       const snapshots = children
         .filter(isFolder)
         .sort((a, b) => a.name.localeCompare(b.name));
@@ -79,7 +83,7 @@ async function runJob(job) {
         const toDelete = snapshots.slice(0, snapshots.length - keepCount);
         for (const item of toDelete) {
           // OneDrive uses item.id; Dropbox uses item.path_lower
-          await deleteItem(token, item.id || item.path_lower);
+          await deleteItem(rotToken, item.id || item.path_lower);
           console.log(`[Backup] Rotated old snapshot: ${item.name}`);
         }
       }
