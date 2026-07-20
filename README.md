@@ -47,6 +47,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /path/to/your/compose/projects:/compose
+      - /path/to/docompose/data:/data
     healthcheck:
       test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8094/api/health"]
       interval: 30s
@@ -54,6 +55,10 @@ services:
       retries: 3
       start_period: 10s
 ```
+
+> **Data volume:** DoCompose stores all settings, credentials, backup jobs, and update schedules in an SQLite database at `/data/settings.db`. Mount a persistent host directory at `/data` so your configuration survives container updates.
+>
+> **Upgrading from an earlier version:** If you have an existing `.docompose-settings.json` file in your compose directory, DoCompose will automatically migrate its contents to the SQLite database on first boot and rename the old file to `.docompose-settings.json.migrated`.
 
 Start it:
 

@@ -15,6 +15,7 @@ const settingsRouter = require('./routes/settings');
 const { router: onedriveRouter } = require('./routes/onedrive');
 const { router: dropboxRouter } = require('./routes/dropbox');
 const imagesRouter = require('./routes/images');
+const { maybeMigrateFromJson } = require('./db');
 const backupScheduler = require('./backup-scheduler');
 const updateScheduler = require('./update-scheduler');
 const { handleTerminal } = require('./terminal');
@@ -61,6 +62,7 @@ wss.on('connection', handleTerminal);
 server.listen(PORT, () => {
   console.log(`DoCompose listening on port ${PORT}`);
   console.log(`COMPOSE_DIR: ${process.env.COMPOSE_DIR || '/compose'}`);
+  maybeMigrateFromJson();
   backupScheduler.init();
   updateScheduler.init();
 });

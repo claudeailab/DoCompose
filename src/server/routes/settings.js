@@ -1,30 +1,10 @@
 'use strict';
 
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const { execFile } = require('child_process');
+const { readSettings, writeSettings } = require('../db');
 
 const router = express.Router();
-
-const SETTINGS_PATH = path.join(process.env.COMPOSE_DIR || '/compose', '.docompose-settings.json');
-
-function readSettings() {
-  try {
-    return JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8'));
-  } catch {
-    return {};
-  }
-}
-
-// Atomic write (temp file + rename) so a concurrent reader never observes a
-// half-written file — a truncated read used to make readSettings() return {}
-// and silently wipe all settings/jobs.
-function writeSettings(data) {
-  const tmp = `${SETTINGS_PATH}.tmp-${process.pid}-${Date.now()}`;
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
-  fs.renameSync(tmp, SETTINGS_PATH);
-}
 
 // Strip secrets before sending settings to the browser. Presence is exposed as
 // boolean flags so the UI can show "(saved — enter to change)" placeholders.
