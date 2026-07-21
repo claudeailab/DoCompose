@@ -35,8 +35,14 @@ async function runUpdateJob(entry) {
     const jobs = s.updateSchedules || [];
     const idx = jobs.findIndex((j) => j.id === id);
     if (idx !== -1) {
+      const runAt = new Date().toISOString();
       jobs[idx].lastStatus = status;
-      jobs[idx].lastRun = new Date().toISOString();
+      jobs[idx].lastRun = runAt;
+      // Append to run history (cap at 20 entries, newest first)
+      const hist = jobs[idx].history || [];
+      hist.unshift({ runAt, status });
+      if (hist.length > 20) hist.length = 20;
+      jobs[idx].history = hist;
       // Once-off: disable after first run
       if (jobs[idx].frequency === 'once') {
         jobs[idx].enabled = false;

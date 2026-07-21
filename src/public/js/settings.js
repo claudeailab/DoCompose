@@ -260,10 +260,10 @@ async function settingsInit() {
           <span class="stg-card-hint">${escHtml(scheduleDescription(entry))}</span>
           <div class="stg-card-actions">
             <button class="btn btn-secondary btn-sm upd-edit-btn" data-idx="${idx}">${IC.edit}Edit</button>
+            <button class="btn btn-ghost btn-sm upd-history-btn" data-idx="${idx}" title="Run history">${IC.clock || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'}</button>
             <button class="btn btn-ghost btn-sm upd-delete-btn" data-idx="${idx}">${IC.trash}</button>
           </div>
         </div>
-        ${entry.lastRun ? `<div class="stg-card-footer">Last run: ${new Date(entry.lastRun).toLocaleString()} · ${escHtml(entry.lastStatus || '')}</div>` : ''}
       </div>
     `).join('');
 
@@ -276,6 +276,9 @@ async function settingsInit() {
     list.querySelectorAll('.upd-edit-btn').forEach((btn) => {
       btn.addEventListener('click', () => openUpdateScheduleModal(+btn.dataset.idx));
     });
+    list.querySelectorAll('.upd-history-btn').forEach((btn) => {
+      btn.addEventListener('click', () => openUpdateHistoryModal(+btn.dataset.idx));
+    });
     list.querySelectorAll('.upd-delete-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         updateSchedules.splice(+btn.dataset.idx, 1);
@@ -283,6 +286,48 @@ async function settingsInit() {
         markDirty();
       });
     });
+  }
+
+  function openUpdateHistoryModal(idx) {
+    const entry = updateSchedules[idx];
+    const existing = document.getElementById('updHistModalOverlay');
+    if (existing) existing.remove();
+
+    const hist = entry.history || [];
+    const rows = hist.length
+      ? hist.map((h) => {
+          const isOk = h.status && h.status.startsWith('ok');
+          const dot = `<span class="status-dot ${isOk ? 'running' : 'exited'}" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;flex-shrink:0"></span>`;
+          const time = new Date(h.runAt).toLocaleString();
+          const statusText = h.status || '';
+          return `<div style="display:flex;align-items:flex-start;gap:0.5rem;padding:0.55rem 0;border-bottom:1px solid var(--border)">
+            <div style="display:flex;align-items:center;min-width:0;flex:1">
+              ${dot}
+              <div style="min-width:0">
+                <div style="font-size:0.82rem;color:var(--text-2)">${escHtml(time)}</div>
+                <div style="font-size:0.85rem;word-break:break-word">${escHtml(statusText)}</div>
+              </div>
+            </div>
+          </div>`;
+        }).join('')
+      : '<div style="padding:1.5rem 0;text-align:center;color:var(--text-2);font-size:0.88rem">No runs recorded yet.</div>';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'updHistModalOverlay';
+    overlay.className = 'modal-overlay is-open';
+    overlay.innerHTML = `
+      <div class="modal" style="width:420px;max-width:95vw">
+        <div class="modal-header">
+          <span class="modal-title">Run History — ${escHtml(entry.serviceName || 'Unknown')}</span>
+          <button class="modal-close" id="updHistModalClose">${IC.x}</button>
+        </div>
+        <div class="modal-body" style="padding:0 1.25rem;max-height:60vh;overflow-y:auto">
+          ${rows}
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.getElementById('updHistModalClose').addEventListener('click', () => overlay.remove());
   }
   renderUpdateSchedules();
 
