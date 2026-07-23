@@ -365,12 +365,16 @@ router.get('/:name/update/stream', async (req, res) => {
     const info = await docker.getContainer(containerName).inspect();
     const image = info.Config.Image;
 
-    // Detect self-update
+    // Detect self-update: check container name matches our own hostname (most reliable),
+    // or fall back to service name / image heuristics.
     let isSelf = false;
     try {
+      const os = require('os');
       const { parsed } = readCompose(project);
       const svc = parsed?.services?.[name];
-      isSelf = name === 'docompose' || (svc?.image?.includes('claudeailab/docompose'));
+      isSelf = containerName === os.hostname()
+        || name === 'docompose'
+        || (svc?.image?.includes('claudeailab/docompose'));
     } catch {}
 
     // Step 1: registry login
@@ -397,6 +401,9 @@ router.get('/:name/update/stream', async (req, res) => {
 
     if (isSelf) {
       log('→ Self-update: launching helper container…');
+      // The helper runs in a separate container (different PID namespace) so it
+      // survives when DoCompose's own container is stopped and removed.
+      // We pass the container name (not service name) so Docker API calls are correct.
       const selfUpdateScript = `
 const http = require('http');
 function dockerRequest(method, path, body) {
@@ -410,20 +417,21 @@ function dockerRequest(method, path, body) {
 }
 async function main() {
   await new Promise((r) => setTimeout(r, 5000));
-  const info = await dockerRequest('GET', '/containers/${name}/json');
-  if (!info || !info.Config) { console.error('inspect failed'); process.exit(1); }
-  await dockerRequest('POST', '/containers/${name}/stop?t=15');
-  await dockerRequest('DELETE', '/containers/${name}?force=true');
+  const info = await dockerRequest('GET', '/containers/${containerName}/json');
+  if (!info || !info.Config) { console.error('[self-update] inspect failed'); process.exit(1); }
+  await dockerRequest('POST', '/containers/${containerName}/stop?t=15');
+  await dockerRequest('DELETE', '/containers/${containerName}?force=true');
   const createBody = { Image: info.Config.Image, Hostname: info.Config.Hostname, User: info.Config.User,
-    Env: info.Config.Env, ExposedPorts: info.Config.ExposedPorts,
+    Env: info.Config.Env, ExposedPorts: info.Config.ExposedPorts, Labels: info.Config.Labels,
     HostConfig: { Binds: info.HostConfig.Binds, PortBindings: info.HostConfig.PortBindings,
       RestartPolicy: info.HostConfig.RestartPolicy, NetworkMode: info.HostConfig.NetworkMode } };
-  await dockerRequest('POST', '/containers/create?name=${name}', createBody);
-  await dockerRequest('POST', '/containers/${name}/start');
+  await dockerRequest('POST', '/containers/create?name=${containerName}', createBody);
+  await dockerRequest('POST', '/containers/${containerName}/start');
+  console.log('[self-update] Done');
 }
 main().catch((e) => { console.error('[self-update]', e.message); process.exit(1); });`;
 
-      const selfInfo = await docker.getContainer(name).inspect();
+      const selfInfo = await docker.getContainer(containerName).inspect();
       const helper = await docker.createContainer({
         Image: selfInfo.Config.Image, User: '0',
         Cmd: ['node', '-e', selfUpdateScript],
@@ -484,110 +492,85 @@ main().catch((e) => { console.error('[self-update]', e.message); process.exit(1)
   }
 });
 
-// POST /api/services/:name/update — pull, remove, then force-recreate via compose
+// POST /api/services/:name/update — pull then recreate (non-streaming fallback)
 router.post('/:name/update', async (req, res) => {
   try {
     const project = req.query.project || '';
     const name = req.params.name;
+    const containerName = await getContainerName(project, name);
 
-    // Detect self-update: updating DoCompose itself kills this process mid-update.
-    // Pull first (safe), then spawn the recreate as a fully detached process that
-    // outlives the DoCompose container so Docker Compose can finish bringing it back.
+    const Docker = require('dockerode');
+    const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+    const info = await docker.getContainer(containerName).inspect();
+    const image = info.Config.Image;
+
+    // Detect self-update
+    const os = require('os');
     let isSelf = false;
     try {
       const { parsed } = readCompose(project);
-      const svc = parsed && parsed.services && parsed.services[name];
-      const img = svc && svc.image;
-      isSelf = name === 'docompose' || (img && img.includes('claudeailab/docompose'));
+      const svc = parsed?.services?.[name];
+      isSelf = containerName === os.hostname()
+        || name === 'docompose'
+        || (svc?.image?.includes('claudeailab/docompose'));
     } catch {}
 
-    await runCompose(project, ['pull', name]);
+    // Pull using docker pull directly (avoids compose project-name mismatch)
+    await loginForImage(image);
+    await runDocker(['pull', image]);
 
     if (isSelf) {
-      // Any process spawned inside our container dies when the container stops.
-      // Solution: launch a helper container (external PID namespace) that uses
-      // the Docker socket HTTP API directly — no compose file, no docker-compose
-      // binary needed. The helper inspects the current container, stops it,
-      // removes it, recreates it with the new image, and starts it.
       const selfUpdateScript = `
 const http = require('http');
 function dockerRequest(method, path, body) {
   return new Promise((resolve, reject) => {
     const data = body ? JSON.stringify(body) : null;
-    const req = http.request({
-      socketPath: '/var/run/docker.sock',
-      path, method,
-      headers: data ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } : {},
-    }, (res) => {
-      let d = '';
-      res.on('data', (c) => { d += c; });
-      res.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve(d); } });
-    });
-    req.on('error', reject);
-    if (data) req.write(data);
-    req.end();
+    const req = http.request({ socketPath: '/var/run/docker.sock', path, method,
+      headers: data ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } : {} },
+      (res) => { let d = ''; res.on('data', (c) => { d += c; }); res.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve(d); } }); });
+    req.on('error', reject); if (data) req.write(data); req.end();
   });
 }
 async function main() {
   await new Promise((r) => setTimeout(r, 5000));
-  const info = await dockerRequest('GET', '/containers/${name}/json');
-  if (!info || !info.Config) { console.error('inspect failed'); process.exit(1); }
-  await dockerRequest('POST', '/containers/${name}/stop?t=15');
-  await dockerRequest('DELETE', '/containers/${name}?force=true');
-  const createBody = {
-    Image: info.Config.Image,
-    Hostname: info.Config.Hostname,
-    User: info.Config.User,
-    Env: info.Config.Env,
-    ExposedPorts: info.Config.ExposedPorts,
-    HostConfig: {
-      Binds: info.HostConfig.Binds,
-      PortBindings: info.HostConfig.PortBindings,
-      RestartPolicy: info.HostConfig.RestartPolicy,
-      NetworkMode: info.HostConfig.NetworkMode,
-    },
-  };
-  await dockerRequest('POST', '/containers/create?name=${name}', createBody);
-  await dockerRequest('POST', '/containers/${name}/start');
+  const info = await dockerRequest('GET', '/containers/${containerName}/json');
+  if (!info || !info.Config) { console.error('[self-update] inspect failed'); process.exit(1); }
+  await dockerRequest('POST', '/containers/${containerName}/stop?t=15');
+  await dockerRequest('DELETE', '/containers/${containerName}?force=true');
+  const createBody = { Image: info.Config.Image, Hostname: info.Config.Hostname, User: info.Config.User,
+    Env: info.Config.Env, ExposedPorts: info.Config.ExposedPorts, Labels: info.Config.Labels,
+    HostConfig: { Binds: info.HostConfig.Binds, PortBindings: info.HostConfig.PortBindings,
+      RestartPolicy: info.HostConfig.RestartPolicy, NetworkMode: info.HostConfig.NetworkMode } };
+  await dockerRequest('POST', '/containers/create?name=${containerName}', createBody);
+  await dockerRequest('POST', '/containers/${containerName}/start');
   console.log('[self-update] Done');
 }
-main().catch((e) => { console.error('[self-update] Error:', e.message); process.exit(1); });
-`;
+main().catch((e) => { console.error('[self-update] Error:', e.message); process.exit(1); });`;
 
       try {
-        const Docker = require('dockerode');
-        const docker = new Docker({ socketPath: '/var/run/docker.sock' });
-        const selfInfo = await docker.getContainer(name).inspect();
-        const helperImage = selfInfo.Config.Image;
-
         const helper = await docker.createContainer({
-          Image: helperImage,
-          User: '0',
+          Image: info.Config.Image, User: '0',
           Cmd: ['node', '-e', selfUpdateScript],
-          HostConfig: {
-            AutoRemove: true,
-            Binds: ['/var/run/docker.sock:/var/run/docker.sock'],
-          },
+          HostConfig: { AutoRemove: true, Binds: ['/var/run/docker.sock:/var/run/docker.sock'] },
         });
         await helper.start();
-        console.log(`[self-update] Helper container launched (image=${helperImage})`);
+        console.log(`[self-update] Helper launched for ${containerName}`);
       } catch (err) {
-        console.error('[self-update] Failed to launch helper container:', err.message);
-        return res.status(500).json({ error: 'Self-update helper failed to launch: ' + err.message });
+        console.error('[self-update] Failed to launch helper:', err.message);
+        return res.status(500).json({ error: 'Self-update helper failed: ' + err.message });
       }
 
       res.json({ ok: true, self: true });
       return;
     }
 
-    const containerName = await getContainerName(project, name);
     let composeHealthcheck = null;
     try {
       const { parsed } = readCompose(project);
-      const svc = parsed && parsed.services && parsed.services[name];
-      if (svc && svc.healthcheck) composeHealthcheck = svc.healthcheck;
+      const svc = parsed?.services?.[name];
+      if (svc?.healthcheck) composeHealthcheck = svc.healthcheck;
     } catch {}
-    await recreateContainerViaApi(containerName, true, composeHealthcheck);
+    await recreateContainerViaApi(containerName, false, composeHealthcheck);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
