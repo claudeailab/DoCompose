@@ -73,11 +73,39 @@ async function graphGet(path_, token) {
 // OneDrive chunk size must be a multiple of 327680 bytes. Use 10 MiB.
 const CHUNK_SIZE = 10 * 1024 * 1024;
 
+async function fetchWithRetry(url, options, maxRetries = 3) {
+  let delay = 2000;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(url, options);
+    if (res.status !== 503 && res.status !== 429) return res;
+    if (attempt === maxRetries) return res;
+    const retryAfter = parseInt(res.headers.get('Retry-After') || '0', 10);
+    await new Promise(r => setTimeout(r, retryAfter > 0 ? retryAfter * 1000 : delay));
+    delay *= 2;
+  }
+}
+
 // Upload a single file using an upload session with chunked streaming so large
 // files (DB dumps, media) don't require loading the whole thing into memory.
+// Empty files use a simple PUT to avoid the invalid Content-Range issue.
 async function uploadFile(token, localPath, remoteItemPath) {
   const fileSize = fs.statSync(localPath).size;
   const encoded = encodeURIComponent(remoteItemPath.replace(/^\//, '')).replace(/%2F/g, '/');
+
+  // Empty files: upload session doesn't work (Content-Range: bytes */0 is rejected).
+  // Use a simple PUT to the item content endpoint instead.
+  if (fileSize === 0) {
+    const putRes = await fetchWithRetry(`${GRAPH}/me/drive/root:/${encoded}:/content`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Length': '0', 'Content-Type': 'application/octet-stream' },
+      body: Buffer.alloc(0),
+    });
+    if (!putRes.ok) {
+      const err = await putRes.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Upload failed: HTTP ${putRes.status}`);
+    }
+    return;
+  }
 
   const sessionRes = await fetch(`${GRAPH}/me/drive/root:/${encoded}:/createUploadSession`, {
     method: 'POST',
@@ -95,7 +123,7 @@ async function uploadFile(token, localPath, remoteItemPath) {
       const buf = Buffer.allocUnsafe(chunkSize);
       fs.readSync(fd, buf, 0, chunkSize, offset);
       const end = offset + chunkSize - 1;
-      const uploadRes = await fetch(session.uploadUrl, {
+      const uploadRes = await fetchWithRetry(session.uploadUrl, {
         method: 'PUT',
         headers: {
           'Content-Length': String(chunkSize),
@@ -108,18 +136,6 @@ async function uploadFile(token, localPath, remoteItemPath) {
         throw new Error(err.error?.message || `Upload failed: HTTP ${uploadRes.status}`);
       }
       offset += chunkSize;
-    }
-    // Empty file edge case
-    if (fileSize === 0) {
-      const uploadRes = await fetch(session.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Length': '0', 'Content-Range': 'bytes *\/0' },
-        body: Buffer.alloc(0),
-      });
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json().catch(() => ({}));
-        throw new Error(err.error?.message || `Upload failed: HTTP ${uploadRes.status}`);
-      }
     }
   } finally {
     fs.closeSync(fd);
