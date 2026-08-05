@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     outputs:
       version: ${{ steps.bump.outputs.version }}
       sha: ${{ steps.push.outputs.sha }}
