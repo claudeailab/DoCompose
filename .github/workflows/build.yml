@@ -1,5 +1,5 @@
-name: Build and Push Docker Image
-run-name: "DoCompose · ${{ github.event.head_commit.message }} · #${{ github.run_number }}"
+name: DoCompose
+run-name: "${{ github.event.head_commit.message }}"
 
 on:
   push:
