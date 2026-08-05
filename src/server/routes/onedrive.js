@@ -295,11 +295,15 @@ router.get('/status', (req, res) => {
   res.json({ connected: !!od.connected && !!od.refreshToken, displayName: od.displayName || '' });
 });
 
-// GET /api/onedrive/folders — list root folders for picker
+// GET /api/onedrive/folders?path=<optional/sub/path> — list subfolders for picker
 router.get('/folders', async (req, res) => {
   try {
     const token = await getValidToken();
-    const data = await graphGet('/me/drive/root/children?$filter=folder ne null&$top=100', token);
+    const path = (req.query.path || '').replace(/^\/+|\/+$/g, '');
+    const endpoint = path
+      ? `/me/drive/root:/${encodeURIComponent(path).replace(/%2F/g, '/')}:/children?$select=name,folder&$top=200`
+      : `/me/drive/root/children?$select=name,folder&$top=200`;
+    const data = await graphGet(endpoint, token);
     const folders = (data.value || []).filter((i) => i.folder).map((i) => i.name).sort();
     res.json({ folders });
   } catch (err) {

@@ -279,6 +279,19 @@ router.get('/status', (req, res) => {
   res.json({ connected: !!db.connected && !!db.refreshToken, displayName: db.displayName || '' });
 });
 
+// GET /api/dropbox/folders?path=<optional/sub/path> — list subfolders for picker
+router.get('/folders', async (req, res) => {
+  try {
+    const token = await getValidToken();
+    const path = (req.query.path || '').replace(/^\/+|\/+$/g, '');
+    const items = await listFolder(token, path ? `/${path}` : '');
+    const folders = items.filter((i) => i['.tag'] === 'folder').map((i) => i.name).sort();
+    res.json({ folders });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/dropbox/backup/:jobId — manual trigger
 router.post('/backup/:jobId', async (req, res) => {
   try {

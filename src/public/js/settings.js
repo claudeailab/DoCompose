@@ -615,14 +615,25 @@ async function settingsInit() {
         <input type="text" id="stgOdTenant" class="settings-input" value="${escHtml(odTenant)}" placeholder="Optional — leave blank for personal/multi-tenant accounts" autocomplete="off" spellcheck="false">
       </div>
       <div class="field">
-        <div class="field-label">Backup folder name</div>
-        <input type="text" id="stgOdBackupFolder" class="settings-input" value="${escHtml(odBackupFolder)}" placeholder="DoCompose Backups">
+        <div class="field-label">Backup folder path</div>
+        <div class="field-row">
+          <input type="text" id="stgOdBackupFolder" class="settings-input" value="${escHtml(odBackupFolder)}" placeholder="DoCompose">
+          ${connected ? `<button class="btn btn-secondary btn-sm" id="stgOdBrowseBtn" type="button">Browse</button>` : ''}
+        </div>
       </div>
       ${connected ? '' : '<div id="stgOdFlowBox"></div>'}`;
 
     document.getElementById('stgOdClientId')?.addEventListener('input', (e) => { odClientId = e.target.value; markDirty(); });
     document.getElementById('stgOdTenant')?.addEventListener('input', (e) => { odTenant = e.target.value; markDirty(); });
     document.getElementById('stgOdBackupFolder')?.addEventListener('input', (e) => { odBackupFolder = e.target.value; markDirty(); });
+    document.getElementById('stgOdBrowseBtn')?.addEventListener('click', () => {
+      openFolderPickerModal('onedrive', odBackupFolder, (selected) => {
+        odBackupFolder = selected;
+        const inp = document.getElementById('stgOdBackupFolder');
+        if (inp) inp.value = selected;
+        markDirty();
+      });
+    });
     document.getElementById('stgOdHelpBtn')?.addEventListener('click', () => {
       const ov = document.createElement('div');
       ov.className = 'modal-overlay is-open';
@@ -730,8 +741,11 @@ async function settingsInit() {
         <input type="password" id="stgDbAppSecret" class="settings-input" placeholder="${dbHasSecret ? '(saved — enter to change)' : '••••••••••••••'}" autocomplete="new-password">
       </div>
       <div class="field">
-        <div class="field-label">Backup folder name</div>
-        <input type="text" id="stgDbBackupFolder" class="settings-input" value="${escHtml(dbBackupFolder)}" placeholder="DoCompose Backups">
+        <div class="field-label">Backup folder path</div>
+        <div class="field-row">
+          <input type="text" id="stgDbBackupFolder" class="settings-input" value="${escHtml(dbBackupFolder)}" placeholder="DoCompose">
+          ${connected ? `<button class="btn btn-secondary btn-sm" id="stgDbBrowseBtn" type="button">Browse</button>` : ''}
+        </div>
       </div>
       <div class="field">
         <div class="field-label">Redirect URI <span class="field-hint" style="font-weight:400">add to your app's OAuth 2 settings</span></div>
@@ -741,6 +755,14 @@ async function settingsInit() {
     document.getElementById('stgDbAppKey')?.addEventListener('input', (e) => { dbAppKey = e.target.value; markDirty(); });
     document.getElementById('stgDbAppSecret')?.addEventListener('input', (e) => { dbAppSecret = e.target.value; dbAppSecretDirty = true; markDirty(); });
     document.getElementById('stgDbBackupFolder')?.addEventListener('input', (e) => { dbBackupFolder = e.target.value; markDirty(); });
+    document.getElementById('stgDbBrowseBtn')?.addEventListener('click', () => {
+      openFolderPickerModal('dropbox', dbBackupFolder, (selected) => {
+        dbBackupFolder = selected;
+        const inp = document.getElementById('stgDbBackupFolder');
+        if (inp) inp.value = selected;
+        markDirty();
+      });
+    });
     document.getElementById('stgDbRemoveBtn')?.addEventListener('click', async () => {
       if (connected) { try { await api('POST', '/api/dropbox/auth/disconnect'); } catch {} }
       dbAppKey = ''; dbEnabled = false; renderProviderBar(); markDirty();
@@ -778,6 +800,85 @@ async function settingsInit() {
     });
   }
   if (dbEnabled) refreshDbStatus();
+
+  // ── Cloud folder picker modal ──────────────────────────────────
+  function openFolderPickerModal(provider, initialPath, onSelect) {
+    let currentPath = (initialPath || '').replace(/^\/+|\/+$/g, '');
+
+    let modal = document.getElementById('folderPickerModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'folderPickerModal';
+      modal.className = 'modal-overlay';
+      modal.innerHTML = `
+        <div class="modal" style="width:480px;max-width:95vw">
+          <div class="modal-header">
+            <span class="modal-title">Choose backup folder</span>
+            <button class="btn-icon" id="fpCloseBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div class="modal-body" style="padding:0">
+            <div id="fpBreadcrumb" class="fp-breadcrumb"></div>
+            <div id="fpList" class="fp-list"></div>
+          </div>
+          <div class="modal-footer">
+            <div id="fpCurrentPath" class="fp-current-path"></div>
+            <button class="btn btn-primary" id="fpSelectBtn">Select this folder</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+    }
+    modal.classList.add('is-open');
+
+    document.getElementById('fpCloseBtn').onclick = () => { modal.classList.remove('is-open'); };
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('is-open'); };
+    document.getElementById('fpSelectBtn').onclick = () => {
+      modal.classList.remove('is-open');
+      onSelect(currentPath || 'DoCompose');
+    };
+
+    async function navigate(path) {
+      currentPath = (path || '').replace(/^\/+|\/+$/g, '');
+      const list = document.getElementById('fpList');
+      const crumb = document.getElementById('fpBreadcrumb');
+      const cur = document.getElementById('fpCurrentPath');
+      list.innerHTML = '<div class="fp-loading">Loading…</div>';
+
+      // Breadcrumb
+      const parts = currentPath ? currentPath.split('/') : [];
+      let crumbHtml = `<span class="fp-crumb" data-path="">Root</span>`;
+      parts.forEach((part, i) => {
+        const p = parts.slice(0, i + 1).join('/');
+        crumbHtml += `<span class="fp-crumb-sep">›</span><span class="fp-crumb" data-path="${escHtml(p)}">${escHtml(part)}</span>`;
+      });
+      crumb.innerHTML = crumbHtml;
+      crumb.querySelectorAll('.fp-crumb').forEach((el) => {
+        el.addEventListener('click', () => navigate(el.dataset.path));
+      });
+
+      cur.textContent = currentPath ? `/${currentPath}` : '/';
+
+      try {
+        const qs = currentPath ? `?path=${encodeURIComponent(currentPath)}` : '';
+        const data = await api('GET', `/api/${provider}/folders${qs}`);
+        const folders = data.folders || [];
+        if (folders.length === 0) {
+          list.innerHTML = '<div class="fp-empty">No subfolders here</div>';
+        } else {
+          list.innerHTML = folders.map((f) => {
+            const fullPath = currentPath ? `${currentPath}/${f}` : f;
+            return `<div class="fp-item" data-path="${escHtml(fullPath)}">${IC.folder || '📁'} ${escHtml(f)}</div>`;
+          }).join('');
+          list.querySelectorAll('.fp-item').forEach((el) => {
+            el.addEventListener('click', () => navigate(el.dataset.path));
+          });
+        }
+      } catch (err) {
+        list.innerHTML = `<div class="fp-empty" style="color:var(--danger)">Error: ${escHtml(err.message)}</div>`;
+      }
+    }
+
+    navigate(currentPath);
+  }
 
   // ── Path chips (shared between openJobModal and openFileBrowser) ─
   function renderPathChips(idx) {
