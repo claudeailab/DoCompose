@@ -54,13 +54,19 @@ jobs:
           echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Set run name
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+          MSG: ${{ github.event.head_commit.message }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          TITLE=$(printf '%s' "$MSG" | head -1)
+          BODY=$(jq -n --arg n "v${VERSION} - ${TITLE}" '{name: $n}')
           curl -s -X PATCH \
             "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             -H "Content-Type: application/json" \
-            -d "{\"name\": \"v${{ steps.bump.outputs.version }} - ${{ github.event.head_commit.message }}\"}"
+            -d "$BODY"
 
   build:
     name: Build ${{ matrix.arch }}
