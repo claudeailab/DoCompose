@@ -1103,18 +1103,19 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 }
 
 /* Cloud folder picker modal */
-.fp-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem; padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--surface-inset); font-size: 0.82rem; }
+.fp-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 0.2rem; padding: 0.4rem 1rem; border-bottom: 1px solid var(--border); background: var(--surface-inset); font-size: 0.78rem; }
 .fp-crumb { color: var(--accent); cursor: pointer; padding: 0.1rem 0.2rem; border-radius: var(--r-sm); }
 .fp-crumb:hover { text-decoration: underline; }
 .fp-crumb:last-child { color: var(--text); font-weight: 600; cursor: default; text-decoration: none; }
 .fp-crumb-sep { color: var(--text-muted); }
-.fp-list { min-height: 180px; max-height: 320px; overflow-y: auto; }
-.fp-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 1.25rem; cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid var(--border-subtle, var(--border)); transition: background 0.12s; }
+.fp-list { min-height: 120px; max-height: 420px; overflow-y: auto; }
+.fp-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.32rem 1rem; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid var(--border-subtle, var(--border)); transition: background 0.1s; }
+.fp-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.7; }
 .fp-item:last-child { border-bottom: none; }
 .fp-item:hover { background: var(--surface-hover, var(--surface-inset)); }
-.fp-loading, .fp-empty { padding: 2rem 1.25rem; text-align: center; color: var(--text-muted); font-size: 0.88rem; }
-.fp-current-path { font-size: 0.8rem; color: var(--text-muted); font-family: monospace; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#folderPickerModal .modal-footer { align-items: center; }
+.fp-loading, .fp-empty { padding: 1.5rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+.fp-current-path { font-size: 0.75rem; color: var(--text-muted); font-family: monospace; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#folderPickerModal .modal-footer { align-items: center; padding: 0.6rem 1rem; }
 
 /* Self-update reconnect overlay */
 #selfUpdateOverlay {
