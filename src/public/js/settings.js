@@ -731,8 +731,7 @@ async function settingsInit() {
       ov.querySelector('.od-help-close').addEventListener('click', close);
       ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     });
-    document.getElementById('stgOdRemoveBtn')?.addEventListener('click', async () => {
-      if (connected) { try { await api('POST', '/api/onedrive/auth/disconnect'); } catch {} }
+    document.getElementById('stgOdRemoveBtn')?.addEventListener('click', () => {
       odClientId = ''; odEnabled = false; renderProviderBar(); markDirty();
     });
     document.getElementById('stgOdDisconnectBtn')?.addEventListener('click', async () => {
@@ -822,8 +821,7 @@ async function settingsInit() {
         markDirty();
       });
     });
-    document.getElementById('stgDbRemoveBtn')?.addEventListener('click', async () => {
-      if (connected) { try { await api('POST', '/api/dropbox/auth/disconnect'); } catch {} }
+    document.getElementById('stgDbRemoveBtn')?.addEventListener('click', () => {
       dbAppKey = ''; dbEnabled = false; renderProviderBar(); markDirty();
     });
     document.getElementById('stgDbCopyUri')?.addEventListener('click', () => {
@@ -1423,6 +1421,8 @@ async function settingsInit() {
         onedrive: { clientId: odClientId, tenant: odTenant, backupFolderPath: odBackupFolder },
         dropbox: Object.assign(dropboxPayload, { backupFolderPath: dbBackupFolder }),
       };
+      if (_origOdId && !odClientId) { try { await api('POST', '/api/onedrive/auth/disconnect'); } catch {} }
+      if (_origDbKey && !dbAppKey)  { try { await api('POST', '/api/dropbox/auth/disconnect');  } catch {} }
       await api('POST', '/api/settings', payload);
       DC.settings = Object.assign({}, DC.settings, {
         updateIntervalSeconds: payload.updateIntervalSeconds,
