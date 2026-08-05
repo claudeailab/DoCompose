@@ -1139,7 +1139,7 @@ async function settingsInit() {
       <div class="sched-row">
         <select class="settings-select" id="bjmFreq" style="width:auto">${freqOpts}</select>
         <span id="bjmDowWrap" style="${showDow}"><label>on</label><select class="settings-select" id="bjmDow" style="width:auto">${dowOpts}</select></span>
-        <span id="bjmDayTimeRow" style="${showDayTime}"><label>at</label><select class="settings-select" id="bjmHour" style="width:auto">${hourOpts}</select><label>:</label><input type="number" class="settings-input" id="bjmMin" value="${g.min}" min="0" max="59" style="width:4.5rem"></span>
+        <span id="bjmDayTimeRow" style="${showDayTime}"><label>at</label><select class="settings-select" id="bjmHour" style="width:auto">${hourOpts}</select><label>:</label><select class="settings-select" id="bjmMin" style="width:auto">${Array.from({length:60},(_,m)=>`<option value="${m}" ${+g.min===m?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('')}</select></span>
       </div>
       ${customRow}
     </div>`;
@@ -1173,8 +1173,14 @@ async function settingsInit() {
   let bjFileBrowserForModal = false;
 
   function openJobModal(idx) {
+    const isNew = idx === -1;
+    let job;
+    if (isNew) {
+      job = { id: 'job-' + Date.now(), containerName: '', paths: [], _pathTypes: {}, schedule: '0 2 * * *', keepCount: 10, enabled: true };
+    } else {
+      job = backupJobs[idx];
+    }
     bjModalIdx = idx;
-    const job = backupJobs[idx];
     const containers = (DC.services || []).map((s) => s.name);
     const isOk = job.lastStatus && job.lastStatus.startsWith('ok');
     const isErr = job.lastStatus && !isOk;
@@ -1186,7 +1192,7 @@ async function settingsInit() {
     overlay.innerHTML = `
       <div class="modal bj-edit-modal" role="dialog" aria-modal="true">
         <div class="modal-head">
-          <span class="modal-title">Edit Backup Job</span>
+          <span class="modal-title">${isNew ? 'Add Backup Job' : 'Edit Backup Job'}</span>
           <button class="btn-icon modal-close" id="bjModalClose" aria-label="Close">${IC.x}</button>
         </div>
         <div class="bj-modal-body">
@@ -1222,18 +1228,16 @@ async function settingsInit() {
             </div>
           </div>
           <div class="bj-modal-foot">
-            <span class="job-status-text ${statusTextCls}" style="font-size:0.78rem">${escHtml(statusTxt)}</span>
+            ${!isNew ? `<span class="job-status-text ${statusTextCls}" style="font-size:0.78rem">${escHtml(statusTxt)}</span>` : '<span></span>'}
             <div style="display:flex;gap:0.5rem">
-              <button class="btn btn-danger btn-sm" id="bjmDelete">Delete</button>
-              <button class="btn btn-secondary btn-sm" id="bjmRunNow" data-jobid="${escHtml(job.id)}">Run Now</button>
-              <button class="btn btn-primary btn-sm" id="bjmDone">Done</button>
+              <button class="btn btn-secondary btn-sm" id="bjmCancel">Cancel</button>
+              ${!isNew ? `<button class="btn btn-secondary btn-sm" id="bjmRunNow" data-jobid="${escHtml(job.id)}">Run Now</button>` : ''}
+              <button class="btn btn-primary btn-sm" id="bjmSave">Save</button>
             </div>
           </div>
         </div>
       </div>`;
     overlay.classList.add('is-open');
-    document.getElementById('bjModalClose').addEventListener('click', closeJobModal);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeJobModal(); }, { once: true });
 
     document.getElementById('bjmDestination').addEventListener('change', (e) => { backupJobs[bjModalIdx].destination = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
     document.getElementById('bjmContainer').addEventListener('change', (e) => { backupJobs[bjModalIdx].containerName = e.target.value; syncJobRow(bjModalIdx); markDirty(); });
@@ -1241,12 +1245,30 @@ async function settingsInit() {
     const cronRaw = document.getElementById('bjmCronRaw'); if (cronRaw) cronRaw.addEventListener('input', syncSchedGui);
     document.getElementById('bjmKeep').addEventListener('change', (e) => { backupJobs[bjModalIdx].keepCount = +e.target.value || 10; markDirty(); });
     document.getElementById('bjmBrowse').addEventListener('click', () => { bjFileBrowserForModal = true; openFileBrowser(bjModalIdx); });
+    if (isNew) {
+      backupJobs.push(job);
+      bjModalIdx = backupJobs.length - 1;
+    }
     renderPathChips(bjModalIdx);
-    document.getElementById('bjmDone').addEventListener('click', closeJobModal);
-    document.getElementById('bjmDelete').addEventListener('click', () => {
-      backupJobs.splice(bjModalIdx, 1); closeJobModal(); renderBackupJobs(); markDirty();
+    document.getElementById('bjmCancel').addEventListener('click', () => {
+      if (isNew) { backupJobs.splice(bjModalIdx, 1); renderBackupJobs(); }
+      closeJobModal();
     });
-    document.getElementById('bjmRunNow').addEventListener('click', async () => {
+    document.getElementById('bjModalClose').addEventListener('click', () => {
+      if (isNew) { backupJobs.splice(bjModalIdx, 1); renderBackupJobs(); }
+      closeJobModal();
+    });
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        if (isNew) { backupJobs.splice(bjModalIdx, 1); renderBackupJobs(); }
+        closeJobModal();
+      }
+    }, { once: true });
+    document.getElementById('bjmSave').addEventListener('click', () => {
+      if (isNew) { renderBackupJobs(); markDirty(); }
+      closeJobModal();
+    });
+    document.getElementById('bjmRunNow')?.addEventListener('click', async () => {
       const btn = document.getElementById('bjmRunNow');
       const jobId = job.id;
       btn.disabled = true; btn.textContent = 'Running…';
@@ -1321,11 +1343,7 @@ async function settingsInit() {
   renderBackupJobs();
 
   document.getElementById('stgAddBackupJobBtn')?.addEventListener('click', () => {
-    const newIdx = backupJobs.length;
-    backupJobs.push({ id: 'job-' + Date.now(), containerName: '', paths: [], schedule: '0 2 * * *', keepCount: 10, enabled: true });
-    renderBackupJobs();
-    markDirty();
-    openJobModal(newIdx);
+    openJobModal(-1);
   });
 
   // ── Save ──────────────────────────────────────────────────────
