@@ -4,74 +4,16 @@ run-name: "${{ github.event.head_commit.message }}"
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: claudeailab/docompose
 
 jobs:
-  bump:
-    name: Bump version
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      actions: write
-    outputs:
-      version: ${{ steps.bump.outputs.version }}
-      sha: ${{ steps.push.outputs.sha }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 1
-          sparse-checkout: |
-            package.json
-            src/public/index.html
-
-      - name: Bump patch version
-        id: bump
-        run: |
-          OLD=$(node -p "require('./package.json').version")
-          IFS='.' read -r maj min pat <<< "$OLD"
-          NEW="$maj.$min.$((pat + 1))"
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json'));
-            pkg.version = '$NEW';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-          sed -i "s/v$OLD/v$NEW/g" src/public/index.html
-          sed -i "s/?v=$OLD/?v=$NEW/g" src/public/index.html
-          echo "version=$NEW" >> $GITHUB_OUTPUT
-
-      - name: Commit and push
-        id: push
-        run: |
-          git config user.name "Claude"
-          git config user.email "noreply@anthropic.com"
-          git add package.json src/public/index.html
-          git commit -m "chore: bump to v${{ steps.bump.outputs.version }}"
-          git push
-          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Set run name
-        env:
-          VERSION: ${{ steps.bump.outputs.version }}
-          MSG: ${{ github.event.head_commit.message }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TITLE=$(printf '%s' "$MSG" | head -1)
-          BODY=$(jq -n --arg n "v${VERSION} - ${TITLE}" '{name: $n}')
-          curl -s -X PATCH \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "Content-Type: application/json" \
-            -d "$BODY"
-
   build:
     name: Build ${{ matrix.arch }}
-    needs: bump
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
@@ -85,11 +27,16 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
             arch: arm64
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.bump.outputs.sha }}
           fetch-depth: 1
+
+      - name: Read version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
       - uses: docker/setup-buildx-action@v3
 
@@ -125,9 +72,9 @@ jobs:
           retention-days: 1
 
   merge:
-    name: "Push manifest · v${{ needs.bump.outputs.version }}"
+    name: "Push manifest · v${{ needs.build.outputs.version }}"
     runs-on: ubuntu-latest
-    needs: [bump, build]
+    needs: build
     permissions:
       contents: read
       packages: write
@@ -148,17 +95,16 @@ jobs:
         run: |
           docker buildx imagetools create \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.bump.outputs.version }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.build.outputs.version }} \
             $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
         working-directory: /tmp/digests
 
       - name: Build summary
         run: |
-          echo "## DoCompose v${{ needs.bump.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "## DoCompose v${{ needs.build.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| | |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Version** | \`v${{ needs.bump.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Image** | \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.bump.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Commit** | \`${{ needs.bump.outputs.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`v${{ needs.build.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Image** | \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ needs.build.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Triggered by** | ${{ github.event.head_commit.message }} |" >> $GITHUB_STEP_SUMMARY
