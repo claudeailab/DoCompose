@@ -655,7 +655,7 @@ async function settingsInit() {
                 </ul>
               </li>
               <li>Copy the <strong>Application (client) ID</strong> and the <strong>Directory (tenant) ID</strong> from the Overview page and paste them into the fields above.</li>
-              <li>Go to <strong>Manage → Authentication</strong>, enable <strong>Allow public client flows</strong>, then <strong>Save</strong>.</li>
+              <li>Go to <strong>Manage → Authentication</strong>, scroll to <strong>Advanced settings</strong>, set <strong>Allow public client flows</strong> to <strong style="color:#f59e0b">Yes</strong>, then click <strong>Save</strong>. <em style="color:#f87171">Required — connection will fail without this.</em></li>
               <li>Go to <strong>Overview → View API Permissions → Add a permission → Microsoft Graph → Delegated permissions</strong> and add:
                 <ul>
                   <li><code>Files.ReadWrite</code></li>

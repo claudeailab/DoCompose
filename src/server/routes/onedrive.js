@@ -255,7 +255,14 @@ router.post('/auth/poll', async (req, res) => {
     if (data.error === 'authorization_pending') return res.json({ pending: true });
     if (data.error === 'authorization_declined') return res.json({ error: 'Authorization declined' });
     if (data.error === 'expired_token') return res.json({ error: 'Code expired — please start again' });
-    if (data.error) return res.json({ error: data.error_description || data.error });
+    if (data.error) {
+      const desc = data.error_description || data.error;
+      // AADSTS7000218: public client flows not enabled on the Azure app registration
+      if (desc.includes('AADSTS7000218') || desc.includes('client_assertion') || desc.includes('client_secret')) {
+        return res.json({ error: 'Azure app not configured for public client flows. In the Azure portal go to your app → Authentication → set "Allow public client flows" to Yes, then Save.' });
+      }
+      return res.json({ error: desc });
+    }
 
     // Success — get display name
     let displayName = '';
