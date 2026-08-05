@@ -153,6 +153,7 @@ async function settingsInit() {
         <div id="bjModalOverlay" class="modal-overlay"></div>
 
         <div class="stg-footer">
+          <button class="btn btn-secondary" id="stgDiscardBtn" disabled>Discard Changes</button>
           <button class="btn btn-primary" id="stgSaveBtn" disabled>${IC.save}Save Changes</button>
           <span id="stgSaveStatus" class="stg-save-status"></span>
         </div>
@@ -181,7 +182,14 @@ async function settingsInit() {
 
   // ── Dirty tracking ────────────────────────────────────────────
   const saveBtn = document.getElementById('stgSaveBtn');
-  function markDirty() { saveBtn.disabled = false; }
+  const discardBtn = document.getElementById('stgDiscardBtn');
+  function markDirty() { saveBtn.disabled = false; discardBtn.disabled = false; }
+  function markClean() { saveBtn.disabled = true; discardBtn.disabled = true; }
+
+  discardBtn.addEventListener('click', () => {
+    if (!confirm('Discard all unsaved changes?')) return;
+    settingsInit();
+  });
 
   // ── General tab ──────────────────────────────────────────────
   const currentTheme = settings.theme || localStorage.getItem('dc-theme') || 'dark';
@@ -319,7 +327,7 @@ async function settingsInit() {
       <div class="modal" style="width:420px;max-width:95vw">
         <div class="modal-header">
           <span class="modal-title">Run History — ${escHtml(entry.serviceName || 'Unknown')}</span>
-          <button class="modal-close" id="updHistModalClose">${IC.x}</button>
+          <button class="btn-icon" id="updHistModalClose">${IC.x}</button>
         </div>
         <div class="modal-body" style="padding:0 1.25rem;max-height:60vh;overflow-y:auto">
           ${rows}
@@ -332,16 +340,15 @@ async function settingsInit() {
   renderUpdateSchedules();
 
   document.getElementById('stgAddUpdateScheduleBtn')?.addEventListener('click', () => {
-    const newIdx = updateSchedules.length;
-    updateSchedules.push({ id: 'us-' + Date.now(), serviceName: '', frequency: 'daily', hour: 3, minute: 0, weekday: 0, enabled: true });
-    renderUpdateSchedules();
-    markDirty();
-    openUpdateScheduleModal(newIdx);
+    openUpdateScheduleModal(-1);
   });
 
-  // Modal for editing a schedule entry
+  // Modal for editing a schedule entry. idx === -1 means new entry (not added until Save).
   function openUpdateScheduleModal(idx) {
-    const entry = updateSchedules[idx];
+    const isNew = idx === -1;
+    const entry = isNew
+      ? { id: 'us-' + Date.now(), serviceName: '', frequency: 'daily', hour: 3, minute: 0, weekday: 0, enabled: true }
+      : updateSchedules[idx];
     const existing = document.getElementById('updSchModalOverlay');
     if (existing) existing.remove();
 
@@ -358,8 +365,8 @@ async function settingsInit() {
     overlay.innerHTML = `
       <div class="modal" style="width:420px;max-width:95vw">
         <div class="modal-header">
-          <span class="modal-title">Scheduled Update</span>
-          <button class="modal-close" id="updSchModalClose">${IC.x}</button>
+          <span class="modal-title">${isNew ? 'Add' : 'Edit'} Scheduled Update</span>
+          <button class="btn-icon" id="updSchModalClose">${IC.x}</button>
         </div>
         <div class="modal-body" style="display:flex;flex-direction:column;gap:1.1rem">
           <div class="field">
@@ -388,7 +395,7 @@ async function settingsInit() {
               </select>
               <span style="color:var(--text-muted);font-weight:600">:</span>
               <select id="updSchMinute" class="settings-select" style="width:90px">
-                ${[0,5,10,15,20,25,30,35,40,45,50,55].map((m)=>`<option value="${m}" ${m===entry.minute?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('')}
+                ${Array.from({length:60},(_,m)=>`<option value="${m}" ${m===entry.minute?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('')}
               </select>
             </div>
           </div>
@@ -424,14 +431,19 @@ async function settingsInit() {
     document.getElementById('updSchModalSave').addEventListener('click', () => {
       const svcName = document.getElementById('updSchContainer').value;
       if (!svcName) { showToast('Please select a container', 'error'); return; }
-      updateSchedules[idx] = {
-        ...updateSchedules[idx],
+      const updated = {
+        ...entry,
         serviceName: svcName,
         frequency: document.getElementById('updSchFrequency').value,
         hour: parseInt(document.getElementById('updSchHour')?.value || 0, 10),
         minute: parseInt(document.getElementById('updSchMinute')?.value || 0, 10),
         weekday: parseInt(document.getElementById('updSchWeekday')?.value || 0, 10),
       };
+      if (isNew) {
+        updateSchedules.push(updated);
+      } else {
+        updateSchedules[idx] = updated;
+      }
       renderUpdateSchedules();
       markDirty();
       close();
@@ -1354,7 +1366,7 @@ async function settingsInit() {
       });
       applyTheme(selectedTheme);
       if (window.updateTopbarDatetime) updateTopbarDatetime();
-      saveBtn.disabled = true;
+      markClean();
       setSt('Saved', true);
       setTimeout(() => setSt(''), 3000);
     } catch (err) {
