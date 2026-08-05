@@ -42,7 +42,10 @@ async function settingsInit() {
       <div class="stg-content">
         <!-- GENERAL -->
         <div class="stg-pane active" id="stgPaneGeneral">
-          <div class="pane-head"><div class="pane-title">General</div></div>
+          <div class="pane-head">
+            <div class="pane-title">General</div>
+            <div class="pane-subtitle">Appearance, timezone and time format</div>
+          </div>
           <div class="stg-section-list">
             <div class="stg-section">
               <div class="stg-section-title">Appearance</div>
@@ -78,7 +81,7 @@ async function settingsInit() {
         <div class="stg-pane" id="stgPaneUpdates">
           <div class="pane-head">
             <div class="pane-title">Updates</div>
-            <div class="pane-subtitle">Configure automatic update checks and scheduled container updates</div>
+            <div class="pane-subtitle">Automatic update checks and scheduled container updates</div>
           </div>
           <div class="stg-section-list">
             <div class="stg-section">
@@ -100,7 +103,7 @@ async function settingsInit() {
             <div class="stg-section">
               <div class="stg-section-title">Scheduled Updates</div>
               <div id="stgUpdateSchedulesList" class="stg-stack"></div>
-              <button class="btn btn-primary btn-sm" id="stgAddUpdateScheduleBtn" style="margin-top:0.75rem;width:fit-content">${IC.plus}Add Schedule</button>
+              <button class="btn btn-primary btn-sm stg-add-btn" id="stgAddUpdateScheduleBtn">${IC.plus}Add Schedule</button>
             </div>
           </div>
         </div>
@@ -257,23 +260,21 @@ async function settingsInit() {
       list.innerHTML = '<div class="stg-empty" style="padding:1rem 0;font-size:0.88rem">No scheduled updates. Click Add Schedule to set one up.</div>';
       return;
     }
-    list.innerHTML = updateSchedules.map((entry, idx) => `
-      <div class="stg-card upd-sched-card" data-idx="${idx}">
-        <div class="stg-card-head">
+    list.innerHTML = `<div class="bj-list">${updateSchedules.map((entry, idx) => `
+      <div class="bj-row upd-sched-card" data-idx="${idx}">
+        <div class="job-summary">
           <label class="toggle" title="${entry.enabled ? 'Enabled' : 'Disabled'}">
             <input type="checkbox" class="upd-enabled-cb" data-idx="${idx}" ${entry.enabled ? 'checked' : ''}>
             <span class="toggle-track"><span class="toggle-thumb"></span></span>
           </label>
-          <span class="stg-card-name">${escHtml(entry.serviceName || 'No container selected')}</span>
-          <span class="stg-card-hint">${escHtml(scheduleDescription(entry))}</span>
-          <div class="stg-card-actions">
-            <button class="btn btn-secondary btn-sm upd-edit-btn" data-idx="${idx}">${IC.edit}Edit</button>
-            <button class="btn btn-ghost btn-sm upd-history-btn" data-idx="${idx}" title="Run history">${IC.clock || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'}</button>
-            <button class="btn btn-ghost btn-sm upd-delete-btn" data-idx="${idx}">${IC.trash}</button>
-          </div>
+          <span class="job-name">${escHtml(entry.serviceName || 'No container selected')}</span>
+          <span class="job-sched-hint">${escHtml(scheduleDescription(entry))}</span>
+          <button class="job-expand upd-edit-btn" data-idx="${idx}" title="Edit">${IC.edit}</button>
+          <button class="job-expand upd-history-btn" data-idx="${idx}" title="Run history">${IC.clock}</button>
+          <button class="job-expand upd-delete-btn" data-idx="${idx}" title="Delete">${IC.trash}</button>
         </div>
       </div>
-    `).join('');
+    `).join('')}</div>`;
 
     list.querySelectorAll('.upd-enabled-cb').forEach((cb) => {
       cb.addEventListener('change', () => {
