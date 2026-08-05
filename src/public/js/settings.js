@@ -235,7 +235,11 @@ async function settingsInit() {
   function markClean() { saveBtn.disabled = true; discardBtn.disabled = true; }
 
   discardBtn.addEventListener('click', () => {
-    settingsInit();
+    const tab = stgCurrentTab;
+    settingsInit().then(() => {
+      const btn = document.querySelector(`.stg-tab[data-tab="${tab}"]`);
+      if (btn) btn.click();
+    });
   });
 
   // ── General tab ──────────────────────────────────────────────
