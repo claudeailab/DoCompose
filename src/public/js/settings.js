@@ -881,19 +881,36 @@ async function settingsInit() {
   }
 
   // ── Path chips (shared between openJobModal and openFileBrowser) ─
+  function isFilePath(p) {
+    // Heuristic: if the last segment contains a dot it's likely a file.
+    // The server also stores a _type hint when paths are added via the browser.
+    const job = backupJobs.find((j) => j.paths && j.paths.includes(p));
+    if (job && job._pathTypes && job._pathTypes[p]) return job._pathTypes[p] === 'file';
+    return /\.[^/]+$/.test(p.split('/').pop());
+  }
+
   function renderPathChips(idx) {
     const container = document.getElementById('bjmPathChips');
     if (!container) return;
     const paths = backupJobs[idx].paths || [];
     if (paths.length === 0) {
-      container.innerHTML = `<span class="path-chips-empty">No folders selected — click Browse to add</span>`;
+      container.innerHTML = `<span class="path-chips-empty">No paths selected — click Browse to add a file or folder</span>`;
     } else {
-      container.innerHTML = paths.map((p) => `
-        <span class="path-chip">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;flex-shrink:0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      const types = backupJobs[idx]._pathTypes || {};
+      container.innerHTML = paths.map((p) => {
+        const isFile = types[p] === 'file';
+        const icon = isFile
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;flex-shrink:0"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+        const badge = isFile
+          ? `<span class="path-chip-type file">file</span>`
+          : `<span class="path-chip-type folder">folder</span>`;
+        return `<span class="path-chip">
+          ${icon}${badge}
           <span class="path-chip-label">${escHtml(p)}</span>
           <button class="path-chip-remove" onclick="removePathFromJobGlobal(${idx},${JSON.stringify(p)})" title="Remove">×</button>
-        </span>`).join('');
+        </span>`;
+      }).join('');
     }
   }
 
@@ -909,26 +926,49 @@ async function settingsInit() {
   function openFileBrowser(jobIdx) {
     let currentPath = '/';
     let selectedPath = null;
+    let selectedIsFile = false;
+
+    const FOLDER_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="fb-icon fb-icon-folder"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+    const FILE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="fb-icon fb-icon-file"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+    const NAV_ARROW = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="fb-nav-arrow"><polyline points="9 18 15 12 9 6"/></svg>`;
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay fb-overlay is-open';
     overlay.innerHTML = `
       <div class="modal fb-modal">
-        <div class="modal-header"><span class="modal-title">Browse folders</span>
+        <div class="modal-header">
+          <span class="modal-title">Select file or folder to back up</span>
           <button class="btn-icon fb-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
-        <div class="fb-path"><span id="fbCurrentPath">/</span></div>
+        <div class="fb-path-bar">
+          <span class="fb-path-label">Current folder:</span>
+          <span id="fbCurrentPath" class="fb-path-value">/</span>
+        </div>
+        <div class="fb-hint">Click to select · Double-click a folder to open it</div>
         <div class="fb-list" id="fbList"><div class="loading"><div class="spinner"></div> Loading…</div></div>
         <div class="modal-footer">
           <button class="btn btn-secondary btn-sm" id="fbCancelBtn">Cancel</button>
-          <button class="btn btn-primary btn-sm" id="fbAddThisBtn">Add Folder</button>
+          <button class="btn btn-primary btn-sm" id="fbAddThisBtn">Add Current Folder</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
 
+    function updateAddButton() {
+      const btn = document.getElementById('fbAddThisBtn');
+      if (!btn) return;
+      if (selectedPath) {
+        btn.textContent = selectedIsFile ? 'Add This File' : 'Add This Folder';
+      } else {
+        btn.textContent = 'Add Current Folder';
+      }
+    }
+
     async function navigate(path) {
       currentPath = path;
+      selectedPath = null;
+      selectedIsFile = false;
       document.getElementById('fbCurrentPath').textContent = path;
+      updateAddButton();
       const listEl = document.getElementById('fbList');
       listEl.innerHTML = '<div class="loading"><div class="spinner"></div> Loading…</div>';
       try {
@@ -938,37 +978,66 @@ async function settingsInit() {
         let html = '';
         if (path !== '/') {
           const parent = path.replace(/\/[^/]+\/?$/, '') || '/';
-          html += `<div class="fb-entry fb-up" data-path="${escHtml(parent)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> ..</div>`;
+          html += `<div class="fb-entry fb-up" data-path="${escHtml(parent)}" data-isdir="1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="fb-icon"><polyline points="15 18 9 12 15 6"/></svg>
+            <span class="fb-entry-name">..</span>
+          </div>`;
         }
-        for (const e of dirs) html += `<div class="fb-entry fb-dir" data-path="${escHtml(e.path)}">${IC.folder}${escHtml(e.name)}</div>`;
-        for (const e of files) html += `<div class="fb-entry fb-file" data-path="${escHtml(e.path)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>${escHtml(e.name)}</div>`;
-        if (!html) html = '<div class="loading">Empty directory</div>';
+        for (const e of dirs) {
+          html += `<div class="fb-entry fb-dir" data-path="${escHtml(e.path)}" data-isdir="1" title="Click to select · Double-click to open">
+            ${FOLDER_ICON}<span class="fb-entry-name">${escHtml(e.name)}</span>${NAV_ARROW}
+          </div>`;
+        }
+        for (const e of files) {
+          html += `<div class="fb-entry fb-file" data-path="${escHtml(e.path)}" data-isdir="0" title="Click to select this file">
+            ${FILE_ICON}<span class="fb-entry-name">${escHtml(e.name)}</span>
+          </div>`;
+        }
+        if (!dirs.length && !files.length) html = '<div class="loading">Empty directory</div>';
         listEl.innerHTML = html;
 
-        // Single-click on a folder navigates into it; click on a file selects it
-        listEl.querySelectorAll('.fb-dir, .fb-up').forEach((el) => {
-          el.addEventListener('click', () => {
-            selectedPath = null;
-            navigate(el.dataset.path);
-          });
-        });
-        listEl.querySelectorAll('.fb-file').forEach((el) => {
+        listEl.querySelectorAll('.fb-entry').forEach((el) => {
+          const isDir = el.dataset.isdir === '1';
+          const isUp = el.classList.contains('fb-up');
+
+          if (isUp) {
+            el.addEventListener('click', () => navigate(el.dataset.path));
+            return;
+          }
+
+          // Single click = select
           el.addEventListener('click', () => {
             listEl.querySelectorAll('.fb-entry').forEach((e) => e.classList.remove('selected'));
             el.classList.add('selected');
             selectedPath = el.dataset.path;
+            selectedIsFile = !isDir;
+            updateAddButton();
           });
+
+          // Double click on folder = navigate in
+          if (isDir) {
+            el.addEventListener('dblclick', () => {
+              navigate(el.dataset.path);
+            });
+            // Nav arrow click also navigates
+            el.querySelector('.fb-nav-arrow')?.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              navigate(el.dataset.path);
+            });
+          }
         });
       } catch (e) {
         listEl.innerHTML = `<div class="loading" style="color:var(--danger)">${escHtml(e.message)}</div>`;
       }
     }
 
-    function addPathToJob(idx, p) {
+    function addPathToJob(idx, p, isFile) {
       if (!p) return;
       if (!backupJobs[idx].paths) backupJobs[idx].paths = [];
       if (!backupJobs[idx].paths.includes(p)) {
         backupJobs[idx].paths.push(p);
+        if (!backupJobs[idx]._pathTypes) backupJobs[idx]._pathTypes = {};
+        backupJobs[idx]._pathTypes[p] = isFile ? 'file' : 'folder';
         markDirty();
         renderPathChips(idx);
       }
@@ -978,7 +1047,11 @@ async function settingsInit() {
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
     document.getElementById('fbCancelBtn').addEventListener('click', () => overlay.remove());
     document.getElementById('fbAddThisBtn').addEventListener('click', () => {
-      addPathToJob(jobIdx, selectedPath || currentPath);
+      if (selectedPath) {
+        addPathToJob(jobIdx, selectedPath, selectedIsFile);
+      } else {
+        addPathToJob(jobIdx, currentPath, false);
+      }
       overlay.remove();
     });
 

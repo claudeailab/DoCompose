@@ -1036,6 +1036,17 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
   white-space: nowrap;
   max-width: 260px;
 }
+.path-chip-type {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.05rem 0.3rem;
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+}
+.path-chip-type.folder { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
+.path-chip-type.file { background: color-mix(in srgb, #22d3ee 15%, transparent); color: #22d3ee; }
 .path-chip-remove {
   background: none;
   border: none;
@@ -1052,15 +1063,23 @@ select.select, select.settings-select { cursor: pointer; appearance: none;
 .path-chip-remove:hover { opacity: 1; }
 
 /* file browser modal */
-.fb-modal { width: min(500px, 95vw); height: min(560px, 85vh); display: flex; flex-direction: column; }
-.fb-path { padding: 0.5rem 1.25rem; background: var(--surface-inset); border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fb-modal { width: min(520px, 95vw); height: min(580px, 85vh); display: flex; flex-direction: column; }
+.fb-path-bar { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 1rem; background: var(--surface-inset); border-bottom: 1px solid var(--border); }
+.fb-path-label { font-size: 0.75rem; color: var(--text-muted); flex-shrink: 0; }
+.fb-path-value { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fb-hint { padding: 0.3rem 1rem; font-size: 0.72rem; color: var(--text-muted); border-bottom: 1px solid var(--border); background: var(--surface-inset); }
 .fb-list { flex: 1; overflow-y: auto; padding: 0.35rem; }
 .fb-entry { display: flex; align-items: center; gap: 0.55rem; padding: 0.42rem 0.65rem; font-size: 0.87rem; cursor: pointer; color: var(--text-primary); user-select: none; border-radius: var(--r-sm); }
-.fb-entry svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--text-muted); }
-.fb-dir svg { color: var(--accent); }
+.fb-entry-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-icon { width: 15px; height: 15px; flex-shrink: 0; color: var(--text-muted); }
+.fb-icon-folder { color: var(--accent); }
+.fb-icon-file { color: var(--text-muted); }
+.fb-nav-arrow { width: 14px; height: 14px; flex-shrink: 0; color: var(--text-muted); opacity: 0.5; margin-left: auto; transition: opacity 0.15s; }
+.fb-entry:hover .fb-nav-arrow { opacity: 1; color: var(--accent); }
 .fb-entry:hover { background: var(--surface-2); }
 .fb-entry.selected { background: var(--accent-dim); color: var(--accent); }
-.fb-entry.selected svg { color: var(--accent); }
+.fb-entry.selected .fb-icon { color: var(--accent); }
+.fb-entry.selected .fb-nav-arrow { opacity: 1; color: var(--accent); }
 
 /* ============================================================
    6. RESPONSIVE
