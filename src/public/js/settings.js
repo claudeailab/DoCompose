@@ -149,15 +149,15 @@ async function settingsInit() {
             <div class="stg-section">
               <div class="stg-section-title">Backup Jobs</div>
               <div id="stgBackupJobsList" class="stg-stack"></div>
-              <button class="btn btn-primary btn-sm" id="stgAddBackupJobBtn" style="display:none"></button>
+              <button class="btn btn-primary btn-sm stg-add-btn" id="stgAddBackupJobBtn">${IC.plus}Add Job</button>
             </div>
           </div>
         </div>
         <div id="bjModalOverlay" class="modal-overlay"></div>
 
         <div class="stg-footer">
-          <button class="btn btn-secondary" id="stgDiscardBtn" disabled>Discard Changes</button>
           <button class="btn btn-primary" id="stgSaveBtn" disabled>${IC.save}Save Changes</button>
+          <button class="btn btn-secondary" id="stgDiscardBtn" disabled>Discard Changes</button>
           <span id="stgSaveStatus" class="stg-save-status"></span>
         </div>
       </div>
@@ -186,11 +186,55 @@ async function settingsInit() {
   // ── Dirty tracking ────────────────────────────────────────────
   const saveBtn = document.getElementById('stgSaveBtn');
   const discardBtn = document.getElementById('stgDiscardBtn');
-  function markDirty() { saveBtn.disabled = false; discardBtn.disabled = false; }
+  // Snapshots of the original loaded values for revert detection.
+  // Scalar fields captured now; arrays/objects referenced via closure at call time.
+  const _origTheme    = settings.theme || 'dark';
+  const _origTz       = settings.timezone || '';
+  const _origTf       = settings.timeFormat || '24';
+  const _origInterval = String(settings.updateIntervalSeconds ?? '');
+  const _origOdId     = (settings.onedrive || {}).clientId || '';
+  const _origOdTenant = (settings.onedrive || {}).tenant || '';
+  const _origOdFolder = (settings.onedrive || {}).backupFolderPath || '';
+  const _origDbKey    = (settings.dropbox || {}).appKey || '';
+  const _origDbFolder = (settings.dropbox || {}).backupFolderPath || '';
+  const _origSchedules = JSON.stringify(settings.updateSchedules || []);
+  const _origJobs      = JSON.stringify(settings.backupJobs || []);
+  const _origRegistries = JSON.stringify((settings.registries || []).map(
+    (r) => ({ name: r.name || '', server: r.server || '', username: r.username || '', enabled: r.enabled !== false })
+  ));
+  const _origExcluded = JSON.stringify([...(settings.excludedFromUpdates || [])].sort());
+
+  function checkDirty() {
+    const curTheme = document.querySelector('.theme-btn.active')?.dataset.theme || 'dark';
+    const curTz    = document.getElementById('stgTimezone')?.value ?? '';
+    const curTf    = document.getElementById('stgTimeFormat')?.value ?? '';
+    const curInt   = document.getElementById('stgUpdateInterval')?.value ?? '';
+    // registries/excluded may not be declared yet when checkDirty is first wired up,
+    // but it's only ever *called* from event handlers that fire after full init.
+    const curSchedules  = JSON.stringify(typeof updateSchedules !== 'undefined' ? updateSchedules : []);
+    const curJobs       = JSON.stringify(typeof backupJobs !== 'undefined' ? backupJobs : []);
+    const curRegistries = JSON.stringify(typeof registries !== 'undefined' ? registries.map(
+      (r) => ({ name: r.name || '', server: r.server || '', username: r.username || '', enabled: r.enabled !== false })
+    ) : []);
+    const curExcluded = JSON.stringify(typeof excluded !== 'undefined' ? [...excluded].sort() : []);
+    const curOdId     = typeof odClientId !== 'undefined' ? odClientId : '';
+    const curOdTenant = typeof odTenant   !== 'undefined' ? odTenant   : '';
+    const curOdFolder = typeof odBackupFolder !== 'undefined' ? odBackupFolder : '';
+    const curDbKey    = typeof dbAppKey   !== 'undefined' ? dbAppKey   : '';
+    const curDbFolder = typeof dbBackupFolder !== 'undefined' ? dbBackupFolder : '';
+
+    const clean = curTheme === _origTheme && curTz === _origTz && curTf === _origTf &&
+      curInt === _origInterval && curSchedules === _origSchedules && curJobs === _origJobs &&
+      curRegistries === _origRegistries && curExcluded === _origExcluded &&
+      curOdId === _origOdId && curOdTenant === _origOdTenant && curOdFolder === _origOdFolder &&
+      curDbKey === _origDbKey && curDbFolder === _origDbFolder;
+    saveBtn.disabled = clean;
+    discardBtn.disabled = clean;
+  }
+  function markDirty() { checkDirty(); }
   function markClean() { saveBtn.disabled = true; discardBtn.disabled = true; }
 
   discardBtn.addEventListener('click', () => {
-    if (!confirm('Discard all unsaved changes?')) return;
     settingsInit();
   });
 
@@ -593,11 +637,9 @@ async function settingsInit() {
     let html = '';
     if (!odEnabled) html += `<button class="btn btn-secondary btn-sm" id="stgAddOdBtn">${odIcon}Add OneDrive</button>`;
     if (!dbEnabled) html += `<button class="btn btn-secondary btn-sm" id="stgAddDbBtn">${dbIcon}Add Dropbox</button>`;
-    html += `<button class="btn btn-primary btn-sm" id="stgAddBackupJobBtn2">${IC.plus}Add Job</button>`;
     bar.innerHTML = html;
     document.getElementById('stgAddOdBtn')?.addEventListener('click', () => { odEnabled = true; renderProviderBar(); refreshOdStatus(); markDirty(); });
     document.getElementById('stgAddDbBtn')?.addEventListener('click', () => { dbEnabled = true; renderProviderBar(); refreshDbStatus(); markDirty(); });
-    document.getElementById('stgAddBackupJobBtn2')?.addEventListener('click', () => document.getElementById('stgAddBackupJobBtn')?.click());
   }
 
   // ── OneDrive ──────────────────────────────────────────────────
